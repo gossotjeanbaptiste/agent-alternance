@@ -19,11 +19,22 @@ def faux_pystray(monkeypatch):
     class Icon:
         def __init__(self, nom, image, titre, menu):
             vu.update(nom=nom, image=image, titre=titre, menu=menu)
+            self._visible = True
+
+        @property
+        def visible(self):
+            return self._visible
+
+        @visible.setter
+        def visible(self, v):
+            vu.setdefault("ordre", []).append("cachée")
+            self._visible = v
 
         def run(self):
             vu["run"] += 1
 
         def stop(self):
+            vu.setdefault("ordre", []).append("arrêtée")
             vu["stop"] += 1
 
     mod = types.ModuleType("pystray")
@@ -50,6 +61,8 @@ def test_menu_ouvrir_et_quitter(faux_pystray, monkeypatch):
     assert ouverts == ["http://127.0.0.1:8765"]
     quitter.action()
     assert fermes == [0] and faux_pystray["stop"] == 1 and icone_tache.ICONE["objet"] is None
+    assert faux_pystray["ordre"] == ["cachée", "arrêtée"]      # retirée AVANT la fermeture du processus
+    assert icone.visible is False
 
 
 def test_sans_pystray(monkeypatch):
