@@ -7,6 +7,7 @@ L'assistant s'affiche tant que config.json n'existe pas ou contient "assistant_a
 """
 import json
 import shutil
+import unicodedata
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -205,19 +206,52 @@ def coordonnees(nom):
     return {"nom": res[0]["nom"], "lat": round(lat, 4), "lon": round(lon, 4)}
 
 
+def _cle(nom):
+    """Nom de ville comparable : minuscules, sans accents ni tirets."""
+    s = unicodedata.normalize("NFD", str(nom)).encode("ascii", "ignore").decode().lower()
+    return " ".join(s.replace("-", " ").replace("'", " ").split())
+
+
+def _ville_saisie(ligne):
+    """« Nom ; latitude ; longitude » saisi à la main, ou None."""
+    morceaux = [m.strip() for m in ligne.split(";")]
+    if len(morceaux) != 3 or not morceaux[0]:
+        return None
+    try:
+        lat, lon = float(morceaux[1].replace(",", ".")), float(morceaux[2].replace(",", "."))
+    except ValueError:
+        return None
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        return None
+    return {"nom": morceaux[0], "lat": round(lat, 4), "lon": round(lon, 4)}
+
+
+def _villes_connues():
+    """Villes déjà présentes dans la config (importée ou précédente), par nom comparable."""
+    c = _lire(commun.donnees.chemin("config_alternance.json")) or {}
+    lba = c.get("la_bonne_alternance") or {}
+    connues = {}
+    for v in (lba.get("villes") or []) + [lba.get("centre") or {}]:
+        if isinstance(v, dict) and v.get("nom") and v.get("lat") is not None and v.get("lon") is not None:
+            connues.setdefault(_cle(v["nom"]), {"nom": v["nom"], "lat": v["lat"], "lon": v["lon"]})
+    return connues
+
+
 def etape_lba(d):
     noms = [n.strip() for n in str(d.get("villes") or "").splitlines() if n.strip()]
     if not noms:
         return False, "Indique au moins une ville (une par ligne), la première sert de référence."
+    connues = _villes_connues()
     villes, inconnues = [], []
     try:
         for n in noms:
-            v = coordonnees(n)
+            v = _ville_saisie(n) or connues.get(_cle(n)) or coordonnees(n)
             (villes.append(v) if v else inconnues.append(n))
     except Exception as e:
         return False, f"Recherche des villes impossible ({e}) : vérifie ta connexion Internet."
     if inconnues:
-        return False, "Villes introuvables : " + ", ".join(inconnues)
+        return False, ("Villes introuvables : " + ", ".join(inconnues)
+                       + ". Corrige le nom, ou indique la position à la main : « Nom ; latitude ; longitude ».")
     try:
         rayon = int(d.get("rayon") or 25)
     except ValueError:
