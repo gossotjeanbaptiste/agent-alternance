@@ -15,11 +15,13 @@ MODULES = [
     "alternance", "postuler", "maj_tableau",
     # web/src et web/app.py
     "api", "assistant", "auth", "chemins", "lettres", "pages", "parametres", "planification", "reglages_web",
-    "relations", "routines", "securite", "suivi_donnees", "tour_web", "app",
+    "relations", "routines", "securite", "suivi_donnees", "tour_web", "icone_tache", "app",
     # racine
     "agent", "tour", "emplacements", "version", "mise_a_jour",
     # dépendances chargées dynamiquement
     "win32com", "win32com.client", "pythoncom", "pywintypes", "win32timezone",
+    # icône de la zone de notification
+    "pystray", "pystray._win32", "PIL.Image", "PIL.PngImagePlugin",
 ]
 
 a = Analysis(
@@ -35,7 +37,7 @@ a = Analysis(
         (str(RACINE / "config.example.json"), "."),
     ],
     hiddenimports=MODULES,
-    excludes=["PIL", "tkinter", "pytest", "IPython", "numpy"],
+    excludes=["tkinter", "pytest", "IPython", "numpy"],
     noarchive=False,
 )
 pyz = PYZ(a.pure)
@@ -44,7 +46,7 @@ exe = EXE(
     exclude_binaries=True,
     name="LMAgent",
     icon=str(RACINE / "web" / "static" / "favicon.ico"),
-    console=True,          # fenêtre de console : journal de l'interface et des routines
+    console=False,         # pas de fenêtre noire : icône près de l'horloge, sortie dans logs/ (voir lmagent.py)
     upx=False,
 )
 coll = COLLECT(exe, a.binaries, a.datas, name="LMAgent", upx=False)

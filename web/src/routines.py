@@ -32,7 +32,8 @@ def lancer(nom, essai=False, fois=1):
     suffixe = (f"_x{fois}" if fois > 1 else "") + ("_essai" if essai else "")
     fichier = LOGS / f"web_{datetime.now():%Y%m%d_%H%M%S}_{nom}{suffixe}.txt"
     sortie = open(fichier, "w", encoding="utf-8")
-    env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
+    # LMAGENT_SORTIE : l'exe installé (sans console) écrit lui-même dans ce fichier
+    env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", LMAGENT_SORTIE=str(fichier))
     cmd = commande(nom, essai, fois)
     proc = subprocess.Popen(cmd, cwd=ROOT, stdout=sortie, stderr=subprocess.STDOUT, env=env,
                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))

@@ -1,10 +1,10 @@
 """Les actions de l'interface (appelées par le JavaScript des pages)."""
-import os
 import threading
 from datetime import date
 
 from flask import Blueprint, abort, current_app, jsonify, request, session
 
+import icone_tache
 import lettres
 import routines
 import suivi_donnees
@@ -133,7 +133,7 @@ def mise_a_jour_maintenant():
     import mise_a_jour
     lancee, message = mise_a_jour.verifier()
     if lancee:
-        threading.Timer(1.0, lambda: os._exit(0)).start()
+        threading.Timer(1.0, icone_tache.quitter).start()
     return jsonify(ok=True, message=message, redemarrage=lancee)
 
 
@@ -141,7 +141,7 @@ def mise_a_jour_maintenant():
 def quitter():
     """Arrête l'interface (le serveur web). Une routine lancée continue jusqu'au bout."""
     continue_routine = routines.en_cours()
-    threading.Timer(0.5, lambda: os._exit(0)).start()  # laisse le temps d'envoyer la réponse
+    threading.Timer(0.5, icone_tache.quitter).start()  # laisse le temps d'envoyer la réponse
     return jsonify(ok=True, routine=continue_routine)
 
 

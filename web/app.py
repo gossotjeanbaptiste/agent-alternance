@@ -71,9 +71,15 @@ def lancer_interface():
         print(f"L'interface tourne déjà : ouverture de {url} dans le navigateur.")
         webbrowser.open(url)
         return
-    print(f"Interface : {url}  (accessible uniquement depuis ce PC — bouton Quitter pour arrêter)")
+    import emplacements
+    import icone_tache
+    print(f"Interface : {url}  (accessible uniquement depuis ce PC — bouton Quitter ou icône près de l'horloge)")
+    icone_tache.demarrer(url, emplacements.RESSOURCES / "web" / "static" / "logo.png")
     threading.Timer(1.2, lambda: webbrowser.open(url)).start()
-    creer_app().run(host=HOTE, port=PORT, debug=False, use_reloader=False)
+    try:
+        creer_app().run(host=HOTE, port=PORT, debug=False, use_reloader=False)
+    finally:
+        icone_tache.arreter()
 
 
 if __name__ == "__main__":

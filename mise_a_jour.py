@@ -132,8 +132,9 @@ def verifier(appliquer=True, journal=print):
     return True, f"Installation de la version {info['version']} : LMAgent redémarre."
 
 
-def surveiller(routine_en_cours, journal=print):
-    """Vérifie toutes les INTERVALLE_H heures (fil en arrière-plan) ; installe si aucune routine ne tourne."""
+def surveiller(routine_en_cours, journal=print, fermer=lambda: os._exit(0)):
+    """Vérifie toutes les INTERVALLE_H heures (fil en arrière-plan) ; installe si aucune routine ne tourne,
+    puis ferme LMAgent avec fermer() (l'installeur le relance)."""
     import threading
     import time
 
@@ -144,7 +145,7 @@ def surveiller(routine_en_cours, journal=print):
             if auto and emplacements.INSTALLEE and not routine_en_cours():
                 lancee, _ = verifier(journal=journal)
                 if lancee:
-                    os._exit(0)
+                    fermer()
     threading.Thread(target=boucle, daemon=True).start()
 
 
