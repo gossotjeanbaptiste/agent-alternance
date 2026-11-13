@@ -28,6 +28,16 @@ def statut():
     return jsonify(ok=ok, message=message)
 
 
+@api.post("/signature")
+def signature():
+    import parametres
+    d = request.get_json(force=True)
+    if not isinstance(d.get("signature"), dict):
+        return jsonify(ok=False, message="Données invalides."), 400
+    ok, message = parametres.enregistrer(d["signature"], d.get("debut"))
+    return jsonify(ok=ok, message=message)
+
+
 @api.post("/quitter")
 def quitter():
     """Arrête l'interface (le serveur web). Une routine lancée continue jusqu'au bout."""

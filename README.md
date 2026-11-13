@@ -23,6 +23,7 @@ Pour arrêter : bouton **⏻ Quitter** en haut à droite (ou ferme la fenêtre n
 Dans l'interface :
 - **Routines** → « Relances » / « Recherche » (coche « mode essai » pour tester sans rien écrire) ;
 - **À postuler** → ouvrir la page (La Bonne Alternance ou formulaire de contact du site de l'entreprise), copier la lettre et, pour La Bonne Alternance, les réponses aux trois questions du formulaire (motivations, missions, expériences), marquer « Envoyée ». Les candidatures par mail y sont aussi, marquées 📧 « Par mail » (le brouillon attend dans ta messagerie, l'envoi est repéré tout seul ; « Abandonner » met ce brouillon à la corbeille) ;
+- **Paramètres** → modifier la signature ajoutée sous les lettres des formulaires (La Bonne Alternance, sites), avec aperçu ;
 - **Suivi** → changer un statut ; **Tableau de bord** → voir où tu en es.
 
 ### En ligne de commande
@@ -262,7 +263,8 @@ python web/app.py
 ```
 Le navigateur s'ouvre sur http://127.0.0.1:8765. Pages : tableau de bord (chiffres, graphique, relances à venir),
 suivi (filtres, changement de statut), à postuler (ouvrir la page, copier la lettre signée), routines (lancement
-et sortie en direct), tour (état, réveil, LM Studio, veille), relations LinkedIn dans tes entreprises, journal.
+et sortie en direct), tour (état, réveil, LM Studio, veille), relations LinkedIn dans tes entreprises, journal,
+paramètres (signature des candidatures par formulaire, écrite dans `config_alternance.json`).
 
 Sécurité : n'écoute que sur 127.0.0.1 (aucun autre appareil ne peut s'y connecter), refuse les en-têtes Host
 étrangers, et chaque action exige un jeton secret renouvelé à chaque démarrage. Rien n'est chargé depuis Internet.

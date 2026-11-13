@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block titre %}Paramètres{% endblock %}
+{% block contenu %}
+<h1>Paramètres</h1>
+<div class="deux">
+  <div class="carte">
+    <h2>Signature des candidatures par formulaire</h2>
+    <p class="doux">Ajoutée sous la lettre à copier pour La Bonne Alternance et les formulaires de contact des sites. Laisse vide une ligne que tu ne veux pas afficher.</p>
+    {% for cle, libelle, exemple in champs %}
+    <label class="champ">{{ libelle }}
+      <input type="text" id="s-{{ cle }}" value="{{ signature[cle] }}" placeholder="{{ exemple }}" oninput="apercu()">
+    </label>
+    {% endfor %}
+    <h2 style="margin-top:18px">Signature de tes mails</h2>
+    <label class="champ">Première ligne de ta signature de mail
+      <input type="text" id="debut" value="{{ debut }}" placeholder="Prénom NOM">
+    </label>
+    <p class="doux">Sert à couper ta signature du mail d'origine avant d'écrire une relance. La signature des mails elle-même est celle de ta messagerie.</p>
+    <div class="actions"><button class="principal" onclick="enregistrer()">💾 Enregistrer</button></div>
+  </div>
+  <div class="carte">
+    <h2>Aperçu</h2>
+    <div class="lettre" id="apercu"></div>
+  </div>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+const CHAMPS = {{ champs|map(attribute=0)|list|tojson }};
+const ETIQUETTES = {linkedin: "LinkedIn", portfolio: "Portfolio", github: "GitHub"};
+function valeurs() {
+  const v = {};
+  for (const c of CHAMPS) v[c] = document.getElementById("s-" + c).value.trim();
+  return v;
+}
+function apercu() {  // même mise en forme que postuler_lba.signature()
+  const v = valeurs();
+  const lignes = ["nom", "titre", "telephone", "email"].map(c => v[c]);
+  for (const c of ["linkedin", "portfolio", "github"]) if (v[c]) lignes.push(ETIQUETTES[c] + " : " + v[c]);
+  document.getElementById("apercu").textContent =
+    "…fin de la lettre.\n\nCordialement,\n\n" + lignes.filter(Boolean).join("\n");
+}
+async function enregistrer() {
+  const r = await poster("/api/signature", {signature: valeurs(), debut: document.getElementById("debut").value});
+  annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
+}
+apercu();
+</script>
+{% endblock %}

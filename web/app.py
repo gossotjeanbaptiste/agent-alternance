@@ -12,7 +12,8 @@ Organisation (modules dans web/src/) :
     suivi_donnees.py  lecture du tableau, statistiques, modification d'une ligne
     routines.py       lancement des routines en arrière-plan
     tour_web.py       état et pilotage de la tour
-    lettres.py        lettres « À postuler » lues dans Outlook
+    lettres.py        lettres « À postuler » (fichier local et brouillons de la messagerie)
+    parametres.py     page Paramètres : signature des candidatures par formulaire
     relations.py      relations LinkedIn dans les entreprises du tableau
     templates/        le HTML des pages        static/  style et JavaScript
 """
