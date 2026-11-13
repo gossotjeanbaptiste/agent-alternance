@@ -150,8 +150,28 @@ class TestEtapes:
 
     def test_sans_ville_ou_sans_reseau(self, neuve, client):
         assert client.post("/api/assistant/lba", json={"villes": ""}).status_code == 400
-        r = client.post("/api/assistant/lba", json={"villes": "Lyon"})      # réseau bloqué dans les tests
+        r = client.post("/api/assistant/lba", json={"villes": "Ville-Absente-De-La-Config"})  # réseau bloqué
         assert r.status_code == 400 and "connexion" in r.get_json()["message"]
+
+    def test_ville_connue_reprise_sans_reseau(self, neuve, client):
+        """Une ville déjà dans la config (import) garde ses coordonnées, même introuvable par l'API."""
+        assistant._ecrire_alternance({"la_bonne_alternance.villes": [{"nom": "Quartier-Ésotérique", "lat": 48.1, "lon": 7.2}]})
+        r = client.post("/api/assistant/lba", json={"villes": "quartier esoterique"})   # réseau bloqué
+        assert r.get_json()["ok"]
+        assert commun.CFG["la_bonne_alternance"]["villes"] == [{"nom": "Quartier-Ésotérique", "lat": 48.1, "lon": 7.2}]
+
+    def test_ville_saisie_a_la_main(self, neuve, client):
+        r = client.post("/api/assistant/lba", json={"villes": "Lieu-dit ; 48,71834 ; 7.7043"})
+        assert r.get_json()["ok"]
+        assert commun.CFG["la_bonne_alternance"]["villes"] == [{"nom": "Lieu-dit", "lat": 48.7183, "lon": 7.7043}]
+
+    @pytest.mark.parametrize("ligne", ["Nom ; abc ; 7", "Nom ; 95 ; 7", " ; 48 ; 7", "Nom ; 48"])
+    def test_ville_saisie_invalide(self, ligne):
+        assert assistant._ville_saisie(ligne) is None
+
+    def test_message_ville_introuvable_explique_la_saisie(self, neuve, client, geo):
+        m = client.post("/api/assistant/lba", json={"villes": "Atlantide"}).get_json()["message"]
+        assert "latitude" in m
 
     def test_jeton_vide_garde_l_ancien(self, neuve, client, geo, cfg):
         client.post("/api/assistant/lba", json={"villes": "Lyon"})
