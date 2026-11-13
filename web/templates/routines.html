@@ -17,6 +17,19 @@
   <h2 id="titre-sortie">Aucune routine lancée depuis l'interface</h2>
   <pre id="sortie"></pre>
 </div>
+<details class="carte pli-section" id="pli-planification">
+  <summary><h2 style="display:inline">Tous les jours automatiquement</h2></summary>
+  <p class="doux">Le Planificateur de tâches Windows lance la routine chaque jour à l'heure choisie
+    (PC allumé, session ouverte). Laisse l'heure vide puis « Enregistrer » pour arrêter.</p>
+  {% for nom, libelle in (("relances", "Relances"), ("recherche", "Recherche"), ("tout", "Les deux")) %}
+  <div class="actions" style="align-items:center">
+    <span style="width:7em">{{ libelle }}</span>
+    <input type="time" id="heure-{{ nom }}">
+    <button onclick="planifier('{{ nom }}')">Enregistrer</button>
+    <span class="doux" id="etat-{{ nom }}"></span>
+  </div>
+  {% endfor %}
+</details>
 <div class="carte">
   <h2>Derniers lancements</h2>
   {% for h in historique %}
@@ -27,6 +40,19 @@
 {% block script %}
 <script>
 let suivi = null;
+async function chargerPlanification() {
+  const t = await (await fetch("/api/planification")).json();
+  for (const nom of ["relances", "recherche", "tout"]) {
+    const e = document.getElementById("etat-" + nom);
+    e.textContent = t[nom] ? `planifiée — prochaine : ${t[nom].prochaine}` : "non planifiée";
+  }
+}
+async function planifier(nom) {
+  const r = await poster("/api/planification", {nom, heure: document.getElementById("heure-" + nom).value});
+  annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
+  chargerPlanification();
+}
+chargerPlanification();
 async function lancer(nom) {
   const r = await poster("/api/routine/" + nom, {
     essai: document.getElementById("essai").checked,

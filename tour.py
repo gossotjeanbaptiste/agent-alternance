@@ -26,8 +26,13 @@ import time
 import urllib.request
 from pathlib import Path
 
+import emplacements  # noqa: E402
+
 ROOT = Path(__file__).parent.resolve()
-_cfg = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
+try:
+    _cfg = json.loads(emplacements.config_agent().read_text(encoding="utf-8"))
+except (FileNotFoundError, ValueError):
+    _cfg = {}   # installation neuve : pas encore de config (la tour n'est pas utilisée)
 T = {
     "mac": "",
     "broadcast": "192.168.1.255",

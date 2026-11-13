@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="jeton" content="{{ jeton }}">
+<title>LMAgent — {{ 'Création du compte' if creation else 'Connexion' }}</title>
+<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="page-connexion">
+<!-- Premier lancement : création du compte ; ensuite : connexion -->
+<form class="carte connexion" id="formulaire" onsubmit="envoyer(event)" novalidate>
+  <h1><img src="{{ url_for('static', filename='logo.png') }}" alt="LMAgent" width="96" height="96"></h1>
+  {% if creation %}
+  <p class="doux">Premier lancement : choisis l'identifiant et le mot de passe qui protégeront l'interface.</p>
+  {% else %}
+  <p class="doux">Connecte-toi pour accéder à l'interface.</p>
+  {% endif %}
+  <label class="champ">Identifiant
+    <input id="identifiant" type="text" autocomplete="username" spellcheck="false" required value="{{ identifiant }}" autofocus>
+  </label>
+  <label class="champ">Mot de passe
+    <input id="mot_de_passe" type="password" autocomplete="{{ 'new-password' if creation else 'current-password' }}" required>
+  </label>
+  {% if creation %}
+  <label class="champ">Confirme le mot de passe
+    <input id="confirmation" type="password" autocomplete="new-password" required>
+  </label>
+  <p class="doux" style="font-size:12px">Au moins {{ longueur_min }} caractères. Mot de passe oublié : supprime
+    <code>alternance/donnees/acces_interface.json</code>, cette page reviendra.</p>
+  {% endif %}
+  <label class="champ" style="display:flex;gap:8px;align-items:center">
+    <input id="rester" type="checkbox" style="width:auto"> Rester connecté 30 jours sur ce PC
+  </label>
+  <p id="erreur" class="erreur-texte" role="alert"></p>
+  <div class="actions"><button class="principal" type="submit">{{ 'Créer le compte' if creation else 'Se connecter' }}</button></div>
+</form>
+<script>
+const JETON = document.querySelector('meta[name="jeton"]').content;
+async function envoyer(ev) {
+  ev.preventDefault();
+  const champ = id => (document.getElementById(id) || {}).value || "";
+  const r = await fetch("/api/connexion", {
+    method: "POST",
+    headers: {"Content-Type": "application/json", "X-Jeton": JETON},
+    body: JSON.stringify({identifiant: champ("identifiant"), mot_de_passe: champ("mot_de_passe"),
+                          confirmation: champ("confirmation"), rester: document.getElementById("rester").checked}),
+  });
+  let j = {};
+  try { j = await r.json(); } catch (e) { j = {ok: false, message: "Erreur " + r.status}; }
+  if (j.ok) { location.href = {{ suite|tojson }}; return; }
+  document.getElementById("erreur").textContent = j.message || "Erreur";
+  document.getElementById("mot_de_passe").value = "";
+}
+</script>
+</body>
+</html>

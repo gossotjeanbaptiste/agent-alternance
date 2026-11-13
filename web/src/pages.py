@@ -1,7 +1,7 @@
 """Les pages de l'interface (affichage)."""
 from datetime import date
 
-from flask import Blueprint, abort, render_template, request
+from flask import Blueprint, abort, redirect, render_template, request
 
 import lettres
 from tableau import A_POSTULER
@@ -12,6 +12,26 @@ import tour_web
 from chemins import LOGS
 
 pages = Blueprint("pages", __name__)
+
+
+@pages.route("/assistant")
+def assistant():
+    """Assistant de premier lancement (aussi accessible ensuite pour tout revoir)."""
+    import assistant as a
+    import reglages_web  # noqa: F401
+    return render_template("assistant.html", page="assistant", e=a.etat(), a_faire=a.a_faire())
+
+
+@pages.route("/connexion")
+def connexion():
+    """Création du compte au premier lancement, sinon connexion."""
+    import auth
+    import securite
+    suite = securite.suite_sure(request.args.get("suite"))
+    if securite.connecte():
+        return redirect(suite)
+    return render_template("connexion.html", creation=not auth.compte_existe(), identifiant=auth.identifiant(),
+                           longueur_min=auth.LONGUEUR_MIN, suite=suite)
 
 
 @pages.route("/")
@@ -36,7 +56,9 @@ def page_parametres():
     ajouter, fichier = parametres.ajouter_signature()
     return render_template("parametres.html", page="parametres", champs=parametres.CHAMPS,
                            signature=signature, debut=debut, ajouter=ajouter, fichier=fichier,
-                           interdits=parametres.lire_interdits(), sections=reglages_web.sections())
+                           interdits=parametres.lire_interdits(), profil=parametres.lire_profil(),
+                           version=__import__("version").__version__, installee=__import__("emplacements").INSTALLEE,
+                           sections=reglages_web.sections())
 
 
 @pages.route("/postuler")

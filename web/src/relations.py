@@ -1,10 +1,11 @@
 """Relations LinkedIn (export Connections.csv) qui travaillent dans une entreprise du tableau."""
 import csv
 
-from chemins import ROOT
+import emplacements
+from chemins import ROOT  # noqa: F401
 from tableau import norm
 
-FICHIER = ROOT / "linkedin" / "Connections.csv"
+FICHIER = emplacements.dossier("linkedin") / "Connections.csv"
 
 
 def lire_relations():

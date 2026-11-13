@@ -99,7 +99,8 @@ class Suivi:
         return row[self.h[col]].value if self.h[col] < len(row) else None
 
     def set(self, row, col, val):
-        self.ws.cell(row[0].row, self.h[col] + 1, val)
+        # (ws.cell(ligne, col, None) ne vide pas la case : openpyxl ignore la valeur None)
+        self.ws.cell(row[0].row, self.h[col] + 1).value = val
 
     def add(self, **vals):
         self.ws.append([vals.get(c, "") for c in sorted(self.h, key=self.h.get)])

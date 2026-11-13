@@ -27,13 +27,26 @@ dans le dépôt et où en est le projet.
 - **Pas de valeur en dur** : tout réglage utile à l'utilisateur est décrit dans `alternance/src/reglages.py`
   (section, libellé, type, défaut, aide), lu dans le code avec `reglages.valeur("chemin")` et modifiable dans la page
   Paramètres. Seuls les détails techniques (délais réseau, tailles de lecture, noms des statuts) restent dans le code.
-- **Interface web** : uniquement sur 127.0.0.1, jeton exigé pour chaque action. Après une modification du code,
+- **Tests** : `python -m pytest` (dossier `tests/`, socle dans `tests/conftest.py` : données temporaires via
+  `LMAGENT_DONNEES`, réseau bloqué, modèle / messagerie simulés, config remise à zéro après chaque test).
+  Toute nouvelle fonction testable reçoit ses tests ; ne pas tester la tour ni la connexion au serveur LM Studio.
+- **Chemins** : ne jamais construire un chemin de fichier personnel à partir du dossier du code ; passer par
+  `emplacements.py` (config, journaux, workspace, LinkedIn…) ou `donnees.chemin()` / `commun.chemin_tableau()`.
+- **Tour facultative** : réglage `utiliser_tour` (config.json) ; désactivée, seul « ce PC » est utilisé et tout ce qui
+  concerne la tour est caché (`agent.utiliser_tour()`, `tour_web.disponible()`).
+- **Interface web** : uniquement sur 127.0.0.1, connexion obligatoire (`web/src/auth.py` : un seul compte,
+  mot de passe haché dans `alternance/donnees/acces_interface.json`), jeton exigé pour chaque action. Après une modification du code,
   l'interface en cours doit être redémarrée (⏻ Quitter puis relance).
 
 ## Où est quoi
 
 | Chemin | Contenu |
 |---|---|
+| `lmagent.py` | point d'entrée unique (devient `LMAgent.exe`) : interface, `--routine`, `--postuler`, `--maj-tableau`, `--agent` ; `commande_soi()` pour se relancer |
+| `web/src/planification.py` | routines quotidiennes via le Planificateur de tâches (`LMAgent_<routine>`) |
+| `version.py`, `mise_a_jour.py` | numéro de version (remplacé par le tag à la publication) ; mises à jour automatiques de la version installée (GitHub Releases, empreinte SHA-256, `msiexec /qn`) |
+| `installeur/`, `.github/workflows/publier.yml` | `LMAgent.spec` (PyInstaller), `LMAgent.wxs` (WiX v5, installation par utilisateur) ; un tag `vX.Y.Z` sur le dépôt public publie l'installeur |
+| `emplacements.py` | où vivent les fichiers personnels : dossier du projet (lancé depuis le code), `%APPDATA%\LMAgent` (version installée) ou `LMAGENT_DOSSIER` (tests) |
 | `agent.py` | agent en chat / tâches, connexion LM Studio (tour puis ce PC), choix du moteur GPU, journal (`logs/`) |
 | `tour.py` (main) | réveil, veille, état de la tour ; `GUIDE_TOUR.md` pour l'installer |
 | `alternance/relances.py`, `recherche.py`, `alternance.py` | routines (suivi + relances, nouvelles candidatures, les deux) |
@@ -48,7 +61,9 @@ dans le dépôt et où en est le projet.
 | `alternance/src/candidatures.py`, `sources.py`, `sites.py` | choix des entreprises (liste perso, alertes LinkedIn, API La Bonne Alternance), site et contact de l'entreprise |
 | `alternance/src/reponses.py`, `refus.py` | lettres et réponses des candidatures par formulaire ; liste des entreprises écartées |
 | `alternance/src/tableau.py` | tableau Excel (openpyxl, Excel non nécessaire), statuts et couleurs |
+| `web/src/assistant.py` | assistant de premier lancement (tour oui/non, messagerie, villes, profil, CV, import) ; s'affiche tant que `config.json` manque ou contient `assistant_a_faire: true` |
 | `web/app.py`, `web/src/`, `web/templates/` | interface : tableau de bord, Suivi, À postuler, Routines, Tour, LinkedIn, Journal, Paramètres |
+| `outils/generer_logo.py` | génère `web/static/logo.png`, `logo-wide.png` et `favicon.ico` (style MyCMS) à partir des icônes de `outils/logo/` |
 | `config.json` | réglages de l'agent et de la tour (non versionné ; modèle `config.example.json`) |
 | `linkedin/` | export LinkedIn de l'utilisateur (non versionné), lu par la page LinkedIn |
 

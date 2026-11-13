@@ -200,7 +200,7 @@ def preparer_relance(suivi, ol, row, t_envoi, sujet, item):
     # Pas d'envoi différé posé par le script : il ne partirait que si l'Outlook classique est ouvert.
     # Tu planifies toi-même dans le nouvel Outlook (Envoyer -> Planifier l'envoi) : c'est le serveur qui envoie.
     ol.brouillon(mail, sujet_relance, texte_vers_html(corps), base=item,
-                 pieces=CFG["pieces_jointes"] if item is None else ())
+                 pieces=commun.pieces_jointes() if item is None else ())
     suivi.set(row, "Statut", "Relance en brouillon")
     suivi.set(row, "Nb relances", nb)
     suivi.set(row, "Notes", f"Relance {nb} en brouillon, à planifier le {quand:%d/%m à %H:%M}. "

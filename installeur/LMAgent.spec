@@ -1,0 +1,50 @@
+# -*- mode: python ; coding: utf-8 -*-
+# Compilation de LMAgent.exe (dossier dist/LMAgent/) :
+#     python -m PyInstaller installeur/LMAgent.spec --noconfirm
+# Le .msi est ensuite fabriqué à partir de ce dossier par WiX (installeur/LMAgent.wxs).
+from pathlib import Path
+
+RACINE = Path(SPECPATH).resolve().parent
+
+# modules chargés par le code via sys.path (PyInstaller ne les voit pas tout seul)
+MODULES = [
+    # alternance/src
+    "candidatures", "commun", "donnees", "imap", "jours", "mails", "messagerie", "modele", "outlook",
+    "refus", "reglages", "reponses", "sites", "sources", "suivi", "tableau",
+    # alternance/ (scripts appelés par lmagent)
+    "alternance", "postuler", "maj_tableau",
+    # web/src et web/app.py
+    "api", "assistant", "auth", "chemins", "lettres", "pages", "parametres", "planification", "reglages_web",
+    "relations", "routines", "securite", "suivi_donnees", "tour_web", "app",
+    # racine
+    "agent", "tour", "emplacements", "version", "mise_a_jour",
+    # dépendances chargées dynamiquement
+    "win32com", "win32com.client", "pythoncom", "pywintypes", "win32timezone",
+]
+
+a = Analysis(
+    [str(RACINE / "lmagent.py")],
+    pathex=[str(RACINE / p) for p in ("alternance/src", "alternance", "web/src", "web", ".")],
+    datas=[
+        (str(RACINE / "web" / "templates"), "web/templates"),
+        (str(RACINE / "web" / "static"), "web/static"),
+        (str(RACINE / "alternance" / "donnees" / "config_alternance.example.json"), "alternance/donnees"),
+        (str(RACINE / "alternance" / "donnees" / "profil.example.md"), "alternance/donnees"),
+        (str(RACINE / "alternance" / "donnees" / "interdits.example.md"), "alternance/donnees"),
+        (str(RACINE / "alternance" / "donnees" / "suivi_alternance.example.xlsx"), "alternance/donnees"),
+        (str(RACINE / "config.example.json"), "."),
+    ],
+    hiddenimports=MODULES,
+    excludes=["PIL", "tkinter", "pytest", "IPython", "numpy"],
+    noarchive=False,
+)
+pyz = PYZ(a.pure)
+exe = EXE(
+    pyz, a.scripts, [],
+    exclude_binaries=True,
+    name="LMAgent",
+    icon=str(RACINE / "web" / "static" / "favicon.ico"),
+    console=True,          # fenêtre de console : journal de l'interface et des routines
+    upx=False,
+)
+coll = COLLECT(exe, a.binaries, a.datas, name="LMAgent", upx=False)

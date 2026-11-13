@@ -22,6 +22,7 @@ from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))  # modules internes (alternance/src)
+import commun  # noqa: E402
 from commun import CFG, P  # noqa: E402
 import reponses  # noqa: E402
 from tableau import A_POSTULER, C_FORMULAIRE, C_LBA, LBA, Suivi  # noqa: E402
@@ -139,7 +140,7 @@ def ecrire_reponses_manquantes(s, a_faire):
 
 # --- Programme -------------------------------------------------------------------------
 def main():
-    s = Suivi(P(CFG["tableau_suivi"]))
+    s = Suivi(commun.chemin_tableau())
     a_faire = [r for r in s.rows() if (s.get(r, "Statut") or "") in A_POSTULER]
     if not a_faire:
         print("Aucune candidature « À postuler » dans le tableau. 👍")

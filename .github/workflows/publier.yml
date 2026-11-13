@@ -1,0 +1,68 @@
+# Publication d'une version : pousser un tag vX.Y.Z (ex. git tag v1.2.0 && git push origin v1.2.0)
+# -> tests, compilation de LMAgent.exe (PyInstaller), installeur LMAgent-X.Y.Z.msi (WiX), empreinte SHA-256,
+#    et création de la version GitHub avec ces fichiers. Les installations existantes s'y mettent à jour seules.
+name: Publier une version
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  installeur:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Dépendances
+        run: pip install -r requirements.txt pyinstaller pytest
+
+      - name: Tests
+        run: python -m pytest
+
+      - name: Numéro de version (depuis le tag)
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart("v")
+          if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Tag invalide : $v (attendu vX.Y.Z)" }
+          "`"`"`"Version de LMAgent (remplacée automatiquement lors de la publication).`"`"`"`n__version__ = `"$v`"" |
+            Set-Content version.py -Encoding utf8
+          "VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Compilation (PyInstaller)
+        run: python -m PyInstaller installeur/LMAgent.spec --noconfirm
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Installeur (WiX)
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          wix build installeur/LMAgent.wxs -arch x64 -d Version=$env:VERSION -bindpath Dist=dist/LMAgent -o dist/LMAgent-$env:VERSION.msi
+
+      - name: Empreinte SHA-256
+        shell: pwsh
+        run: |
+          $msi = "dist/LMAgent-$env:VERSION.msi"
+          $h = (Get-FileHash $msi -Algorithm SHA256).Hash.ToLower()
+          "$h  LMAgent-$env:VERSION.msi" | Set-Content "$msi.sha256" -Encoding ascii -NoNewline
+
+      - name: Version GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          name: LMAgent ${{ github.ref_name }}
+          files: |
+            dist/LMAgent-*.msi
+            dist/LMAgent-*.msi.sha256
+          body: |
+            Installeur Windows : télécharge `LMAgent-*.msi` et lance-le (installation pour ton compte, sans droits
+            administrateur). Windows peut afficher « éditeur inconnu » : l'installeur n'est pas signé.
+            Les installations existantes se mettent à jour toutes seules (désactivable dans Paramètres).

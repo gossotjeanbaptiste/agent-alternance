@@ -14,6 +14,7 @@ Organisation (modules dans web/src/) :
     tour_web.py       état et pilotage de la tour
     lettres.py        lettres « À postuler » (fichier local et brouillons de la messagerie)
     parametres.py     page Paramètres : signature des candidatures par formulaire
+    auth.py           compte de l'interface (identifiant + mot de passe haché), frein aux essais répétés
     relations.py      relations LinkedIn dans les entreprises du tableau
     templates/        le HTML des pages        static/  style et JavaScript
 """
@@ -23,9 +24,12 @@ import threading
 import webbrowser
 from pathlib import Path
 
-from flask import Flask
+from datetime import timedelta
+
+from flask import Flask, session
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))  # modules de l'interface (web/src)
+import auth  # noqa: E402
 import chemins  # noqa: E402,F401
 import securite  # noqa: E402
 import tour_web  # noqa: E402
@@ -37,9 +41,15 @@ HOTE, PORT = "127.0.0.1", 8765   # 127.0.0.1 = joignable uniquement depuis ce PC
 
 
 def creer_app():
-    app = Flask(__name__)
+    import emplacements
+    web = emplacements.RESSOURCES / "web"   # dans l'exe : fichiers extraits ; depuis le code : dossier web/
+    app = Flask(__name__, template_folder=str(web / "templates"), static_folder=str(web / "static"))
+    app.secret_key = auth.cle_secrete()   # signe le cookie de session (gardée : on reste connecté après un redémarrage)
+    app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Strict",
+                      PERMANENT_SESSION_LIFETIME=timedelta(days=30))
     app.before_request(securite.proteger)
-    app.context_processor(lambda: {"jeton": securite.JETON, "avec_tour": tour_web.disponible(), "statuts": STATUTS})
+    app.context_processor(lambda: {"jeton": securite.JETON, "avec_tour": tour_web.disponible(), "statuts": STATUTS,
+                                   "connecte": session.get("connecte")})
     app.register_blueprint(pages)
     app.register_blueprint(api)
     return app
@@ -54,12 +64,17 @@ def deja_lancee():
         return False
 
 
-if __name__ == "__main__":
+def lancer_interface():
+    """Démarre l'interface et ouvre le navigateur (ou ouvre celle qui tourne déjà)."""
     url = f"http://{HOTE}:{PORT}"
     if deja_lancee():
         print(f"L'interface tourne déjà : ouverture de {url} dans le navigateur.")
         webbrowser.open(url)
-        sys.exit(0)
+        return
     print(f"Interface : {url}  (accessible uniquement depuis ce PC — bouton Quitter pour arrêter)")
     threading.Timer(1.2, lambda: webbrowser.open(url)).start()
     creer_app().run(host=HOTE, port=PORT, debug=False, use_reloader=False)
+
+
+if __name__ == "__main__":
+    lancer_interface()

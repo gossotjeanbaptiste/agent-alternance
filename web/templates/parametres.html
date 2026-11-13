@@ -2,38 +2,64 @@
 {% block titre %}Paramètres{% endblock %}
 {% block contenu %}
 <h1>Paramètres</h1>
-<div class="deux">
-  <div class="carte">
-    <h2>Signature des candidatures par formulaire</h2>
-    <p class="doux">Ajoutée sous la lettre à copier pour La Bonne Alternance et les formulaires de contact des sites. Laisse vide une ligne que tu ne veux pas afficher.</p>
-    {% for cle, libelle, exemple in champs %}
-    <label class="champ">{{ libelle }}
-      <input type="text" id="s-{{ cle }}" value="{{ signature[cle] }}" placeholder="{{ exemple }}" oninput="apercu()">
-    </label>
-    {% endfor %}
-    <h2 style="margin-top:18px">Signature de tes mails</h2>
-    <label class="champ" style="display:flex;gap:8px;align-items:center">
-      <input type="checkbox" id="ajouter" {% if ajouter %}checked{% endif %} onchange="apercu()" style="width:auto">
-      Ajouter ma signature à la fin des mails (brouillons de candidature et de relance)
-    </label>
-    <p class="doux">Cochée : la signature ci-dessus (nom, titre, téléphone, mail, liens) est mise sous chaque brouillon{% if fichier %}, ou plutôt ton fichier de signature <code>{{ fichier }}</code>{% endif %}. Décochée : pas de signature (à mettre toi-même ; attention aux doublons si ta messagerie en ajoute déjà une).</p>
-    <label class="champ">Première ligne de ta signature de mail
-      <input type="text" id="debut" value="{{ debut }}" placeholder="Prénom NOM">
-    </label>
-    <p class="doux">Sert à couper ta signature du mail d'origine avant d'écrire une relance.</p>
-    <div class="actions"><button class="principal" onclick="enregistrer()">💾 Enregistrer</button></div>
+<p class="doux">Ouvre une section pour la modifier. <a href="/assistant">Revoir l'assistant de premier lancement</a></p>
+<details class="carte pli-section" id="pli-version">
+  <summary><h2 style="display:inline">Version et mises à jour</h2></summary>
+  <p>LMAgent version <b>{{ version }}</b>{% if not installee %} (lancé depuis le code : mise à jour par git){% endif %}.</p>
+  <p class="doux">Les mises à jour s'installent toutes seules (réglage dans « Tous les réglages » → Mises à jour).</p>
+  <div class="actions"><button onclick="verifierMaj()">🔄 Vérifier maintenant</button></div>
+</details>
+<details class="carte pli-section" id="pli-profil">
+  <summary><h2 style="display:inline">Profil</h2></summary>
+  <p class="doux">Ce qui guide l'écriture des mails : formation, poste visé, rythme, projets, style, et un exemple de mail qui te plaît.</p>
+  <textarea id="profil" class="zone" rows="16" spellcheck="true">{{ profil }}</textarea>
+  <div class="actions"><button class="principal" onclick="enregistrerProfil()">💾 Enregistrer</button></div>
+</details>
+<details class="carte pli-section" id="pli-signature">
+  <summary><h2 style="display:inline">Signature des candidatures par formulaire</h2></summary>
+  <div class="deux">
+    <div>
+      <p class="doux">Ajoutée sous la lettre à copier pour La Bonne Alternance et les formulaires de contact des sites. Laisse vide une ligne que tu ne veux pas afficher.</p>
+      {% for cle, libelle, exemple in champs %}
+      <label class="champ">{{ libelle }}
+        <input type="text" id="s-{{ cle }}" value="{{ signature[cle] }}" placeholder="{{ exemple }}" oninput="apercu()">
+      </label>
+      {% endfor %}
+      <div class="actions"><button class="principal" onclick="enregistrer()">💾 Enregistrer</button></div>
+    </div>
+    <div>
+      <h3>Aperçu</h3>
+      <div class="lettre" id="apercu"></div>
+    </div>
   </div>
-  <div class="carte">
-    <h2>Aperçu</h2>
-    <div class="lettre" id="apercu"></div>
-  </div>
-</div>
-<div class="carte">
-  <h2>Ce que je ne veux pas dans mes mails</h2>
+</details>
+<details class="carte pli-section" id="pli-signature-mails">
+  <summary><h2 style="display:inline">Signature de tes mails</h2></summary>
+  <label class="champ" style="display:flex;gap:8px;align-items:center">
+    <input type="checkbox" id="ajouter" {% if ajouter %}checked{% endif %} onchange="apercu()" style="width:auto">
+    Ajouter ma signature à la fin des mails (brouillons de candidature et de relance)
+  </label>
+  <p class="doux">Cochée : la signature des formulaires (nom, titre, téléphone, mail, liens) est mise sous chaque brouillon{% if fichier %}, ou plutôt ton fichier de signature <code>{{ fichier }}</code>{% endif %}. Décochée : pas de signature (à mettre toi-même ; attention aux doublons si ta messagerie en ajoute déjà une).</p>
+  <label class="champ">Première ligne de ta signature de mail
+    <input type="text" id="debut" value="{{ debut }}" placeholder="Prénom NOM">
+  </label>
+  <p class="doux">Sert à couper ta signature du mail d'origine avant d'écrire une relance.</p>
+  <div class="actions"><button class="principal" onclick="enregistrer()">💾 Enregistrer</button></div>
+</details>
+<details class="carte pli-section" id="pli-interdits">
+  <summary><h2 style="display:inline">Ce que je ne veux pas dans mes mails</h2></summary>
   <p class="doux">Une interdiction par ligne. Elles sont ajoutées à la fin des consignes du modèle pour chaque candidature, relance et réponse aux questions de La Bonne Alternance. Les lignes qui commencent par « # » ou « > » sont ignorées.</p>
   <textarea id="interdits" class="zone" rows="12" spellcheck="true">{{ interdits }}</textarea>
   <div class="actions"><button class="principal" onclick="enregistrerInterdits()">💾 Enregistrer</button></div>
-</div>
+</details>
+<details class="carte pli-section" id="pli-mot-de-passe">
+  <summary><h2 style="display:inline">Mot de passe de l'interface</h2></summary>
+  <p class="doux">Compte « {{ connecte }} ». Changer le mot de passe déconnecte les autres navigateurs, pas celui-ci.</p>
+  <label class="champ">Mot de passe actuel <input type="password" id="mdp-actuel" autocomplete="current-password"></label>
+  <label class="champ">Nouveau mot de passe <input type="password" id="mdp-nouveau" autocomplete="new-password"></label>
+  <label class="champ">Confirme le nouveau mot de passe <input type="password" id="mdp-confirmation" autocomplete="new-password"></label>
+  <div class="actions"><button class="principal" onclick="changerMotDePasse()">🔒 Changer le mot de passe</button></div>
+</details>
 <h2 style="margin-top:28px">Tous les réglages</h2>
 <p class="doux">Ouvre une section pour la modifier, puis « Enregistrer les réglages » en bas. Les routines prennent
 les changements dès leur prochain lancement. Les mots de passe et jetons ne sont jamais affichés :
@@ -95,6 +121,20 @@ async function enregistrer() {
   const r = await poster("/api/signature", {signature: valeurs(), debut: document.getElementById("debut").value,
                                          ajouter: document.getElementById("ajouter").checked});
   annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
+}
+async function verifierMaj() {
+  const r = await poster("/api/mise_a_jour", {});
+  annoncer(r.message || "Erreur", !r.ok);
+}
+async function enregistrerProfil() {
+  const r = await poster("/api/profil", {texte: document.getElementById("profil").value});
+  annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
+}
+async function changerMotDePasse() {
+  const v = id => document.getElementById(id).value;
+  const r = await poster("/api/mot_de_passe", {actuel: v("mdp-actuel"), nouveau: v("mdp-nouveau"), confirmation: v("mdp-confirmation")});
+  annoncer(r.message || (r.ok ? "Mot de passe changé." : "Erreur"), !r.ok);
+  for (const id of ["mdp-actuel", "mdp-nouveau", "mdp-confirmation"]) document.getElementById(id).value = "";
 }
 async function enregistrerReglages() {
   const valeurs = {};

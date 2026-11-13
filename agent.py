@@ -23,13 +23,15 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
+import emplacements  # noqa: E402  (où vivent config, journaux… : dossier du projet ou %APPDATA%\LMAgent)
+
 ROOT = Path(__file__).parent.resolve()
-WORKSPACE = ROOT / "workspace"
-CORBEILLE = ROOT / "corbeille"
-LOGS = ROOT / "logs"
-TACHES = ROOT / "taches"
+WORKSPACE = emplacements.dossier("workspace")
+CORBEILLE = emplacements.dossier("corbeille")
+LOGS = emplacements.dossier("logs")
+TACHES = emplacements.dossier("taches")
 for d in (WORKSPACE, CORBEILLE, LOGS, TACHES):
-    d.mkdir(exist_ok=True)
+    d.mkdir(parents=True, exist_ok=True)
 
 CONFIG = {
     "modele": "qwen/qwen3.5-9b",
@@ -39,8 +41,17 @@ CONFIG = {
     "etapes_max": 20,
     "afficher_reflexion": False,
 }
-if (ROOT / "config.json").exists():
-    CONFIG.update(json.loads((ROOT / "config.json").read_text(encoding="utf-8")))
+if emplacements.config_agent().exists():
+    CONFIG.update(json.loads(emplacements.config_agent().read_text(encoding="utf-8")))
+
+
+def utiliser_tour(config=None):
+    """Vrai si un deuxième PC (la tour) fait tourner l'IA. Réglage « utiliser_tour » ; s'il est absent
+    (anciennes configs), déduit de la liste des serveurs (un serveur autre que « ce PC »)."""
+    c = CONFIG if config is None else config
+    if "utiliser_tour" in c:
+        return bool(c["utiliser_tour"])
+    return any(s.get("url") != "local" for s in c.get("serveurs") or [])
 
 LMS = Path(os.path.expanduser(CONFIG.get("lms_local") or "~/.lmstudio/bin/lms.exe"))
 ALLOWED = [WORKSPACE] + [Path(os.path.expanduser(p)).resolve() for p in CONFIG["dossiers_autorises"]]
@@ -441,6 +452,8 @@ def ensure_server(sauf=()):
     dans l'ordre (la tour d'abord), et ce PC en dernier recours."""
     global BASE_URL, SERVEUR
     liste = list(CONFIG.get("serveurs") or [])
+    if not utiliser_tour():  # pas de deuxième PC : uniquement ce PC (aucun réveil, aucune attente)
+        liste = [s for s in liste if s.get("url") == "local"]
     if os.environ.get("LMSTUDIO_URL"):
         liste.insert(0, {"nom": "LMSTUDIO_URL", "url": os.environ["LMSTUDIO_URL"]})
     if not any(s.get("url") == "local" for s in liste):
@@ -578,7 +591,7 @@ def run_chat():
             print(f"❌ Erreur de connexion : {e}\n")
 
 
-if __name__ == "__main__":
+def main():
     ap = argparse.ArgumentParser(description="Agent IA local (LM Studio)")
     ap.add_argument("--task", help="consigne à exécuter automatiquement")
     ap.add_argument("--tache", help="nom d'un fichier taches/<nom>.txt à exécuter automatiquement")
@@ -593,3 +606,7 @@ if __name__ == "__main__":
         run_auto(a.task, "ligne de commande")
     else:
         run_chat()
+
+
+if __name__ == "__main__":
+    main()

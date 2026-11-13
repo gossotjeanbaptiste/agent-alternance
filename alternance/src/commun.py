@@ -7,9 +7,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent.parent   # dossier alternance/
 sys.path.insert(0, str(HERE.parent))            # racine du projet (agent.py)
 import agent  # noqa: E402,F401  (connexion LM Studio, journal)
-import donnees  # noqa: E402  (données personnelles : alternance/donnees/)
+import donnees  # noqa: E402  (données personnelles : alternance/donnees/ ou %APPDATA%\LMAgent\donnees)
 
 donnees.ranger()  # anciens emplacements (directement dans alternance/) -> alternance/donnees/
+donnees.initialiser()  # installation neuve : config, profil et contre-prompt créés depuis les modèles
 DONNEES = donnees.DONNEES
 CFG = json.loads(donnees.chemin("config_alternance.json").read_text(encoding="utf-8"))
 PROFIL = donnees.chemin("profil.md").read_text(encoding="utf-8")
@@ -36,6 +37,17 @@ def interdits():
 def P(p):
     """Chemin avec ~ développé."""
     return Path(os.path.expanduser(p))
+
+
+def chemin_tableau():
+    """Tableau de suivi : le chemin indiqué dans la config, sinon suivi_alternance.xlsx du dossier de données."""
+    c = (CFG.get("tableau_suivi") or "").strip()
+    return P(c) if c else donnees.chemin("suivi_alternance.xlsx")
+
+
+def pieces_jointes():
+    """Pièces jointes des candidatures (CV, calendrier…) : chemins de la config."""
+    return list(CFG.get("pieces_jointes") or [])
 
 
 def say(msg):

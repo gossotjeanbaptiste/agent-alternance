@@ -71,7 +71,7 @@ def main():
         commun.ESSAI = True  # empêche toute sauvegarde
 
     print(f"📬 Lecture de {nom_messagerie()} (brouillons et mails envoyés)...")
-    s = Suivi(P(CFG["tableau_suivi"]))
+    s = Suivi(commun.chemin_tableau())
     ol = ouvrir()
     envois = ol.envois(120)
     brouillons = ol.destinataires_brouillons()

@@ -106,7 +106,7 @@ def nouvelles_candidatures(suivi, ol):
             # à part et affichée sur la page « À postuler » (et dans postuler.py)
             reponses.enregistrer_lettre(o["lien"], corps.split("\n\n", 1)[1])
         else:
-            ol.brouillon(o.get("email"), objet, texte_vers_html(corps), pieces=CFG["pieces_jointes"])
+            ol.brouillon(o.get("email"), objet, texte_vers_html(corps), pieces=commun.pieces_jointes())
         if statut == LBA:  # le formulaire La Bonne Alternance pose aussi trois questions : réponses prêtes
             try:
                 reponses.enregistrer(o["lien"], reponses.rediger_reponses(o))

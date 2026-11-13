@@ -1,0 +1,153 @@
+"""Point d'entrée unique (lmagent.py) et routines planifiées (web/src/planification.py).
+Aucune routine ne tourne vraiment : alternance, sous-processus et schtasks sont simulés."""
+import subprocess
+import sys
+import types
+
+import pytest
+
+import lmagent
+import planification
+
+
+class TestCommandeSoi:
+    def test_depuis_le_code(self, monkeypatch):
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        c = lmagent.commande_soi()
+        assert c[0] == sys.executable and c[1].endswith("lmagent.py")
+
+    def test_version_installee(self, monkeypatch):
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "executable", r"C:\Programmes\LMAgent\LMAgent.exe")
+        assert lmagent.commande_soi() == [r"C:\Programmes\LMAgent\LMAgent.exe"]
+
+
+class TestAiguillage:
+    @pytest.fixture
+    def appels(self, monkeypatch):
+        vus = []
+        monkeypatch.setattr(lmagent, "routine", lambda a: vus.append(("routine", a)) or 0)
+        monkeypatch.setattr(lmagent, "script", lambda m, a, o: vus.append((m, sorted(o))) or 0)
+        monkeypatch.setattr(lmagent, "agent", lambda a: vus.append(("agent", a)) or 0)
+        monkeypatch.setattr(lmagent, "interface", lambda: vus.append(("interface",)) or 0)
+        return vus
+
+    @pytest.mark.parametrize("args, attendu", [
+        ([], "interface"),
+        (["--routine", "relances"], "routine"),
+        (["--postuler", "--reponses"], "postuler"),
+        (["--maj-tableau"], "maj_tableau"),
+        (["--agent", "--tache", "trier"], "agent"),
+    ])
+    def test_commandes(self, appels, args, attendu):
+        assert lmagent.main(args) == 0
+        assert appels[0][0] == attendu
+
+
+class TestRoutine:
+    @pytest.fixture
+    def faux_alternance(self, monkeypatch):
+        vu = {}
+        mod = types.ModuleType("alternance")
+        mod.main = lambda mode: vu.update(mode=mode, argv=list(sys.argv))
+        monkeypatch.setitem(sys.modules, "alternance", mod)
+        monkeypatch.setattr(sys, "argv", list(sys.argv))
+        return vu
+
+    def test_un_passage_dans_ce_processus(self, faux_alternance):
+        assert lmagent.routine(["--routine", "recherche", "--essai"]) == 0
+        assert faux_alternance["mode"] == "recherche" and faux_alternance["argv"] == ["alternance", "--essai"]
+
+    def test_plusieurs_passages_dans_des_processus_neufs(self, monkeypatch, capsys):
+        lances = []
+        monkeypatch.setattr(lmagent.subprocess, "call", lambda cmd: lances.append(cmd) or 0)
+        assert lmagent.routine(["--routine", "relances", "--fois", "3"]) == 0
+        assert len(lances) == 3 and all(c[-2:] == ["--routine", "relances"] for c in lances)
+        assert "Passage 3/3" in capsys.readouterr().out
+
+    def test_code_d_erreur_garde(self, monkeypatch):
+        codes = iter([0, 2, 0])
+        monkeypatch.setattr(lmagent.subprocess, "call", lambda cmd: next(codes))
+        assert lmagent.routine(["--routine", "tout", "--fois", "3"]) == 2
+
+    def test_essai_transmis_a_chaque_passage(self, monkeypatch):
+        lances = []
+        monkeypatch.setattr(lmagent.subprocess, "call", lambda cmd: lances.append(cmd) or 0)
+        lmagent.routine(["--routine", "relances", "--fois", "2", "--essai"])
+        assert all(c[-1] == "--essai" for c in lances)
+
+    @pytest.mark.parametrize("args", [["--routine", "formatage"], ["--routine"]])
+    def test_routine_inconnue(self, args):
+        with pytest.raises(SystemExit):
+            lmagent.routine(args)
+
+    def test_nombre_de_passages_invalide(self, faux_alternance):
+        assert lmagent.routine(["--routine", "relances", "--fois", "beaucoup"]) == 0
+        assert faux_alternance["mode"] == "relances"
+
+
+def test_script_transmet_seulement_les_options_prevues(monkeypatch):
+    vu = {}
+    mod = types.ModuleType("faux_script")
+    mod.main = lambda: vu.update(argv=list(sys.argv))
+    monkeypatch.setitem(sys.modules, "faux_script", mod)
+    monkeypatch.setattr(sys, "argv", list(sys.argv))
+    lmagent.script("faux_script", ["--postuler", "--reponses", "--pirate"], {"--reponses"})
+    assert vu["argv"] == ["faux_script", "--reponses"]
+
+
+# --- planification (schtasks simulé) ------------------------------------------------------------------
+@pytest.fixture
+def schtasks(monkeypatch):
+    appels, reponses = [], {}
+
+    def run(cmd, **k):
+        appels.append(cmd)
+        action, nom = cmd[1], cmd[3] if len(cmd) > 3 else ""
+        sortie, code = reponses.get((action, nom), ("", 0 if action != "/Query" else 1))
+        return subprocess.CompletedProcess(cmd, code, stdout=sortie, stderr="erreur simulée" if code else "")
+    monkeypatch.setattr(planification.subprocess, "run", run)
+    schtasks.appels, schtasks.reponses = appels, reponses
+    return schtasks
+
+
+class TestPlanification:
+    def test_planifier(self, schtasks):
+        ok, msg = planification.planifier("relances", "10:00")
+        assert ok and "10:00" in msg
+        cmd = schtasks.appels[0]
+        assert cmd[:4] == ["schtasks", "/Create", "/TN", "LMAgent_relances"]
+        assert cmd[cmd.index("/SC") + 1] == "DAILY" and cmd[cmd.index("/ST") + 1] == "10:00" and "/F" in cmd
+        assert cmd[cmd.index("/TR") + 1].endswith("--routine relances")
+
+    @pytest.mark.parametrize("heure", ["25:00", "10h", "", "9:5"])
+    def test_heure_invalide(self, schtasks, heure):
+        assert not planification.planifier("relances", heure)[0]
+        assert schtasks.appels == []
+
+    def test_routine_inconnue(self, schtasks):
+        assert not planification.planifier("formatage", "10:00")[0]
+        assert not planification.supprimer("formatage")[0]
+
+    def test_echec_de_schtasks(self, schtasks):
+        schtasks.reponses[("/Create", "LMAgent_relances")] = ("", 1)
+        ok, msg = planification.planifier("relances", "10:00")
+        assert not ok and "impossible" in msg
+
+    def test_supprimer(self, schtasks):
+        assert planification.supprimer("recherche")[0]
+        assert schtasks.appels[0][:4] == ["schtasks", "/Delete", "/TN", "LMAgent_recherche"]
+
+    def test_liste(self, schtasks):
+        schtasks.reponses[("/Query", "LMAgent_relances")] = ('"\\LMAgent_relances","14/11/2026 10:00:00","Prêt"\n', 0)
+        assert planification.taches() == {"relances": {"prochaine": "14/11/2026 10:00:00", "etat": "Prêt"}}
+
+    def test_api(self, client, schtasks):
+        assert client.post("/api/planification", json={"nom": "relances", "heure": "09:30"}).get_json()["ok"]
+        assert client.post("/api/planification", json={"nom": "relances", "heure": ""}).get_json()["ok"]
+        assert schtasks.appels[-1][1] == "/Delete"
+        assert client.post("/api/planification", json={"nom": "relances", "heure": "midi"}).status_code == 400
+        assert client.get("/api/planification").get_json() == {}
+
+    def test_section_dans_la_page(self, client):
+        assert 'id="pli-planification"' in client.get("/routines").get_data(as_text=True)
