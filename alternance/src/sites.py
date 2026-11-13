@@ -16,27 +16,17 @@ import unicodedata
 import urllib.parse
 import urllib.request
 
-from mails import domaine
+import reglages
+from mails import DOMAINES_PERSO, domaine
 
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                     "Chrome/124.0 Safari/537.36", "Accept-Language": "fr-FR,fr;q=0.9"}
 
-# sites qui parlent de l'entreprise sans être le sien
-ANNUAIRES = ("societe.com", "pappers", "pagesjaunes", "kompass", "dnb.com", "linkedin", "facebook",
-             "instagram", "twitter", "x.com", "youtube", "wikipedia", "mappy", "infogreffe", "verif.com",
-             "manageo", "annuaire", "indeed", "welcometothejungle", "glassdoor", "labonnealternance",
-             "france-travail", "pole-emploi", "hellowork", "findglocal", "corporama", "lefigaro", "google",
-             "bing.com", "apple.com", "yelp", "tripadvisor", "infonet", "entreprises.lefigaro", "societeinfo",
-             "score3", "ellisphere", "bfmtv", "francebleu",
-             "elioplus", "superordi", "118000", "118712", "justacote", "cylex", "hoodspot", "doctrine")
-
-# messageries grand public : acceptées si l'adresse est affichée sur le site même de l'entreprise
-GRAND_PUBLIC = ("gmail.com", "orange.fr", "wanadoo.fr", "free.fr", "outlook.fr", "outlook.com", "hotmail.fr",
-                "hotmail.com", "laposte.net", "sfr.fr", "yahoo.fr", "live.fr", "icloud.com")
-
-MOTS_CONTACT = ("contact", "nous-contacter", "contactez", "recrutement", "carriere", "carrieres", "emploi",
-                "jobs", "join", "rejoindre", "candidature", "postuler", "mentions-legales", "a-propos", "about")
-PAGES_CLASSIQUES = ("/contact", "/nous-contacter", "/contact/", "/contact.html", "/recrutement", "/mentions-legales")
+# modifiables dans la page Paramètres (section « Sites des entreprises »)
+ANNUAIRES = tuple(reglages.valeur("sites.annuaires"))          # sites qui parlent de l'entreprise sans être le sien
+GRAND_PUBLIC = tuple(DOMAINES_PERSO)                             # messageries grand public (acceptées sur le site même)
+MOTS_CONTACT = tuple(reglages.valeur("sites.mots_contact"))
+PAGES_CLASSIQUES = tuple(reglages.valeur("sites.pages_classiques"))
 FORMES = {"sarl", "sas", "sasu", "eurl", "sa", "sci", "snc", "groupe", "group", "france", "societe", "soc",
           "ste", "et", "de", "des", "du", "la", "le", "les", "services", "service", "informatique"}
 
@@ -151,7 +141,7 @@ def trouver_site(nom, lieu=""):
     site = deviner_site(nom, lieu)
     if site or RECHERCHE["bloquee"]:
         return site
-    attente = 4 - (time.time() - RECHERCHE["derniere"])  # recherches espacées, pour rester poli
+    attente = float(reglages.valeur("sites.attente_recherche_s")) - (time.time() - RECHERCHE["derniere"])  # recherches espacées, pour rester poli
     if attente > 0:
         time.sleep(attente)
     RECHERCHE["derniere"] = time.time()
@@ -224,7 +214,7 @@ def _liens_contact(html, base):
     return sorted(vus, key=lambda u: next((i for i, m in enumerate(MOTS_CONTACT) if m in u.lower()), 99))
 
 
-def explorer_site(site, pages_max=6):
+def explorer_site(site, pages_max=None):
     """{"site", "email", "formulaire"} : la meilleure adresse trouvée et la page du formulaire de contact."""
     res = {"site": site, "email": "", "formulaire": ""}
     if not site:
@@ -241,7 +231,7 @@ def explorer_site(site, pages_max=6):
     trouvees = _adresses(accueil, dom)
     vues = {site_final}
     for url in a_voir:
-        if len(vues) > pages_max:
+        if len(vues) > (pages_max or int(reglages.valeur("sites.pages_max"))):
             break
         if url in vues:
             continue

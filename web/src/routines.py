@@ -28,13 +28,13 @@ for i in range(n):
     code = subprocess.call([sys.executable, "-u", script, *args]) or code
 sys.exit(code)
 """
-MAX_PASSAGES = 50
 
 
 def lancer(nom, essai=False, fois=1):
     """Lance la routine (fois passages d'affilée) dans un processus séparé ;
     sa sortie va dans logs/web_<date>_<nom>.txt."""
-    fois = max(1, min(int(fois), MAX_PASSAGES))
+    import reglages
+    fois = max(1, min(int(fois), int(reglages.valeur("interface.passages_max"))))
     LOGS.mkdir(exist_ok=True)
     suffixe = (f"_x{fois}" if fois > 1 else "") + ("_essai" if essai else "")
     fichier = LOGS / f"web_{datetime.now():%Y%m%d_%H%M%S}_{nom}{suffixe}.txt"

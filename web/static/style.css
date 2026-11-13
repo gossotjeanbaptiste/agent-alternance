@@ -53,3 +53,6 @@ a { color: var(--accent); }
 .champ { display: block; margin: 8px 0; font-size: 13px; color: var(--doux, inherit); }
 .champ input { display: block; width: 100%; box-sizing: border-box; margin-top: 3px; font: inherit; font-size: 14px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--bord); background: var(--carte); color: var(--texte); }
 .zone { display: block; width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; line-height: 1.5; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--bord); background: var(--carte); color: var(--texte); resize: vertical; }
+.pli-section summary { cursor: pointer; user-select: none; }
+.pli-section[open] summary { margin-bottom: 8px; }
+.champ select { display: block; margin-top: 3px; }

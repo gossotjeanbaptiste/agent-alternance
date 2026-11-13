@@ -24,6 +24,9 @@ dans le dépôt et où en est le projet.
   faux modèle (`llm_json` remplacé) pour tester les consignes. Ne pas faire tourner le modèle sur le processeur
   du portable ; ne pas utiliser la tour si elle est occupée (le script vérifie sa carte graphique) ; ne jamais la
   mettre en veille sans demander.
+- **Pas de valeur en dur** : tout réglage utile à l'utilisateur est décrit dans `alternance/src/reglages.py`
+  (section, libellé, type, défaut, aide), lu dans le code avec `reglages.valeur("chemin")` et modifiable dans la page
+  Paramètres. Seuls les détails techniques (délais réseau, tailles de lecture, noms des statuts) restent dans le code.
 - **Interface web** : uniquement sur 127.0.0.1, jeton exigé pour chaque action. Après une modification du code,
   l'interface en cours doit être redémarrée (⏻ Quitter puis relance).
 
@@ -39,6 +42,7 @@ dans le dépôt et où en est le projet.
 | `alternance/donnees/` | **données personnelles** (non versionnées) + modèles `*.example.*` versionnés : `config_alternance.json`, `profil.md`, `interdits.md` (contre-prompt), `suivi_alternance.xlsx`, `reponses_lba.json`, `entreprises_refusees.csv` |
 | `alternance/src/donnees.py` | chemins des données ; range automatiquement les anciens fichiers de `alternance/` dans `donnees/` |
 | `alternance/src/commun.py` | config, profil, contre-prompt (`interdits()`), mode essai, signature des mails |
+| `alternance/src/reglages.py` | tous les réglages modifiables (défauts, aides) ; `web/src/reglages_web.py` les affiche et les enregistre |
 | `alternance/src/messagerie.py` | choisit `outlook.py` (COM) ou `imap.py` selon `messagerie.type` — même interface |
 | `alternance/src/suivi.py` | mise à jour du suivi, réponses, non-remises, relances |
 | `alternance/src/candidatures.py`, `sources.py`, `sites.py` | choix des entreprises (liste perso, alertes LinkedIn, API La Bonne Alternance), site et contact de l'entreprise |

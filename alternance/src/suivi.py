@@ -9,6 +9,7 @@ from jours import date_relance, heure_aleatoire, prochain_ouvrable
 from mails import DOMAINES_PERSO, domaine, est_adresse, est_generique, texte_vers_html
 from modele import llm, llm_json
 from messagerie import nom_messagerie, texte_mail, type_messagerie
+import reglages
 from tableau import MAIL, as_date
 
 def classer_reponse(entreprise, sujet, corps):
@@ -178,7 +179,7 @@ def preparer_relance(suivi, ol, row, t_envoi, sujet, item):
         consigne_ton = (f"Ton : {'formel, « Madame, Monsieur, »' if formel else 'vouvoiement mais plus direct, en nommant la personne'}.")
     try:
         corps = llm(
-            f"{PROFIL}\n\n---\nÉcris un mail de RELANCE n°{nb} (court : 60 à 110 mots) pour la candidature "
+            f"{PROFIL}\n\n---\nÉcris un mail de RELANCE n°{nb} (court : {reglages.valeur('redaction.longueur_relance')}) pour la candidature "
             f"envoyée le {t_envoi:%d/%m/%Y} à « {ent} »"
             f"{' (contact : ' + contact + ')' if contact else ''}, restée sans réponse.\n"
             f"{consigne_ton}\n"
