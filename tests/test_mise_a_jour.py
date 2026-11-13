@@ -177,7 +177,7 @@ def test_lancer_installation_commande(monkeypatch, tmp_path):
     monkeypatch.setattr(mise_a_jour.subprocess, "Popen", lambda cmd, **k: vu.update(cmd=cmd, **k))
     mise_a_jour.lancer_installation(tmp_path / "LMAgent-9.9.9.msi")
     script = vu["cmd"][-1]
-    assert "Wait-Process" in script and "msiexec" in script and "/qn" in script and "LMAgent-9.9.9.msi" in script
+    assert "Wait-Process" in script and "msiexec" in script and "/passive" in script and "/qn" not in script and "LMAgent-9.9.9.msi" in script
     assert "/l*v" in script and "installation_LMAgent-9.9.9.txt" in script      # journal de l'installeur
     assert (emplacements.dossier("logs")).is_dir()
 

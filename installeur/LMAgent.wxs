@@ -4,7 +4,7 @@
       wix build installeur/LMAgent.wxs -arch x64 -d Version=1.2.3 -d Dist=C:\chemin\absolu\dist\LMAgent -o dist/LMAgent-1.2.3.msi
   (Dist doit être un chemin ABSOLU : un chemin relatif est cherché depuis installeur/ et rien n'est inclus.)
   - installation par utilisateur dans %LOCALAPPDATA%\Programs\LMAgent : aucune demande d'autorisation Windows,
-    ce qui permet les mises à jour silencieuses (msiexec /qn) ;
+    ce qui permet les mises à jour sans questions (msiexec /passive : seulement la barre de progression) ;
   - une nouvelle version remplace l'ancienne (MajorUpgrade, même UpgradeCode pour toujours) ;
   - les données de l'utilisateur sont ailleurs (%APPDATA%\LMAgent) : jamais touchées par l'installation,
     la mise à jour ni la désinstallation.

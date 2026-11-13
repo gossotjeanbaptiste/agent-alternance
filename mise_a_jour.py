@@ -3,7 +3,8 @@
 Au lancement de l'interface (et toutes les 6 heures ensuite, si aucune routine ne tourne) :
 1. demande à GitHub la dernière version publiée (tag vX.Y.Z) du dépôt indiqué dans les réglages ;
 2. si elle est plus récente, télécharge le .msi et son empreinte .sha256, et vérifie l'empreinte ;
-3. lance l'installation silencieuse (installation par utilisateur : pas de demande d'autorisation Windows)
+3. lance l'installation sans questions, avec la fenêtre de progression de Windows (msiexec /passive, comme
+   MyCMS ; installation par utilisateur : pas de demande d'autorisation Windows)
    après la fermeture de LMAgent, puis relance LMAgent.
 
 Rien ne se passe quand LMAgent tourne depuis le code (mise à jour par git), ni si le réglage
@@ -111,13 +112,14 @@ def _ps(texte):
 
 
 def commande_installation(msi, pid=None, exe=None):
-    """Commande PowerShell : attend la fermeture de LMAgent, installe en silence (journal dans logs/), relance LMAgent."""
+    """Commande PowerShell : attend la fermeture de LMAgent, installe (barre de progression, aucune question ;
+    journal dans logs/), relance LMAgent."""
     logs = emplacements.dossier("logs")
     logs.mkdir(parents=True, exist_ok=True)
     journal = logs / f"installation_{Path(msi).stem}.txt"
     script = (f"Wait-Process -Id {pid or os.getpid()} -ErrorAction SilentlyContinue; "
               f"Start-Process msiexec.exe -Wait -ArgumentList "
-              f"'/i',{_ps(chr(34) + str(msi) + chr(34))},'/qn','/norestart','/l*v',{_ps(chr(34) + str(journal) + chr(34))}; "
+              f"'/i',{_ps(chr(34) + str(msi) + chr(34))},'/passive','/norestart','/l*v',{_ps(chr(34) + str(journal) + chr(34))}; "
               f"Start-Process {_ps(exe or sys.executable)}")
     return ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script]
 
