@@ -131,19 +131,38 @@ class Imap:
             raise SystemExit(f"❌ Messagerie IMAP : il manque {', '.join(manque)} dans "
                              "config_alternance.json (rubrique « messagerie » → « imap »)")
         self.adresse = c["adresse"]
+        self._reglages = c
         say(f"   Connexion à la messagerie {c['serveur']} ({self.adresse})...")
+        self._connecter()
+        self.dossiers = self._dossiers_speciaux()
+        self._cache_recus = None
+        self.fichier_signature = c.get("signature_html") or ""  # vide : signature construite (voir commun)
+
+    # --- outils ------------------------------------------------------------------------
+    def _connecter(self):
+        c = self._reglages
         self.cx = imaplib.IMAP4_SSL(c["serveur"], int(c.get("port", 993)), timeout=60)
         try:
             self.cx.login(self.adresse, c["mot_de_passe_app"])
         except imaplib.IMAP4.error as e:
             raise SystemExit(f"❌ Connexion refusée par {c['serveur']} ({e}). Pour Gmail : utilise un "
                              "« mot de passe d'application » (pas ton mot de passe normal), et active IMAP.")
-        self.dossiers = self._dossiers_speciaux()
-        self._cache_recus = None
         self._selectionne = None
-        self.fichier_signature = c.get("signature_html") or ""  # vide : signature construite (voir commun)
 
-    # --- outils ------------------------------------------------------------------------
+    def _avec_reprise(self, action):
+        """Exécute action() ; si le serveur a coupé la connexion (Gmail ferme celles qui restent
+        inactives pendant que le modèle écrit les lettres), se reconnecte et réessaie une fois."""
+        try:
+            return action()
+        except (imaplib.IMAP4.abort, OSError) as e:
+            say(f"   🔌 Connexion à la messagerie coupée ({e}) : reconnexion...")
+            try:
+                self.cx.shutdown()
+            except Exception:
+                pass
+            self._connecter()
+            return action()
+
     def _dossiers_speciaux(self):
         """Trouve Envoyés / Brouillons par leur rôle (\\Sent, \\Drafts) : le nom dépend de la langue."""
         trouves = {"recus": "INBOX"}
@@ -173,6 +192,9 @@ class Imap:
 
     def _entetes(self, dossier, critere, champs):
         """[(uid, {en-tête: valeur})] des mails du dossier qui répondent au critère IMAP."""
+        return self._avec_reprise(lambda: self._entetes_sans_reprise(dossier, critere, champs))
+
+    def _entetes_sans_reprise(self, dossier, critere, champs):
         self._choisir(dossier)
         _, data = self.cx.uid("search", None, *([critere] if isinstance(critere, str) else critere))
         uids = (data[0] or b"").split()
@@ -190,8 +212,10 @@ class Imap:
 
     def telecharger(self, dossier, uid, maxi=None):
         """Message complet, ou seulement ses maxi premiers octets (assez pour le texte)."""
-        self._choisir(dossier)
-        _, rep = self.cx.uid("fetch", uid, f"(BODY.PEEK[]<0.{maxi}>)" if maxi else "(BODY.PEEK[])")
+        def lire():
+            self._choisir(dossier)
+            return self.cx.uid("fetch", uid, f"(BODY.PEEK[]<0.{maxi}>)" if maxi else "(BODY.PEEK[])")
+        _, rep = self._avec_reprise(lire)
         brut = next((b[1] for b in rep or [] if isinstance(b, tuple)), b"")
         return email.message_from_bytes(brut, policy=email.policy.default)
 
@@ -323,8 +347,9 @@ class Imap:
             if donnees:
                 principal, _, sous = typ.partition("/")
                 msg.add_attachment(donnees, maintype=principal, subtype=sous or "octet-stream", filename=nom)
-        self.cx.append(self.dossiers["brouillons"], "(\\Draft)", imaplib.Time2Internaldate(time.time()),
-                       msg.as_bytes())
+        brut = msg.as_bytes()
+        self._avec_reprise(lambda: self.cx.append(self.dossiers["brouillons"], "(\\Draft)",
+                                                  imaplib.Time2Internaldate(time.time()), brut))
 
 
 def _texte_en_html(msg):
