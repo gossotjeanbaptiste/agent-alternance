@@ -55,13 +55,7 @@ class Outlook:
         self._cache_recus = None
         self._utc = datetime.now().astimezone().utcoffset()  # Outlook donne les heures en UTC
         # Le nouvel Outlook ajoute déjà ta signature automatiquement à l'ouverture du brouillon :
-        # l'ajouter ici la doublerait. Mettre "ajouter_signature": true si un jour ce n'est plus le cas.
-        self.signature = ""
-        if CFG.get("ajouter_signature", False):
-            sig = P(CFG["signature_html"])
-            self.signature = sig.read_text(encoding="utf-8", errors="replace") if sig.exists() else ""
-            if not self.signature:
-                say("⚠️ Signature Outlook introuvable : les brouillons seront sans signature")
+        # dans ce cas laisser "ajouter_signature" à false, sinon elle apparaît deux fois.
 
     @staticmethod
     def _addr(entry_or_recipient):
@@ -211,7 +205,7 @@ class Outlook:
         mail.Subject = sujet
         ancien = mail.HTMLBody if base is not None else ""
         mail.HTMLBody = (f"<div style='font-family:Calibri,Arial,sans-serif;font-size:11pt'>{corps_html}</div>"
-                         f"<br>{self.signature}{ancien}")
+                         f"<br>{commun.signature_mail(CFG.get('signature_html'))}{ancien}")
         for p in pieces:
             if P(p).exists():
                 mail.Attachments.Add(str(P(p)))

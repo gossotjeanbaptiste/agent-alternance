@@ -32,8 +32,9 @@ def suivi():
 def page_parametres():
     import parametres
     signature, debut = parametres.lire()
+    ajouter, fichier = parametres.ajouter_signature()
     return render_template("parametres.html", page="parametres", champs=parametres.CHAMPS,
-                           signature=signature, debut=debut)
+                           signature=signature, debut=debut, ajouter=ajouter, fichier=fichier)
 
 
 @pages.route("/postuler")

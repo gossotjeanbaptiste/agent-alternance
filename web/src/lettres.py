@@ -4,20 +4,34 @@ import time
 
 import chemins  # noqa: F401
 
-CACHE = {"quand": 0, "lettres": {}, "signature": ""}
+CACHE = {"quand": 0, "lettres": {}, "signature": "", "note": None}
+
+
+def _outlook_ferme():
+    """Vrai si la messagerie est l'Outlook classique et qu'il n'est pas lancé : la page ne l'ouvre pas
+    (le lancer prend ~20 s, la page semblait ne pas répondre et il fallait cliquer deux fois)."""
+    from messagerie import type_messagerie
+    if type_messagerie() != "outlook":
+        return False
+    import outlook
+    return not outlook._outlook_lance()
 
 
 def lettres_et_signature():
     if time.time() - CACHE["quand"] > 300:
         import pythoncom
         import postuler_lba
+        ferme = _outlook_ferme()
         pythoncom.CoInitialize()  # Outlook (COM) depuis un fil du serveur web
         try:
-            CACHE["lettres"] = postuler_lba.lettres_des_brouillons()
+            CACHE["lettres"] = postuler_lba.lettres_des_brouillons(lire_messagerie=not ferme)
             CACHE["signature"] = postuler_lba.signature()
         finally:
             pythoncom.CoUninitialize()
-        CACHE["quand"] = time.time()
+        CACHE["note"] = ("Outlook classique fermé : les lettres des candidatures par mail ne sont pas affichées "
+                         "(ouvre Outlook puis recharge la page)." if ferme else None)
+        if not ferme:  # Outlook fermé : pas de cache, il sera lu dès qu'il sera ouvert
+            CACHE["quand"] = time.time()
     return CACHE["lettres"], CACHE["signature"]
 
 
@@ -55,4 +69,6 @@ def ajouter_lettres(lignes):
             continue
         lettre = lettres.get((l.get("Lien") or "").strip())
         l["_lettre"] = (lettre + "\n\n" + sig) if lettre and sig else lettre
-    return None
+    for l in lignes:
+        l["_ferme"] = bool(CACHE["note"])
+    return CACHE["note"]

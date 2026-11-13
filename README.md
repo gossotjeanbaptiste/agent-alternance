@@ -22,7 +22,7 @@ Pour arrêter : bouton **⏻ Quitter** en haut à droite (ou ferme la fenêtre n
 Dans l'interface :
 - **Routines** → « Relances » / « Recherche » (coche « mode essai » pour tester sans rien écrire) ;
 - **À postuler** → ouvrir la page (La Bonne Alternance ou formulaire de contact du site de l'entreprise), copier la lettre et, pour La Bonne Alternance, les réponses aux trois questions du formulaire (motivations, missions, expériences), marquer « Envoyée ». Les candidatures par mail y sont aussi, marquées 📧 « Par mail » (le brouillon attend dans ta messagerie, l'envoi est repéré tout seul ; « Abandonner » met ce brouillon à la corbeille) ;
-- **Paramètres** → modifier la signature ajoutée sous les lettres des formulaires (La Bonne Alternance, sites), avec aperçu ;
+- **Paramètres** → modifier la signature ajoutée sous les lettres des formulaires (La Bonne Alternance, sites), avec aperçu, et choisir de la mettre ou non sous les mails ;
 - **Suivi** → changer un statut ; **Tableau de bord** → voir où tu en es ; **Tour** → réveiller, démarrer LM Studio, mettre en veille.
 
 ### En ligne de commande
@@ -129,7 +129,7 @@ Puis remplir chaque fichier comme ci-dessous.
 | `la_bonne_alternance.villes` | Points de recherche `{"nom", "lat", "lon"}` (coordonnées sur geo.api.gouv.fr ou Google Maps) |
 | `pieces_jointes` | Chemins de ton CV et de ton calendrier d'alternance (à mettre dans `pieces_jointes/`) |
 | `tableau_suivi` | Chemin du tableau Excel (créé automatiquement s'il n'existe pas ; voir le modèle `suivi_alternance.example.xlsx`, 4 lignes fictives) |
-| `signature_html` | Seulement si `ajouter_signature` est à `true` : chemin de ta signature Outlook (`%APPDATA%\Microsoft\Signatures\…htm`) |
+| `signature_html` | Facultatif, avec `ajouter_signature` à `true` : chemin de ta signature Outlook (`%APPDATA%\Microsoft\Signatures\…htm`). Absent ou introuvable : signature construite à partir de `signature_formulaire` |
 
 ### Selon tes envies
 
@@ -142,7 +142,7 @@ Puis remplir chaque fichier comme ci-dessous.
 | `heure_envoi_relance` / `fenetre_aleatoire_minutes` | `09:30` / `15` | Heure conseillée pour la relance (entre 9h30 et 9h44, prochain jour ouvrable) : affichée dans le journal et le tableau, à planifier toi-même (nouvel Outlook : Envoyer → Planifier l'envoi ; Gmail : flèche à côté d'Envoyer → Programmer l'envoi) |
 | `jours_feries_alsace` | `false` | Ajoute le Vendredi saint et le 26 décembre |
 | `messagerie.type` | `"outlook"` | `"outlook"` ou `"imap"` (Gmail…) : voir [Messagerie : Outlook ou Gmail](#messagerie--outlook-ou-gmail) |
-| `ajouter_signature` | `false` | Outlook : `false` si Outlook ajoute déjà ta signature (sinon elle apparaît deux fois) |
+| `ajouter_signature` | `false` | `true` : ta signature est mise sous chaque brouillon (candidature et relance) : ton fichier HTML s'il est indiqué, sinon nom, titre, téléphone, mail et liens de `signature_formulaire`. Se règle aussi dans la page **Paramètres**. Laisse `false` si ta messagerie ajoute déjà la signature (sinon elle apparaît deux fois) |
 | `signature_formulaire` | ton nom, titre, téléphone, mail, LinkedIn, portfolio, GitHub | Signature ajoutée aux lettres collées dans les formulaires (La Bonne Alternance) |
 | `reflexion` | `false` | Comme dans `config.json` |
 | `la_bonne_alternance.codes_rome` | informatique | Métiers recherchés ([codes ROME](https://www.francetravail.fr)) |
@@ -165,7 +165,7 @@ il lit tes mails (envois, réponses, avis de non-remise, alertes LinkedIn) et d�
 | Brouillons visibles dans | Outlook classique, nouvel Outlook, téléphone | Gmail (web, appli, téléphone) |
 | Planifier un envoi | nouvel Outlook : Envoyer → Planifier l'envoi | Gmail : flèche à côté d'Envoyer → Programmer l'envoi |
 | Relances | le mail d'origine est transféré | le mail d'origine est cité en dessous, avec ses pièces jointes |
-| Signature | ajoutée par Outlook (`ajouter_signature: false`) | fichier HTML indiqué dans `imap.signature_html` (vide = pas de signature) |
+| Signature | souvent ajoutée par Outlook lui-même : laisser `ajouter_signature: false` | Gmail n'ajoute pas sa signature aux brouillons créés par le script : mettre `ajouter_signature: true` (fichier HTML `imap.signature_html`, ou vide = signature construite depuis `signature_formulaire`) |
 
 **Mettre Gmail en place :**
 1. Active la **validation en deux étapes** sur ton compte Google.

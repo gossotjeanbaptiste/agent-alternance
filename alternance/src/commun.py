@@ -21,3 +21,29 @@ def P(p):
 
 def say(msg):
     agent.say(msg)
+
+
+def signature_mail(fichier=None):
+    """Signature HTML à mettre sous les mails, ou "" si "ajouter_signature" est à false.
+
+    Prend le fichier HTML indiqué s'il existe (signature Outlook, ou imap.signature_html), sinon
+    construit la signature à partir de "signature_formulaire" (nom, titre, téléphone, mail, liens).
+    Lu à chaque brouillon : un changement fait dans la page Paramètres compte tout de suite.
+    """
+    if not CFG.get("ajouter_signature", False):
+        return ""
+    if fichier and P(fichier).is_file():
+        return P(fichier).read_text(encoding="utf-8", errors="replace")
+    from html import escape
+    s = CFG.get("signature_formulaire") or {}
+    lignes = [f"<b>{escape(s['nom'])}</b>" if s.get("nom") else ""]
+    lignes += [escape(s.get(c) or "") for c in ("titre", "telephone", "email")]
+    for etiquette, cle in (("LinkedIn", "linkedin"), ("Portfolio", "portfolio"), ("GitHub", "github")):
+        if s.get(cle):
+            u = escape(s[cle])
+            lignes.append(f"{etiquette} : <a href='{u}'>{u}</a>")
+    lignes = [l for l in lignes if l]
+    if not lignes:
+        return ""
+    return ("<div style='font-family:Calibri,Arial,sans-serif;font-size:11pt'>"
+            + "<br>".join(lignes) + "</div>")

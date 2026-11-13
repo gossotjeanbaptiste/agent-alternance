@@ -8,6 +8,8 @@ Réglages (config_alternance.json) :
     "messagerie": {"type": "imap", "imap": {"serveur": "imap.gmail.com", "port": 993,
                    "adresse": "toi@gmail.com", "mot_de_passe_app": "xxxx xxxx xxxx xxxx",
                    "signature_html": "chemin/vers/signature.html"}}
+    "ajouter_signature": true  -> signature sous les brouillons (fichier ci-dessus, ou vide = construite
+                                  depuis "signature_formulaire" ; voir commun.signature_mail)
 """
 import email
 import email.header
@@ -79,7 +81,7 @@ def _texte(msg):
 class MailImap:
     """Un mail du serveur ; son contenu complet n'est téléchargé que si on en a besoin."""
     def __init__(self, boite, dossier, uid, entetes):
-        self._boite, self._dossier, self._uid, self._msg = boite, dossier, uid, None
+        self._boite, self._dossier, self._uid, self._msg, self._debut = boite, dossier, uid, None, None
         self.Subject = _decoder(entetes.get("Subject"))
         self.entetes = entetes
 
@@ -90,7 +92,13 @@ class MailImap:
 
     @property
     def Body(self):  # même nom que dans Outlook : texte_mail() marche pour les deux
-        return _texte(self.message())
+        # Le texte est au début du mail, les pièces jointes (CV, PDF…) après : on ne télécharge
+        # que le début, sinon chaque brouillon coûte ~1 s (le message complet sert aux relances).
+        if self._msg is not None:
+            return _texte(self._msg)
+        if self._debut is None:
+            self._debut = self._boite.telecharger(self._dossier, self._uid, maxi=200_000)
+        return _texte(self._debut)
 
 
 class Recu(dict):
@@ -133,10 +141,7 @@ class Imap:
         self.dossiers = self._dossiers_speciaux()
         self._cache_recus = None
         self._selectionne = None
-        self.signature = ""
-        sig = c.get("signature_html")
-        if sig and P(sig).exists():
-            self.signature = P(sig).read_text(encoding="utf-8", errors="replace")
+        self.fichier_signature = c.get("signature_html") or ""  # vide : signature construite (voir commun)
 
     # --- outils ------------------------------------------------------------------------
     def _dossiers_speciaux(self):
@@ -183,9 +188,10 @@ class Imap:
                     res.append((m.group(1).decode(), email.message_from_bytes(bloc[1])))
         return res
 
-    def telecharger(self, dossier, uid):
+    def telecharger(self, dossier, uid, maxi=None):
+        """Message complet, ou seulement ses maxi premiers octets (assez pour le texte)."""
         self._choisir(dossier)
-        _, rep = self.cx.uid("fetch", uid, "(BODY.PEEK[])")
+        _, rep = self.cx.uid("fetch", uid, f"(BODY.PEEK[]<0.{maxi}>)" if maxi else "(BODY.PEEK[])")
         brut = next((b[1] for b in rep or [] if isinstance(b, tuple)), b"")
         return email.message_from_bytes(brut, policy=email.policy.default)
 
@@ -245,9 +251,18 @@ class Imap:
 
     def textes_brouillons(self):
         """[(sujet, texte, [destinataires])] des brouillons (pour la page « À postuler »)."""
+        # Une seule requête pour tous les brouillons (un aller-retour par mail coûtait ~0,8 s chacun),
+        # et seulement le début de chaque mail : le texte, sans les pièces jointes.
         d = self.dossiers["brouillons"]
-        return [(m.Subject, m.Body, _adresses(h.get("To"), h.get("Cc"))) for m, h in
-                ((MailImap(self, d, uid, h), h) for uid, h in self._entetes(d, "ALL", ["SUBJECT", "TO", "CC"]))]
+        self._choisir(d)
+        _, rep = self.cx.uid("fetch", "1:*", "(UID BODY.PEEK[]<0.200000>)")
+        res = []
+        for bloc in rep or []:
+            if not isinstance(bloc, tuple):
+                continue
+            msg = email.message_from_bytes(bloc[1], policy=email.policy.default)
+            res.append((_decoder(msg.get("Subject")).strip(), _texte(msg), _adresses(msg.get("To"), msg.get("Cc"))))
+        return res
 
     def supprimer_brouillons(self, adresse):
         """Met à la corbeille les brouillons adressés à cette adresse. Renvoie leur nombre."""
@@ -282,7 +297,7 @@ class Imap:
         msg["Subject"] = sujet
         msg["Date"] = formatdate(localtime=True)
         msg["Message-ID"] = make_msgid()
-        corps = f"<div style='font-family:Calibri,Arial,sans-serif;font-size:11pt'>{corps_html}</div><br>{self.signature}"
+        corps = f"<div style='font-family:Calibri,Arial,sans-serif;font-size:11pt'>{corps_html}</div><br>{commun.signature_mail(self.fichier_signature)}"
         a_joindre = []
         if base is not None:  # relance : le mail d'origine est cité en dessous, avec ses pièces jointes
             orig = base.message()
