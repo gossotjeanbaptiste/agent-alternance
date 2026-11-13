@@ -26,11 +26,14 @@ def demarrer(url, image, journal=print):
 
 
 def arreter():
-    """Retire l'icône (sinon elle reste affichée jusqu'au survol de la souris)."""
+    """Retire l'icône (sinon elle reste affichée jusqu'au survol de la souris).
+    visible = False la retire tout de suite (stop() ne fait que poster un message : os._exit passerait avant)."""
     icone, ICONE["objet"] = ICONE["objet"], None
-    if icone is not None:
+    if icone is None:
+        return
+    for action in (lambda: setattr(icone, "visible", False), icone.stop):
         try:
-            icone.stop()
+            action()
         except Exception:
             pass
 
