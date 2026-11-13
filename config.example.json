@@ -1,0 +1,48 @@
+{
+  "modele": "qwen/qwen3.5-9b",
+  "tour": {
+    "mac": "AA:BB:CC:DD:EE:FF",
+    "broadcast": "192.168.1.255",
+    "wol_internet": {
+      "hote": "",
+      "ports": [
+        9,
+        7
+      ]
+    },
+    "ssh": "utilisateur@nom-de-la-tour",
+    "url_lmstudio": "http://nom-de-la-tour:1236/v1",
+    "attente_reveil_s": 150,
+    "veille_apres": false,
+    "port_serveur": 1235,
+    "lms_tour": "C:\\Users\\utilisateur\\.lmstudio\\bin\\lms.exe",
+    "ssh_lan": "utilisateur@192.168.1.XX",
+    "tailscale_tour": "C:\\Program Files\\Tailscale\\tailscale.exe",
+    "fermer_lmstudio_apres": true,
+    "verifier_gpu": true,
+    "vram_libre_min_mo": 7000,
+    "gpu_utilisation_max": 40
+  },
+  "serveurs": [
+    {
+      "nom": "tour",
+      "url": "http://nom-de-la-tour:1236/v1",
+      "reveil": true
+    },
+    {
+      "nom": "ce PC",
+      "url": "local"
+    }
+  ],
+  "contexte": 16384,
+  "gpu": "auto",
+  "decharger_a_la_fin": true,
+  "dossiers_autorises": [
+    "~/Downloads"
+  ],
+  "powershell_en_auto": false,
+  "etapes_max": 20,
+  "afficher_reflexion": false,
+  "reflexion": false,
+  "fermer_lmstudio_apres": true
+}

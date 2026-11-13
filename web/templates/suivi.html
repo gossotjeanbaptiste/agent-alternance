@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block titre %}Suivi{% endblock %}
+{% block contenu %}
+<h1>Suivi des candidatures <span class="doux" id="compte"></span></h1>
+<div class="filtres">
+  <input type="search" id="recherche" placeholder="Rechercher (entreprise, poste, contact…)" size="36">
+  <select id="f-statut"><option value="">Tous les statuts</option>{% for st in statuts %}<option>{{ st }}</option>{% endfor %}</select>
+  <select id="f-source"><option value="">Toutes les sources</option><option>La Bonne Alternance</option><option>LinkedIn</option><option>Liste perso</option><option>Ancien tableau</option></select>
+</div>
+<div class="carte" style="padding:0; overflow:auto">
+<table id="tableau">
+  <tr><th>Entreprise</th><th>Poste</th><th>Lieu</th><th>Statut</th><th>Envoi</th><th>Relance prévue</th><th>Contact</th><th>Dernière réponse</th></tr>
+  {% for l in lignes %}
+  <tr data-statut="{{ l['Statut'] or '' }}" data-source="{{ l['Source'] or '' }}">
+    <td><b>{{ l['Entreprise'] }}</b>{% if l['Lien'] and l['Lien'].startswith('http') %} <a href="{{ l['Lien'] }}" target="_blank" rel="noopener">↗</a>{% endif %}</td>
+    <td>{{ l['Poste'] or '' }}</td>
+    <td>{{ l['Lieu'] or '' }}</td>
+    <td>
+      <select data-entreprise="{{ l['Entreprise'] }}" onchange="changer(this, {{ l['_ligne'] }}, this.dataset.entreprise)" style="background:#{{ statuts.get(l['Statut'], 'EDEDED') }}; color:#222">
+        {% for st in statuts %}<option {{ 'selected' if st == l['Statut'] }}>{{ st }}</option>{% endfor %}
+        {% if l['Statut'] not in statuts %}<option selected>{{ l['Statut'] }}</option>{% endif %}
+      </select>
+    </td>
+    <td>{{ l['Date envoi'].strftime('%d/%m/%y') if l['Date envoi'] else '' }}</td>
+    <td>{{ l['Relance prévue'].strftime('%d/%m/%y') if l['Relance prévue'] else '' }}</td>
+    <td>{{ l['Contact'] or '' }}{% if l['Email'] %}<br><span class="doux">{{ l['Email'] }}</span>{% endif %}</td>
+    <td class="doux">{{ (l['Dernière réponse'] or '')[:120] }}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+const couleurs = {{ statuts|tojson }};
+async function changer(sel, ligne, entreprise) {
+  const ok = await changerStatut(ligne, entreprise, sel.value);
+  if (ok) { sel.style.background = "#" + (couleurs[sel.value] || "EDEDED"); sel.closest("tr").dataset.statut = sel.value; }
+  else { location.reload(); }
+}
+function filtrer() {
+  const q = document.getElementById("recherche").value.toLowerCase();
+  const st = document.getElementById("f-statut").value;
+  const so = document.getElementById("f-source").value;
+  let n = 0;
+  document.querySelectorAll("#tableau tr[data-statut]").forEach(tr => {
+    const ok = (!q || tr.textContent.toLowerCase().includes(q)) && (!st || tr.dataset.statut === st) && (!so || tr.dataset.source.startsWith(so));
+    tr.style.display = ok ? "" : "none"; if (ok) n++;
+  });
+  document.getElementById("compte").textContent = "(" + n + ")";
+}
+["recherche", "f-statut", "f-source"].forEach(id => document.getElementById(id).addEventListener("input", filtrer));
+filtrer();
+</script>
+{% endblock %}

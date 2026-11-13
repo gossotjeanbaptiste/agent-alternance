@@ -1,0 +1,58 @@
+"""Lettres des candidatures « À postuler » (brouillons, mis en cache 5 min) et réponses du formulaire."""
+import re
+import time
+
+import chemins  # noqa: F401
+
+CACHE = {"quand": 0, "lettres": {}, "signature": ""}
+
+
+def lettres_et_signature():
+    if time.time() - CACHE["quand"] > 300:
+        import pythoncom
+        import postuler_lba
+        pythoncom.CoInitialize()  # Outlook (COM) depuis un fil du serveur web
+        try:
+            CACHE["lettres"] = postuler_lba.lettres_des_brouillons()
+            CACHE["signature"] = postuler_lba.signature()
+        finally:
+            pythoncom.CoUninitialize()
+        CACHE["quand"] = time.time()
+    return CACHE["lettres"], CACHE["signature"]
+
+
+def supprimer_brouillons(adresse):
+    """Met à la corbeille les brouillons adressés à cette adresse ; renvoie un message pour l'interface."""
+    import pythoncom
+    from messagerie import nom_messagerie, ouvrir
+    pythoncom.CoInitialize()
+    try:
+        n = ouvrir().supprimer_brouillons(adresse)
+    except Exception as e:
+        return f"Brouillon non supprimé ({e}) : supprime-le à la main dans {nom_messagerie()}."
+    finally:
+        pythoncom.CoUninitialize()
+    CACHE["quand"] = 0  # la liste des lettres a changé
+    return f"Brouillon mis à la corbeille de {nom_messagerie()}." if n else "Aucun brouillon trouvé pour cette adresse."
+
+
+def ajouter_lettres(lignes):
+    """Ajoute à chaque ligne « _lettre » (lettre + signature) si un brouillon existe. Renvoie un message d'erreur ou None."""
+    try:
+        lettres, sig = lettres_et_signature()
+    except Exception as e:
+        return f"Lecture des lettres et brouillons impossible : {e}"
+    import reponses
+    deja = reponses.lire()
+    for l in lignes:
+        l["_mail"] = l.get("Statut") == "Brouillon"
+        l["_lba"] = l.get("Statut") == "À postuler (La Bonne Alternance)"
+        m = re.search(r"Formulaire : (\S+)", str(l.get("Notes") or ""))
+        l["_formulaire"] = m.group(1) if m and l["_lba"] else ""  # 2e solution : le formulaire du site
+        l["_reponses"] = reponses.en_liste(deja.get((l.get("Lien") or "").strip()) or {})
+        if l["_mail"]:  # brouillon de mail : la signature est déjà celle de la messagerie
+            l["_lettre"] = lettres.get(str(l.get("Email") or "").strip().lower())
+            continue
+        lettre = lettres.get((l.get("Lien") or "").strip())
+        l["_lettre"] = (lettre + "\n\n" + sig) if lettre and sig else lettre
+    return None

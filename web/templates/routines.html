@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block titre %}Routines{% endblock %}
+{% block contenu %}
+<h1>Routines</h1>
+<div class="carte">
+  <div class="actions">
+    <button class="principal" onclick="lancer('relances')">🔁 Relances</button>
+    <button class="principal" onclick="lancer('recherche')">🔎 Recherche</button>
+    <button onclick="lancer('tout')">Les deux</button>
+    <label style="align-self:center"><input type="checkbox" id="essai"> mode essai (rien n'est écrit)</label>
+  </div>
+  <p class="doux">La routine utilise la tour si elle est disponible, sinon ce PC. Le tableau ne peut pas être modifié depuis l'interface pendant qu'elle tourne.</p>
+</div>
+<div class="carte">
+  <h2 id="titre-sortie">Aucune routine lancée depuis l'interface</h2>
+  <pre id="sortie"></pre>
+</div>
+<div class="carte">
+  <h2>Derniers lancements</h2>
+  {% for h in historique %}
+  <div><a href="#" onclick="voir('{{ h.nom }}'); return false;">{{ h.nom }}</a> <span class="doux">({{ (h.taille / 1024)|round(1) }} Ko)</span></div>
+  {% else %}<p class="doux">Aucun lancement depuis l'interface pour l'instant.</p>{% endfor %}
+</div>
+{% endblock %}
+{% block script %}
+<script>
+let suivi = null;
+async function lancer(nom) {
+  const r = await poster("/api/routine/" + nom, { essai: document.getElementById("essai").checked });
+  if (!r.ok) { annoncer(r.message || "Impossible de lancer", true); return; }
+  annoncer("Routine lancée."); actualiser();
+}
+async function actualiser() {
+  const r = await (await fetch("/api/routine")).json();
+  if (!r.nom) return;
+  const etat = r.en_cours ? "⏳ en cours" : (r.code === 0 ? "✅ terminée" : "❌ terminée avec une erreur (code " + r.code + ")");
+  document.getElementById("titre-sortie").textContent = "Routine « " + r.nom + " » lancée à " + r.debut + " — " + etat;
+  const pre = document.getElementById("sortie");
+  const enBas = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20;
+  pre.textContent = r.sortie;
+  if (enBas) pre.scrollTop = pre.scrollHeight;
+  clearTimeout(suivi);
+  if (r.en_cours) suivi = setTimeout(actualiser, 2000);
+}
+async function voir(nom) {
+  const r = await (await fetch("/api/historique/" + encodeURIComponent(nom))).json();
+  clearTimeout(suivi);
+  document.getElementById("titre-sortie").textContent = nom;
+  document.getElementById("sortie").textContent = r.sortie;
+}
+actualiser();
+</script>
+{% endblock %}

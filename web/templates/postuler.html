@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block titre %}À postuler{% endblock %}
+{% block contenu %}
+<h1>À postuler <span class="doux">({{ lignes|length }})</span></h1>
+<p class="doux">Formulaires (La Bonne Alternance ou site de l'entreprise) : ouvre la page, copie la lettre et les réponses aux questions, colle-les (Ctrl+V) et envoie, puis clique « Envoyée ».
+Par mail : le brouillon t'attend dans {{ messagerie }}, relis-le et envoie-le ; l'envoi est repéré tout seul au prochain suivi.</p>
+{% if erreur %}<div class="carte erreur">{{ erreur }}</div>{% endif %}
+{% for l in lignes %}
+<div class="carte" id="c{{ l['_ligne'] }}" data-entreprise="{{ l['Entreprise'] }}" data-email="{{ l['Email'] or '' }}">
+  <h2>{{ l['Entreprise'] }} <span class="doux" style="font-weight:400">— {{ l['Poste'] or '' }} · {{ l['Lieu'] or '' }}</span></h2>
+  {% if l['_mail'] %}
+  <p class="doux">📧 <b>Par mail</b> à {{ l['Email'] }} — brouillon dans {{ messagerie }}</p>
+  {% elif l['_lba'] %}
+  <p class="doux">🎓 Formulaire La Bonne Alternance</p>
+  {% else %}
+  <p class="doux">📝 Formulaire de contact du site de l'entreprise</p>
+  {% endif %}
+  {% if l['_lettre'] %}
+  <details class="pli">
+    <summary><span class="voir">📄 Afficher la lettre</span><span class="masquer">📄 Masquer la lettre</span></summary>
+    <div class="lettre" id="l{{ l['_ligne'] }}">{{ l['_lettre'] }}</div>
+  </details>
+  {% elif l['_mail'] %}
+  <p class="doux">Brouillon introuvable dans {{ messagerie }} (déjà envoyé ou supprimé ?) : le prochain suivi mettra la ligne à jour.</p>
+  {% else %}
+  <p class="doux">Pas encore de lettre pour cette entreprise : lance <code>python alternance\postuler_lba.py</code>, le modèle écrira la lettre.</p>
+  {% endif %}
+  {% for titre, texte in l['_reponses'] %}
+  <details class="pli">
+    <summary>💬 {{ titre }}</summary>
+    <div class="lettre" id="r{{ l['_ligne'] }}_{{ loop.index }}">{{ texte }}</div>
+    <button onclick="copier(document.getElementById('r{{ l['_ligne'] }}_{{ loop.index }}').textContent, 'Réponse copiée')">📋 Copier la réponse</button>
+  </details>
+  {% else %}
+  {% if l['_lettre'] and l['_lba'] %}<p class="doux">Réponses au formulaire pas encore écrites : lance <code>python alternance\postuler_lba.py --reponses</code>.</p>{% endif %}
+  {% endfor %}
+  <div class="actions">
+    {% if l['_mail'] %}
+    <button onclick="abandonnerMail({{ l['_ligne'] }})">Abandonner (brouillon à la corbeille)</button>
+    {% else %}
+    {% if l['Lien'] and l['Lien'].startswith('http') %}<a href="{{ l['Lien'] }}" target="_blank" rel="noopener"><button>🌐 Ouvrir la page</button></a>{% endif %}
+    {% if l['_formulaire'] %}<a href="{{ l['_formulaire'] }}" target="_blank" rel="noopener"><button>📝 Formulaire du site</button></a>{% endif %}
+    {% if l['_lettre'] %}<button onclick="copier(document.getElementById('l{{ l['_ligne'] }}').textContent)">📋 Copier la lettre</button>{% endif %}
+    <button class="principal" onclick="fait({{ l['_ligne'] }}, '{{ 'Candidaté (La Bonne Alternance)' if l['_lba'] else 'Candidaté (formulaire du site)' }}', true)">✅ Envoyée</button>
+    <button onclick="fait({{ l['_ligne'] }}, 'Abandonné', false)">Abandonner</button>
+    {% endif %}
+  </div>
+</div>
+{% else %}
+<div class="carte">Rien à postuler pour l'instant. 👍</div>
+{% endfor %}
+{% endblock %}
+{% block script %}
+<script>
+async function fait(ligne, statut, postule) {
+  const carte = document.getElementById("c" + ligne);
+  if (await changerStatut(ligne, carte.dataset.entreprise, statut, postule)) carte.remove();
+}
+async function abandonnerMail(ligne) {
+  const carte = document.getElementById("c" + ligne);
+  if (!confirm("Abandonner " + carte.dataset.entreprise + " et mettre son brouillon à la corbeille ?")) return;
+  if (await changerStatut(ligne, carte.dataset.entreprise, "Abandonné", false, carte.dataset.email)) carte.remove();
+}
+</script>
+{% endblock %}
