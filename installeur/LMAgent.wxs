@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Installeur LMAgent (WiX Toolset v5), à partir du dossier compilé par PyInstaller :
-      wix build installeur/LMAgent.wxs -arch x64 -d Version=1.2.3 -bindpath Dist=dist/LMAgent -o dist/LMAgent-1.2.3.msi
+      wix build installeur/LMAgent.wxs -arch x64 -d Version=1.2.3 -d Dist=C:\chemin\absolu\dist\LMAgent -o dist/LMAgent-1.2.3.msi
+  (Dist doit être un chemin ABSOLU : un chemin relatif est cherché depuis installeur/ et rien n'est inclus.)
   - installation par utilisateur dans %LOCALAPPDATA%\Programs\LMAgent : aucune demande d'autorisation Windows,
     ce qui permet les mises à jour silencieuses (msiexec /qn) ;
   - une nouvelle version remplace l'ancienne (MajorUpgrade, même UpgradeCode pour toujours) ;
@@ -14,7 +15,7 @@
     <MajorUpgrade DowngradeErrorMessage="Une version plus récente de LMAgent est déjà installée." />
     <MediaTemplate EmbedCab="yes" />
 
-    <Icon Id="icone" SourceFile="web\static\favicon.ico" />
+    <Icon Id="icone" SourceFile="$(var.Dist)\_internal\web\static\favicon.ico" />
     <Property Id="ARPPRODUCTICON" Value="icone" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/gossotjeanbaptiste/agent-alternance" />
 
@@ -26,7 +27,7 @@
 
     <!-- tout le dossier produit par PyInstaller -->
     <ComponentGroup Id="Fichiers" Directory="INSTALLFOLDER">
-      <Files Include="!(bindpath.Dist)\**" />
+      <Files Include="$(var.Dist)\**" />
     </ComponentGroup>
 
     <!-- nettoyage des dossiers à la désinstallation (installation par utilisateur) -->
