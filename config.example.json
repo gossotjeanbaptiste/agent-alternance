@@ -1,0 +1,14 @@
+{
+  "modele": "qwen/qwen3.5-9b",
+  "contexte": 16384,
+  "gpu": "auto",
+  "decharger_a_la_fin": true,
+  "reflexion": false,
+  "dossiers_autorises": [
+    "~/Downloads"
+  ],
+  "powershell_en_auto": false,
+  "etapes_max": 20,
+  "afficher_reflexion": false,
+  "fermer_lmstudio_apres": true
+}

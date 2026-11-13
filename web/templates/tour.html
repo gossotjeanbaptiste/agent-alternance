@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block titre %}Tour{% endblock %}
+{% block contenu %}
+<h1>La tour</h1>
+<div class="deux">
+  <div class="carte">
+    <h2>État <button onclick="actualiser()" style="float:right">↻</button></h2>
+    <div class="etat"><span class="point" id="p-lmstudio"></span> Serveur LM Studio</div>
+    <div class="etat"><span class="point" id="p-ssh"></span> Accès à distance (Tailscale)</div>
+    <div class="etat"><span class="point" id="p-ssh_lan"></span> Accès par le réseau local</div>
+    <div class="etat"><span class="point" id="p-tailscale"></span> Tailscale sur ce PC</div>
+  </div>
+  <div class="carte">
+    <h2>Actions</h2>
+    <div class="actions" style="flex-direction:column; align-items:flex-start">
+      <button onclick="agir('reveiller')">⏰ Réveiller / tout remettre en route</button>
+      <button onclick="agir('serveur')">▶️ Démarrer LM Studio</button>
+      <button onclick="agir('fermer_lmstudio', 'Fermer LM Studio sur la tour ?')">⏹ Fermer LM Studio</button>
+      <button onclick="agir('veille', 'Mettre la tour en veille ? (tu l\'utilises peut-être en ce moment)')">😴 Mettre en veille</button>
+    </div>
+  </div>
+</div>
+<div class="carte"><h2>Dernière action</h2><pre id="messages">—</pre></div>
+{% endblock %}
+{% block script %}
+<script>
+let t = null;
+async function actualiser() {
+  const r = await (await fetch("/api/tour")).json();
+  for (const [k, v] of Object.entries(r.etat || {})) {
+    const p = document.getElementById("p-" + k); if (p) p.classList.toggle("vert", v);
+  }
+  if (r.messages.length) document.getElementById("messages").textContent = r.messages.join("\n");
+  clearTimeout(t);
+  t = setTimeout(actualiser, r.action ? 2000 : 15000);
+}
+async function agir(nom, question) {
+  if (question && !confirm(question)) return;
+  const r = await poster("/api/tour/" + nom);
+  if (!r.ok) { annoncer(r.message || "Impossible", true); return; }
+  annoncer("Action lancée…"); setTimeout(actualiser, 800);
+}
+actualiser();
+</script>
+{% endblock %}

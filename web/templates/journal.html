@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block titre %}Journal{% endblock %}
+{% block contenu %}
+<h1>Journal</h1>
+<div class="filtres">
+  <select onchange="location.href='/journal?f=' + encodeURIComponent(this.value)">
+    {% for f in fichiers %}<option {{ 'selected' if f == choisi }}>{{ f }}</option>{% endfor %}
+  </select>
+</div>
+<div class="carte"><pre>{{ contenu or 'Journal vide.' }}</pre></div>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block titre %}Tableau de bord{% endblock %}
+{% block contenu %}
+<h1>Tableau de bord</h1>
+{% if routine %}<div class="carte">⏳ Routine en cours : <b>{{ routine }}</b> — <a href="/routines">voir l'avancement</a></div>{% endif %}
+<div class="grille">
+  <div class="carte"><div class="chiffre">{{ s.envoyees }}</div><div class="libelle">candidatures envoyées</div></div>
+  <div class="carte"><div class="chiffre">{{ s.semaine }}</div><div class="libelle">ces 7 derniers jours</div></div>
+  <div class="carte"><div class="chiffre">{{ s.taux }} %</div><div class="libelle">taux de réponse ({{ s.reponses }})</div></div>
+  <div class="carte"><div class="chiffre">{{ s.entretiens }}</div><div class="libelle">entretiens / acceptées</div></div>
+  <div class="carte"><div class="chiffre">{{ s.en_cours }}</div><div class="libelle">en attente de réponse</div></div>
+  <div class="carte"><div class="chiffre"><a href="/postuler">{{ s.a_postuler }}</a></div><div class="libelle">à postuler (La Bonne Alternance, formulaires)</div></div>
+</div>
+<div class="deux">
+  <div class="carte">
+    <h2>Candidatures envoyées par semaine</h2>
+    <div class="barres">
+      {% for w in s.semaines %}
+      <div class="barre" title="{{ w.n }} candidature(s)">
+        <span>{{ w.n if w.n }}</span>
+        <div style="height: {{ (100 * w.n / s.maxi)|round|int }}%"></div>
+        <span>{{ w.libelle }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="carte">
+    <h2>Répartition par statut</h2>
+    <table>
+      {% for st, n in s.par_statut %}
+      <tr><td><span class="badge" style="background:#{{ statuts.get(st, 'EDEDED') }}">{{ st }}</span></td><td>{{ n }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+<div class="carte">
+  <h2>Prochaines relances prévues</h2>
+  {% if s.relances %}
+  <table>
+    <tr><th>Date</th><th>Entreprise</th><th>Poste</th><th>Relances déjà faites</th></tr>
+    {% for l in s.relances %}
+    <tr><td>{{ l['Relance prévue'].strftime('%d/%m') }}</td><td>{{ l['Entreprise'] }}</td><td>{{ l['Poste'] or '' }}</td><td>{{ l['Nb relances'] or 0 }}</td></tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="doux">Aucune relance prévue.</p>{% endif %}
+</div>
+{% endblock %}

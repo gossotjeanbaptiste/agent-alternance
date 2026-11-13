@@ -1,0 +1,34 @@
+# --- Secrets et réglages personnels (des modèles *.example.* sont versionnés à la place)
+config.json
+alternance/config_alternance.json
+.env
+*.key
+*.pem
+id_*
+*.pub
+
+# --- Données personnelles
+alternance/profil.md
+alternance/reponses_lba.json
+alternance/*.xlsx
+*.xlsx
+pieces_jointes/
+*.pdf
+*.docx
+
+# --- Fichiers générés
+logs/
+corbeille/
+workspace/
+__pycache__/
+*.pyc
+
+# Exception : tableau d exemple (donnees fictives)
+!alternance/suivi_alternance.example.xlsx
+
+# --- Export LinkedIn (données personnelles : relations, messages...)
+linkedin/
+*.csv
+
+# Connexion Microsoft Graph (jeton personnel)
+alternance/graph_jeton.json

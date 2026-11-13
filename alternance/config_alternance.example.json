@@ -1,0 +1,152 @@
+{
+  "mails_par_jour": 5,
+  "reflexion": false,
+  "relance_apres_jours": 8,
+  "relances_max": 2,
+  "relances_max_par_jour": 5,
+  "heure_envoi_relance": "09:30",
+  "fenetre_aleatoire_minutes": 15,
+  "jours_feries_alsace": false,
+  "tableau_suivi": "~/Documents/lm_agent/alternance/suivi_alternance.xlsx",
+  "pieces_jointes": [
+    "~/Documents/lm_agent/pieces_jointes/CV.pdf",
+    "~/Documents/lm_agent/pieces_jointes/Calendrier_alternance.pdf"
+  ],
+  "ajouter_signature": false,
+  "signature_html": "~/AppData/Roaming/Microsoft/Signatures/Signature (ton.adresse@exemple.fr).htm",
+  "messagerie": {
+    "_aide": "type = \"outlook\" (Outlook classique, par défaut) ou \"imap\" (Gmail et autres). Pour Gmail : active la validation en deux étapes, crée un mot de passe d'application sur https://myaccount.google.com/apppasswords et colle-le dans mot_de_passe_app.",
+    "type": "outlook",
+    "imap": {
+      "serveur": "imap.gmail.com",
+      "port": 993,
+      "adresse": "",
+      "mot_de_passe_app": "",
+      "signature_html": ""
+    }
+  },
+  "la_bonne_alternance": {
+    "actif": true,
+    "jeton_api": "",
+    "codes_rome": [
+      "M1805",
+      "M1810",
+      "I1401",
+      "M1801"
+    ],
+    "_villes": "Exemple (autour de Lyon) : mets tes villes, avec leur latitude et longitude (par ex. les communes des gares de tes trajets).",
+    "_poids": "Poids des villes : 1 pour le centre et les villes prioritaires, sinon divisé par 2 tous les demi_distance_km depuis le centre (minimum poids_min). Un \"poids\" écrit sur une ville passe avant tout.",
+    "centre": {
+      "nom": "Lyon",
+      "lat": 45.764,
+      "lon": 4.8357
+    },
+    "villes_prioritaires": [
+      "Lyon",
+      "Villeurbanne"
+    ],
+    "demi_distance_km": 30,
+    "poids_min": 0.05,
+    "villes": [
+      {
+        "nom": "Lyon",
+        "lat": 45.764,
+        "lon": 4.8357
+      },
+      {
+        "nom": "Villeurbanne",
+        "lat": 45.7719,
+        "lon": 4.8902
+      },
+      {
+        "nom": "Vénissieux",
+        "lat": 45.6973,
+        "lon": 4.8859
+      },
+      {
+        "nom": "Bron",
+        "lat": 45.7386,
+        "lon": 4.9131
+      },
+      {
+        "nom": "Saint-Priest",
+        "lat": 45.6966,
+        "lon": 4.9439
+      },
+      {
+        "nom": "Vaulx-en-Velin",
+        "lat": 45.7783,
+        "lon": 4.9197
+      },
+      {
+        "nom": "Caluire-et-Cuire",
+        "lat": 45.7953,
+        "lon": 4.8467
+      },
+      {
+        "nom": "Oullins",
+        "lat": 45.7146,
+        "lon": 4.8075
+      },
+      {
+        "nom": "Givors",
+        "lat": 45.5906,
+        "lon": 4.7689
+      },
+      {
+        "nom": "Vienne",
+        "lat": 45.5253,
+        "lon": 4.8743
+      },
+      {
+        "nom": "Villefranche-sur-Saône",
+        "lat": 45.9897,
+        "lon": 4.7186
+      },
+      {
+        "nom": "Saint-Étienne",
+        "lat": 45.4397,
+        "lon": 4.3872
+      }
+    ],
+    "rayon_km": 25,
+    "recherches_site_max": 30,
+    "_naf": "Candidatures spontanées : seulement ces activités (codes NAF, préfixe suffisant). 62 = programmation/conseil informatique, 63.11/63.12 = hébergement/portails, 58.2 = édition de logiciels et jeux, 26.x = fabrication électronique/ordinateurs, 46.51 = commerce de gros informatique, 61 = télécoms. Les vraies offres d'emploi ne sont pas filtrées.",
+    "naf_acceptes": [
+      "62",
+      "63.11",
+      "63.12",
+      "58.2",
+      "26.1",
+      "26.2",
+      "26.3",
+      "26.4",
+      "26.5",
+      "46.51",
+      "61"
+    ]
+  },
+  "alertes_linkedin": {
+    "actif": true,
+    "expediteurs": [
+      "jobalerts-noreply@linkedin.com",
+      "jobs-noreply@linkedin.com"
+    ],
+    "jours": 3
+  },
+  "signature_formulaire": {
+    "nom": "Prénom NOM",
+    "titre": "Étudiant en … à …, en recherche d'alternance",
+    "telephone": "+33 6 00 00 00 00",
+    "email": "ton.adresse@exemple.fr",
+    "linkedin": "https://www.linkedin.com/in/ton-profil/",
+    "portfolio": "",
+    "github": ""
+  },
+  "_debut_signature": "1re ligne de ta signature de mail (ex. ton nom) : elle est retirée du mail d'origine relu avant d'écrire une relance.",
+  "debut_signature": "Prénom NOM",
+  "_domaines_ignores": "Domaines de ton école / employeur : leurs mails ne sont jamais comptés comme des réponses d'entreprise.",
+  "domaines_ignores": [
+    "mon-ecole.fr"
+  ]
+}
