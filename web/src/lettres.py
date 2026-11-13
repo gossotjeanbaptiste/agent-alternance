@@ -20,12 +20,12 @@ def _outlook_ferme():
 def lettres_et_signature():
     if time.time() - CACHE["quand"] > 300:
         import pythoncom
-        import postuler_lba
+        import postuler
         ferme = _outlook_ferme()
         pythoncom.CoInitialize()  # Outlook (COM) depuis un fil du serveur web
         try:
-            CACHE["lettres"] = postuler_lba.lettres_des_brouillons(lire_messagerie=not ferme)
-            CACHE["signature"] = postuler_lba.signature()
+            CACHE["lettres"] = postuler.lettres_des_brouillons(lire_messagerie=not ferme)
+            CACHE["signature"] = postuler.signature()
         finally:
             pythoncom.CoUninitialize()
         CACHE["note"] = ("Outlook classique fermé : les lettres des candidatures par mail ne sont pas affichées "
@@ -50,6 +50,23 @@ def supprimer_brouillons(adresse):
     return f"Brouillon mis à la corbeille de {nom_messagerie()}." if n else "Aucun brouillon trouvé pour cette adresse."
 
 
+def site_ou_recherche(l):
+    """(site de l'entreprise ou "", recherche Google sur son nom et sa ville).
+    Site : celui noté par la recherche (« Site : … » dans Notes), sinon le domaine de son adresse mail
+    (sauf messageries grand public comme gmail.com)."""
+    from urllib.parse import quote_plus
+    from mails import DOMAINES_PERSO, domaine
+    m = re.search(r"Site : (\S+)", str(l.get("Notes") or ""))
+    site = m.group(1) if m else ""
+    if not site:
+        d = domaine(str(l.get("Email") or "").strip().lower())
+        if d and d not in DOMAINES_PERSO and re.search(r"\.[a-z]{2,}$", d):
+            site = "https://" + d
+    lieu = str(l.get("Lieu") or "")
+    ville = re.split(r"\b\d{5}\b", lieu)[-1].strip(" ,") or lieu
+    return site, "https://www.google.com/search?q=" + quote_plus(f"{l.get('Entreprise') or ''} {ville}".strip())
+
+
 def ajouter_lettres(lignes):
     """Ajoute à chaque ligne « _lettre » (lettre + signature) si un brouillon existe. Renvoie un message d'erreur ou None."""
     try:
@@ -64,6 +81,7 @@ def ajouter_lettres(lignes):
         m = re.search(r"Formulaire : (\S+)", str(l.get("Notes") or ""))
         l["_formulaire"] = m.group(1) if m and l["_lba"] else ""  # 2e solution : le formulaire du site
         l["_reponses"] = reponses.en_liste(deja.get((l.get("Lien") or "").strip()) or {})
+        l["_site"], l["_recherche"] = site_ou_recherche(l)
         if l["_mail"]:  # brouillon de mail : la signature est déjà celle de la messagerie
             l["_lettre"] = lettres.get(str(l.get("Email") or "").strip().lower())
             continue

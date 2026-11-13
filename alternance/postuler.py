@@ -1,7 +1,7 @@
-"""Assistant pour postuler sur La Bonne Alternance, entreprise par entreprise.
+"""Assistant pour postuler par formulaire (La Bonne Alternance, site de l'entreprise), entreprise par entreprise.
 
-    python alternance\\postuler_lba.py
-    python alternance\\postuler_lba.py --reponses   (écrit seulement les réponses manquantes, sans rien ouvrir)
+    python alternance\\postuler.py
+    python alternance\\postuler.py --reponses   (écrit seulement les réponses manquantes, sans rien ouvrir)
 
 Pour chaque ligne « À postuler » du tableau (La Bonne Alternance ou formulaire du site de l'entreprise) :
   1. ouvre la page de l'entreprise (La Bonne Alternance, ou le formulaire de contact) dans ton navigateur ;
@@ -10,7 +10,7 @@ Pour chaque ligne « À postuler » du tableau (La Bonne Alternance ou formulair
      se copient avec les touches 1, 2 et 3 ;
   3. te demande ce que tu as fait, et met le tableau à jour.
 
-La lettre vient de recherche.py (gardée dans alternance/reponses_lba.json, ou dans un ancien
+La lettre vient de recherche.py (gardée dans alternance/donnees/reponses_lba.json, ou dans un ancien
 brouillon « [À postuler…] » de la messagerie). S'il n'y en a pas, elle est écrite par le modèle. C'est toujours toi qui envoies le formulaire.
 Ferme le tableau Excel avant de lancer.
 """
@@ -58,12 +58,13 @@ def signature():
     return "\n".join(l for l in lignes if l)
 
 
-def nettoyer(corps):
-    """Texte du brouillon -> lettre seule (sans la ligne du lien, ni la signature Outlook)."""
+def nettoyer(corps, garder_signature=False):
+    """Texte du brouillon -> lettre seule (sans la ligne du lien, ni la signature Outlook).
+    garder_signature=True : brouillon de mail, affiché tel qu'il partira (signature comprise)."""
     t = corps.replace("\r\n", "\n")
     t = re.sub(r"^\s*Lien pour postuler\s*:.*\n+", "", t)
     fin = t.rfind("Cordialement")
-    if fin != -1:
+    if fin != -1 and not garder_signature:
         t = t[:fin] + "Cordialement,"
     return re.sub(r"\n{3,}", "\n\n", t).strip()
 
@@ -82,7 +83,7 @@ def lettres_des_brouillons(lire_messagerie=True):
         if not sujet.startswith("[À postuler"):
             for a in destinataires:
                 if a:
-                    res.setdefault(a.lower(), nettoyer(corps))
+                    res.setdefault(a.lower(), nettoyer(corps, garder_signature=True))
             continue
         m = re.search(r"Lien pour postuler\s*:\s*(\S+)", corps)
         if m:

@@ -4,14 +4,33 @@ import os
 import sys
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent.parent   # dossier alternance/ (config, profil, tableau)
+HERE = Path(__file__).resolve().parent.parent   # dossier alternance/
 sys.path.insert(0, str(HERE.parent))            # racine du projet (agent.py)
 import agent  # noqa: E402,F401  (connexion LM Studio, journal)
+import donnees  # noqa: E402  (données personnelles : alternance/donnees/)
 
-CFG = json.loads((HERE / "config_alternance.json").read_text(encoding="utf-8"))
-PROFIL = (HERE / "profil.md").read_text(encoding="utf-8")
+donnees.ranger()  # anciens emplacements (directement dans alternance/) -> alternance/donnees/
+DONNEES = donnees.DONNEES
+CFG = json.loads(donnees.chemin("config_alternance.json").read_text(encoding="utf-8"))
+PROFIL = donnees.chemin("profil.md").read_text(encoding="utf-8")
+INTERDITS = donnees.chemin("interdits.md")   # « contre-prompt » : ce que tu ne veux pas dans tes mails (facultatif)
 ESSAI = False   # True avec --essai : rien n'est écrit (ni brouillon, ni Excel)
 GARDE = None    # minuteur qui arrête tout si la lecture d'Outlook se bloque
+
+
+def interdits():
+    """Bloc à placer à la fin d'une consigne d'écriture : ce que tu ne veux surtout pas dans le texte
+    (alternance/donnees/interdits.md, relu à chaque fois : une modification compte tout de suite).
+    Les lignes vides et celles qui commencent par « # » ou « > » (titres, explications) sont ignorées."""
+    try:
+        lignes = INTERDITS.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return ""
+    regles = [l.strip() for l in lignes if l.strip() and not l.lstrip().startswith(("#", ">"))]
+    if not regles:
+        return ""
+    return ("\n\nINTERDIT dans ce texte (consignes strictes du candidat, à respecter absolument) :\n"
+            + "\n".join(r if r.startswith(("-", "*")) else "- " + r for r in regles) + "\n")
 
 
 def P(p):

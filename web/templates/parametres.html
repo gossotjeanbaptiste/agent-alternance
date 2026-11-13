@@ -28,6 +28,12 @@
     <div class="lettre" id="apercu"></div>
   </div>
 </div>
+<div class="carte">
+  <h2>Ce que je ne veux pas dans mes mails</h2>
+  <p class="doux">Une interdiction par ligne. Elles sont ajoutées à la fin des consignes du modèle pour chaque candidature, relance et réponse aux questions de La Bonne Alternance. Les lignes qui commencent par « # » ou « > » sont ignorées.</p>
+  <textarea id="interdits" class="zone" rows="12" spellcheck="true">{{ interdits }}</textarea>
+  <div class="actions"><button class="principal" onclick="enregistrerInterdits()">💾 Enregistrer</button></div>
+</div>
 {% endblock %}
 {% block script %}
 <script>
@@ -38,7 +44,7 @@ function valeurs() {
   for (const c of CHAMPS) v[c] = document.getElementById("s-" + c).value.trim();
   return v;
 }
-function apercu() {  // même mise en forme que postuler_lba.signature()
+function apercu() {  // même mise en forme que postuler.signature()
   const v = valeurs();
   const lignes = ["nom", "titre", "telephone", "email"].map(c => v[c]);
   for (const c of ["linkedin", "portfolio", "github"]) if (v[c]) lignes.push(ETIQUETTES[c] + " : " + v[c]);
@@ -52,6 +58,10 @@ function apercu() {  // même mise en forme que postuler_lba.signature()
 async function enregistrer() {
   const r = await poster("/api/signature", {signature: valeurs(), debut: document.getElementById("debut").value,
                                          ajouter: document.getElementById("ajouter").checked});
+  annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
+}
+async function enregistrerInterdits() {
+  const r = await poster("/api/interdits", {texte: document.getElementById("interdits").value});
   annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
 }
 apercu();

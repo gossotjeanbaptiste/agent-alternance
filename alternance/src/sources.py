@@ -6,6 +6,7 @@ import unicodedata
 import urllib.parse
 import urllib.request
 
+import refus
 from commun import CFG, say
 from modele import llm_json
 
@@ -106,7 +107,7 @@ def depuis_lba():
         return
     villes = ordre_pondere(c)  # les villes au poids fort passent en premier (plus souvent)
     for v in villes:
-        out, ecartees = [], []
+        out, ecartees, a_noter = [], [], []
         q = urllib.parse.urlencode({"romes": ",".join(c["codes_rome"]), "latitude": v["lat"],
                                     "longitude": v["lon"], "radius": c["rayon_km"]})
         req = urllib.request.Request(f"https://api.apprentissage.beta.gouv.fr/api/job/v1/search?{q}",
@@ -132,12 +133,14 @@ def depuis_lba():
             # (logiciel ou matériel). Les vraies offres d'emploi passent toujours (poste déjà ciblé).
             if not offer and not activite_acceptee(naf_info.get("code"), c):
                 ecartees.append(f"{nom} ({naf or 'activité inconnue'})")
+                a_noter.append({"Entreprise": nom.title() if nom.isupper() else nom, "SIRET": str(wp.get("siret") or ""),
+                                "Code NAF": naf_info.get("code") or "", "Activité": naf or "inconnue",
+                                "Adresse": loc.get("address") or "", "Recherche": v["nom"]})
                 continue
             infos = [str(offer.get("description") or wp.get("description") or "")[:1200]]
             if naf:
                 infos.append(f"Activité : {naf}")
-            if wp.get("size"):
-                infos.append(f"Taille : {wp['size']} salariés")
+            # (taille de l'entreprise volontairement absente : le modèle la recopiait dans les mails)
             if wp.get("website"):
                 infos.append(f"Site : {wp['website']}")
             # Candidature possible sur le site de La Bonne Alternance (bouton « Postuler ») seulement
@@ -155,4 +158,5 @@ def depuis_lba():
         if ecartees:
             say(f"   🚫 {v['nom']} : {len(ecartees)} entreprise(s) hors informatique écartée(s) "
                 f"({', '.join(ecartees[:3])}{'…' if len(ecartees) > 3 else ''})")
+            refus.noter(a_noter)  # liste complète : alternance/donnees/entreprises_refusees.csv
         yield from out

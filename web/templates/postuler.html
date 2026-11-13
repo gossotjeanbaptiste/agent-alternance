@@ -3,7 +3,7 @@
 {% block contenu %}
 <h1>À postuler <span class="doux">({{ lignes|length }})</span></h1>
 <p class="doux">Formulaires (La Bonne Alternance ou site de l'entreprise) : ouvre la page, copie la lettre et les réponses aux questions, colle-les (Ctrl+V) et envoie, puis clique « Envoyée ».
-Par mail : le brouillon t'attend dans {{ messagerie }}, relis-le et envoie-le ; l'envoi est repéré tout seul au prochain suivi.</p>
+Par mail : le brouillon t'attend dans {{ messagerie }}, relis-le et envoie-le ; l'envoi est repéré tout seul au prochain suivi, ou clique « Envoyée » si tu l'as déjà envoyé.</p>
 {% if erreur %}<div class="carte erreur">{{ erreur }}</div>{% endif %}
 {% for l in lignes %}
 <div class="carte" id="c{{ l['_ligne'] }}" data-entreprise="{{ l['Entreprise'] }}" data-email="{{ l['Email'] or '' }}">
@@ -25,7 +25,7 @@ Par mail : le brouillon t'attend dans {{ messagerie }}, relis-le et envoie-le ; 
   {% elif l['_mail'] %}
   <p class="doux">Brouillon introuvable dans {{ messagerie }} (déjà envoyé ou supprimé ?) : le prochain suivi mettra la ligne à jour.</p>
   {% else %}
-  <p class="doux">Pas encore de lettre pour cette entreprise : lance <code>python alternance\postuler_lba.py</code>, le modèle écrira la lettre.</p>
+  <p class="doux">Pas encore de lettre pour cette entreprise : lance <code>python alternance\postuler.py</code>, le modèle écrira la lettre.</p>
   {% endif %}
   {% for titre, texte in l['_reponses'] %}
   <details class="pli">
@@ -34,10 +34,13 @@ Par mail : le brouillon t'attend dans {{ messagerie }}, relis-le et envoie-le ; 
     <button onclick="copier(document.getElementById('r{{ l['_ligne'] }}_{{ loop.index }}').textContent, 'Réponse copiée')">📋 Copier la réponse</button>
   </details>
   {% else %}
-  {% if l['_lettre'] and l['_lba'] %}<p class="doux">Réponses au formulaire pas encore écrites : lance <code>python alternance\postuler_lba.py --reponses</code>.</p>{% endif %}
+  {% if l['_lettre'] and l['_lba'] %}<p class="doux">Réponses au formulaire pas encore écrites : lance <code>python alternance\postuler.py --reponses</code>.</p>{% endif %}
   {% endfor %}
   <div class="actions">
     {% if l['_mail'] %}
+    <button class="principal" onclick="fait({{ l['_ligne'] }}, 'Candidaté (mail)', true)" title="J'ai envoyé ce mail : statut « Candidaté (mail) », date d'envoi aujourd'hui, relance prévue. Le script n'envoie rien lui-même.">✅ Envoyée</button>
+    {% if l['_site'] %}<a href="{{ l['_site'] }}" target="_blank" rel="noopener"><button>🌐 Site de l'entreprise</button></a>{% endif %}
+    <a href="{{ l['_recherche'] }}" target="_blank" rel="noopener"><button>🔎 Rechercher sur Google</button></a>
     <button onclick="abandonnerMail({{ l['_ligne'] }})">Abandonner (brouillon à la corbeille)</button>
     {% else %}
     {% if l['Lien'] and l['Lien'].startswith('http') %}<a href="{{ l['Lien'] }}" target="_blank" rel="noopener"><button>🌐 Ouvrir la page</button></a>{% endif %}

@@ -1,15 +1,16 @@
 """Candidatures par formulaire (La Bonne Alternance, site de l'entreprise) : lettre et réponses.
 
 Pas de brouillon dans la messagerie pour ces candidatures : la lettre et les réponses aux
-questions du formulaire La Bonne Alternance sont gardées dans alternance/reponses_lba.json
+questions du formulaire La Bonne Alternance sont gardées dans alternance/donnees/reponses_lba.json
 (données personnelles, non versionné), rangées par lien pour postuler.
 """
 import json
 
 import commun
-from commun import HERE, PROFIL
+import donnees
+from commun import PROFIL, interdits
 
-FICHIER = HERE / "reponses_lba.json"
+FICHIER = donnees.chemin("reponses_lba.json")
 
 # (clé, titre affiché, consigne pour le modèle)
 QUESTIONS = [
@@ -35,6 +36,7 @@ def rediger_reponses(o):
         "Chaque réponse : 4 à 6 phrases (environ 600 à 900 caractères), ton sincère et professionnel, "
         "sans formule de politesse, sans inventer d'expérience absente du profil. "
         "Si on ne sait rien de l'entreprise, appuie-toi sur son nom et son secteur sans inventer de faits.\n"
+        + interdits() +
         "{" + ", ".join(f'"{cle}": "..."' for cle, _, _ in QUESTIONS) + "}")
     return {cle: str(r.get(cle) or "").strip() for cle, _, _ in QUESTIONS}
 
