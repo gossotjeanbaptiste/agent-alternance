@@ -359,6 +359,7 @@ Sur le dépôt public, GitHub Actions (`.github/workflows/publier.yml`) lance le
 (PyInstaller, `installeur/LMAgent.spec`), fabrique `LMAgent-1.2.0.msi` (WiX, `installeur/LMAgent.wxs`) et son
 empreinte `.sha256`, puis crée la version GitHub : les installations existantes s'y mettent à jour seules.
 Compilation locale de l'exe : `python -m PyInstaller installeur/LMAgent.spec --noconfirm` (dossier `dist/LMAgent/`).
+Essai sans publier : onglet *Actions* → « Publier une version » → *Run workflow* (installeur en artefact).
 
 ## 9. Ce qui n'est pas versionné
 
