@@ -174,7 +174,47 @@ def test_bouton_verifier_maintenant(client, monkeypatch):
 
 def test_lancer_installation_commande(monkeypatch, tmp_path):
     vu = {}
-    monkeypatch.setattr(mise_a_jour.subprocess, "Popen", lambda cmd, **k: vu.update(cmd=cmd))
+    monkeypatch.setattr(mise_a_jour.subprocess, "Popen", lambda cmd, **k: vu.update(cmd=cmd, **k))
     mise_a_jour.lancer_installation(tmp_path / "LMAgent-9.9.9.msi")
     script = vu["cmd"][-1]
     assert "Wait-Process" in script and "msiexec" in script and "/qn" in script and "LMAgent-9.9.9.msi" in script
+    assert "/l*v" in script and "installation_LMAgent-9.9.9.txt" in script      # journal de l'installeur
+    assert (emplacements.dossier("logs")).is_dir()
+
+
+def test_powershell_jamais_detache(monkeypatch, tmp_path):
+    """Sans console (DETACHED_PROCESS), PowerShell se ferme sans rien faire : la mise à jour ne s'installait pas."""
+    vu = {}
+    monkeypatch.setattr(mise_a_jour.subprocess, "Popen", lambda cmd, **k: vu.update(k))
+    mise_a_jour.lancer_installation(tmp_path / "x.msi")
+    flags = vu["creationflags"]
+    assert not flags & getattr(mise_a_jour.subprocess, "DETACHED_PROCESS", 0x8)
+    assert flags & getattr(mise_a_jour.subprocess, "CREATE_NO_WINDOW", 0x08000000)
+
+
+def test_sans_droit_de_sortir_du_job(monkeypatch, tmp_path):
+    essais = []
+
+    def popen(cmd, creationflags=0, **k):
+        essais.append(creationflags)
+        if creationflags & mise_a_jour.subprocess.CREATE_BREAKAWAY_FROM_JOB:
+            raise PermissionError("accès refusé")
+    monkeypatch.setattr(mise_a_jour.subprocess, "Popen", popen)
+    mise_a_jour.lancer_installation(tmp_path / "x.msi")
+    assert len(essais) == 2 and not essais[1] & mise_a_jour.subprocess.CREATE_BREAKAWAY_FROM_JOB
+
+
+def test_chemins_avec_apostrophe(tmp_path):
+    cmd = mise_a_jour.commande_installation(tmp_path / "l'appli" / "LMAgent-1.0.0.msi", pid=42,
+                                            exe=r"C:\Users\d'Artagnan\LMAgent.exe")
+    script = cmd[-1]
+    assert "Wait-Process -Id 42" in script
+    assert "l''appli" in script and "'C:\\Users\\d''Artagnan\\LMAgent.exe'" in script
+
+
+def test_telechargement_dans_un_dossier_vide_a_chaque_fois(github):
+    vieux = emplacements.dossier("mises_a_jour") / "ancien.msi"
+    vieux.parent.mkdir(parents=True, exist_ok=True)
+    vieux.write_bytes(b"x")
+    msi = mise_a_jour.preparer(mise_a_jour.derniere_version("x/y"))
+    assert msi.parent == emplacements.dossier("mises_a_jour") and not vieux.exists()
