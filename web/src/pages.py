@@ -28,6 +28,14 @@ def suivi():
     return render_template("suivi.html", page="suivi", lignes=lignes)
 
 
+@pages.route("/parametres")
+def page_parametres():
+    import parametres
+    signature, debut = parametres.lire()
+    return render_template("parametres.html", page="parametres", champs=parametres.CHAMPS,
+                           signature=signature, debut=debut)
+
+
 @pages.route("/postuler")
 def postuler():
     # formulaires d'abord, puis les candidatures par mail (brouillons à envoyer)
