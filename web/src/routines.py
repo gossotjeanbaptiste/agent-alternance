@@ -16,16 +16,35 @@ def en_cours():
     return p is not None and p.poll() is None
 
 
-def lancer(nom, essai=False):
-    """Lance la routine dans un processus séparé ; sa sortie va dans logs/web_<date>_<nom>.txt."""
+# Relance le script N fois d'affilée (chaque passage démarre quand le précédent est fini).
+# Tourne dans le processus séparé : la boucle continue même si l'interface est arrêtée.
+BOUCLE = """
+import subprocess, sys
+script, n, *args = sys.argv[1:]
+n, code = int(n), 0
+for i in range(n):
+    if n > 1:
+        print(f"\\n===== Passage {i + 1}/{n} =====\\n", flush=True)
+    code = subprocess.call([sys.executable, "-u", script, *args]) or code
+sys.exit(code)
+"""
+MAX_PASSAGES = 50
+
+
+def lancer(nom, essai=False, fois=1):
+    """Lance la routine (fois passages d'affilée) dans un processus séparé ;
+    sa sortie va dans logs/web_<date>_<nom>.txt."""
+    fois = max(1, min(int(fois), MAX_PASSAGES))
     LOGS.mkdir(exist_ok=True)
-    fichier = LOGS / f"web_{datetime.now():%Y%m%d_%H%M%S}_{nom}{'_essai' if essai else ''}.txt"
+    suffixe = (f"_x{fois}" if fois > 1 else "") + ("_essai" if essai else "")
+    fichier = LOGS / f"web_{datetime.now():%Y%m%d_%H%M%S}_{nom}{suffixe}.txt"
     sortie = open(fichier, "w", encoding="utf-8")
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
-    cmd = [sys.executable, "-u", str(SCRIPTS[nom])] + (["--essai"] if essai else [])
+    cmd = [sys.executable, "-u", "-c", BOUCLE, str(SCRIPTS[nom]), str(fois)] + (["--essai"] if essai else [])
     proc = subprocess.Popen(cmd, cwd=ROOT, stdout=sortie, stderr=subprocess.STDOUT, env=env,
                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-    ROUTINE.update(proc=proc, nom=nom + (" (essai)" if essai else ""), fichier=fichier, debut=datetime.now())
+    libelle = nom + (f" ×{fois}" if fois > 1 else "") + (" (essai)" if essai else "")
+    ROUTINE.update(proc=proc, nom=libelle, fichier=fichier, debut=datetime.now())
 
 
 def etat():

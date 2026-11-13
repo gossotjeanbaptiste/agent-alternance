@@ -69,7 +69,7 @@ Le navigateur s'ouvre sur **http://127.0.0.1:8765**. Pour arrêter : bouton **�
 | **Tableau de bord** | chiffres, graphique des envois, relances à venir |
 | **Suivi** | toutes les candidatures, filtres, changement de statut |
 | **À postuler** | candidatures par formulaire (La Bonne Alternance, formulaire de contact du site) : ouvrir la page, copier la lettre et, pour La Bonne Alternance, les réponses aux trois questions (motivations, missions, expériences), puis « Envoyée ». Les candidatures **📧 par mail** y sont aussi : site de l'entreprise, recherche Google, « Envoyée » (statut « Candidaté (mail) », date d'envoi et relance prévue), « Abandonner » (brouillon mis à la corbeille) |
-| **Routines** | lancer « Relances » / « Recherche » (« mode essai » pour tester sans rien écrire), sortie en direct |
+| **Routines** | lancer « Relances » / « Recherche » (« mode essai » pour tester sans rien écrire ; « passages » pour l'enchaîner N fois d'affilée, 1 par défaut), sortie en direct |
 | **LinkedIn** | tes relations (`linkedin/Connections.csv`) qui travaillent dans une entreprise du tableau |
 | **Journal** | journaux des routines |
 | **Paramètres** | signature des lettres de formulaire (avec aperçu), signature ou non sous les mails, **ce que tu ne veux pas dans tes mails** |

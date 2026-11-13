@@ -66,7 +66,11 @@ def lancer_routine(nom):
     if routines.en_cours():
         return jsonify(ok=False, message=f"« {routines.ROUTINE['nom']} » tourne déjà."), 409
     donnees = request.get_json(silent=True, force=True) or {}
-    routines.lancer(nom, bool(donnees.get("essai")))
+    try:
+        fois = int(donnees.get("fois") or 1)
+    except (TypeError, ValueError):
+        fois = 1
+    routines.lancer(nom, bool(donnees.get("essai")), fois)
     return jsonify(ok=True)
 
 
