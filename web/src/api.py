@@ -51,6 +51,16 @@ def interdits():
     return jsonify(ok=ok, message=message)
 
 
+@api.post("/reglages")
+def enregistrer_reglages():
+    import reglages_web
+    d = request.get_json(force=True)
+    if not isinstance(d.get("valeurs"), dict):
+        return jsonify(ok=False, message="Données invalides."), 400
+    ok, message = reglages_web.enregistrer(d["valeurs"])
+    return jsonify(ok=ok, message=message)
+
+
 @api.post("/quitter")
 def quitter():
     """Arrête l'interface (le serveur web). Une routine lancée continue jusqu'au bout."""

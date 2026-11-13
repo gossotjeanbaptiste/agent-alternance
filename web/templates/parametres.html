@@ -34,6 +34,42 @@
   <textarea id="interdits" class="zone" rows="12" spellcheck="true">{{ interdits }}</textarea>
   <div class="actions"><button class="principal" onclick="enregistrerInterdits()">💾 Enregistrer</button></div>
 </div>
+<h2 style="margin-top:28px">Tous les réglages</h2>
+<p class="doux">Ouvre une section pour la modifier, puis « Enregistrer les réglages » en bas. Les routines prennent
+les changements dès leur prochain lancement. Les mots de passe et jetons ne sont jamais affichés :
+laisse le champ vide pour garder la valeur actuelle.</p>
+{% for titre, champs_section in sections %}
+<details class="carte pli-section">
+  <summary><h2 style="display:inline">{{ titre }}</h2></summary>
+  {% for c in champs_section %}
+  <div class="champ">
+    {% if c.type == 'oui_non' %}
+    <label style="display:flex;gap:8px;align-items:center">
+      <input type="checkbox" data-cle="{{ c.cle }}" data-type="oui_non" {% if c.valeur %}checked{% endif %} style="width:auto"> {{ c.libelle }}
+    </label>
+    {% else %}
+    <label>{{ c.libelle }}
+      {% if c.type in ('liste', 'json') %}
+      <textarea class="zone" rows="{{ c.lignes }}" data-cle="{{ c.cle }}" data-type="{{ c.type }}" spellcheck="false">{{ c.valeur }}</textarea>
+      {% elif c.type == 'choix' %}
+      <select data-cle="{{ c.cle }}" data-type="choix">
+        {% for o in c.choix %}<option value="{{ o }}" {% if o == c.valeur %}selected{% endif %}>{{ o }}</option>{% endfor %}
+      </select>
+      {% elif c.type == 'secret' %}
+      <input type="password" data-cle="{{ c.cle }}" data-type="secret" autocomplete="new-password"
+             placeholder="{{ '•••••••• (enregistré, laisser vide pour garder)' if c.defini else 'non renseigné' }}">
+      {% else %}
+      <input type="text" data-cle="{{ c.cle }}" data-type="{{ c.type }}" value="{{ c.valeur }}">
+      {% endif %}
+    </label>
+    {% endif %}
+    {% if c.aide %}<div class="doux" style="font-size:12px">{{ c.aide }}</div>{% endif %}
+    {% if c.type == 'liste' %}<div class="doux" style="font-size:12px">Une valeur par ligne.</div>{% endif %}
+  </div>
+  {% endfor %}
+</details>
+{% endfor %}
+<div class="actions"><button class="principal" onclick="enregistrerReglages()">💾 Enregistrer les réglages</button></div>
 {% endblock %}
 {% block script %}
 <script>
@@ -59,6 +95,15 @@ async function enregistrer() {
   const r = await poster("/api/signature", {signature: valeurs(), debut: document.getElementById("debut").value,
                                          ajouter: document.getElementById("ajouter").checked});
   annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
+}
+async function enregistrerReglages() {
+  const valeurs = {};
+  for (const el of document.querySelectorAll("[data-cle]")) {
+    valeurs[el.dataset.cle] = el.dataset.type === "oui_non" ? el.checked : el.value;
+  }
+  const r = await poster("/api/reglages", {valeurs});
+  annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
+  if (r.ok) for (const el of document.querySelectorAll('[data-type="secret"]')) el.value = "";
 }
 async function enregistrerInterdits() {
   const r = await poster("/api/interdits", {texte: document.getElementById("interdits").value});

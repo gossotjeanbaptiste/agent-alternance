@@ -158,7 +158,7 @@ def fermer_lmstudio_si_ouvert(log=_print):
     log("   🧹 LM Studio fermé sur la tour (il avait été ouvert par le script)")
 
 
-TAILSCALE_LOCAL = r"C:\Program Files\Tailscale\tailscale.exe"
+TAILSCALE_LOCAL = T.get("tailscale_local") or r"C:\Program Files\Tailscale\tailscale.exe"
 
 
 def tailscale_local(log=_print):

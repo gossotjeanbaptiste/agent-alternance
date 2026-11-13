@@ -28,7 +28,6 @@ WORKSPACE = ROOT / "workspace"
 CORBEILLE = ROOT / "corbeille"
 LOGS = ROOT / "logs"
 TACHES = ROOT / "taches"
-LMS = Path.home() / ".lmstudio" / "bin" / "lms.exe"
 for d in (WORKSPACE, CORBEILLE, LOGS, TACHES):
     d.mkdir(exist_ok=True)
 
@@ -43,6 +42,7 @@ CONFIG = {
 if (ROOT / "config.json").exists():
     CONFIG.update(json.loads((ROOT / "config.json").read_text(encoding="utf-8")))
 
+LMS = Path(os.path.expanduser(CONFIG.get("lms_local") or "~/.lmstudio/bin/lms.exe"))
 ALLOWED = [WORKSPACE] + [Path(os.path.expanduser(p)).resolve() for p in CONFIG["dossiers_autorises"]]
 AUTO = False          # passe à True en mode --task / --tache
 BASE_URL = None  # choisi par ensure_server()

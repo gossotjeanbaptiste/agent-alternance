@@ -18,7 +18,8 @@ def _outlook_ferme():
 
 
 def lettres_et_signature():
-    if time.time() - CACHE["quand"] > 300:
+    import reglages
+    if time.time() - CACHE["quand"] > 60 * int(reglages.valeur("interface.cache_lettres_minutes")):
         import pythoncom
         import postuler
         ferme = _outlook_ferme()

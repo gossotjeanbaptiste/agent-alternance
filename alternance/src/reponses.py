@@ -8,20 +8,14 @@ import json
 
 import commun
 import donnees
+import reglages
 from commun import PROFIL, interdits
 
 FICHIER = donnees.chemin("reponses_lba.json")
 
-# (clé, titre affiché, consigne pour le modèle)
-QUESTIONS = [
-    ("motivations", "Vos motivations : pourquoi souhaitez-vous rejoindre l'entreprise ?",
-     "pourquoi je souhaite rejoindre cette entreprise précisément (son activité, ce qui m'attire chez elle)"),
-    ("missions", "Quelles missions souhaiteriez-vous accomplir au sein de l'entreprise ?",
-     "le poste visé, les missions que je souhaite accomplir et ma contribution concrète aux activités de l'entreprise"),
-    ("experiences", "Vos expériences passées (stage, job, bénévolat) en lien avec le poste visé",
-     "mes expériences passées (stages, jobs, bénévolat, projets) en lien avec le poste visé, et ce qu'elles m'ont apporté"),
-]
-
+# (clé, titre affiché, consigne pour le modèle) : modifiables dans la page Paramètres
+QUESTIONS = [(cle, reglages.valeur(f"redaction.questions.{cle}.titre"),
+              reglages.valeur(f"redaction.questions.{cle}.consigne")) for cle in reglages.QUESTIONS]
 
 def rediger_reponses(o):
     """{clé: texte} des réponses pour l'entreprise o (entreprise, poste, lieu, infos)."""
@@ -33,7 +27,7 @@ def rediger_reponses(o):
         f"- Entreprise : {o['entreprise']}\n- Poste / offre : {o.get('poste') or 'candidature spontanée'}\n"
         f"- Lieu : {o.get('lieu') or '?'}\n- Ce qu'on sait de l'entreprise : {o.get('infos') or 'rien de plus'}\n\n"
         f"Questions :\n{consignes}\n\n"
-        "Chaque réponse : 4 à 6 phrases (environ 600 à 900 caractères), ton sincère et professionnel, "
+        f"Chaque réponse : {reglages.valeur('redaction.longueur_reponses')}, ton sincère et professionnel, "
         "sans formule de politesse, sans inventer d'expérience absente du profil. "
         "Si on ne sait rien de l'entreprise, appuie-toi sur son nom et son secteur sans inventer de faits.\n"
         + interdits() +

@@ -6,10 +6,12 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import commun
+import reglages
 from commun import CFG, P, say
 
-OUTLOOK_EXE = [Path(r"C:\Program Files\Microsoft Office\root\Office16\OUTLOOK.EXE"),
-               Path(r"C:\Program Files (x86)\Microsoft Office\root\Office16\OUTLOOK.EXE")]
+def _chemins_outlook():
+    """Emplacements possibles d'OUTLOOK.EXE (modifiables dans la page Paramètres, section « Messagerie »)."""
+    return [Path(p) for p in reglages.valeur("outlook.chemins_exe")]
 
 
 class Msg(dict):
@@ -43,11 +45,11 @@ class Outlook:
         # Lancé caché par COM, Outlook ne peut pas afficher sa fenêtre de connexion et reste bloqué.
         # On l'ouvre donc normalement (fenêtre visible) s'il ne tourne pas déjà.
         if not _outlook_lance():
-            exe = next((p for p in OUTLOOK_EXE if p.exists()), None)
+            exe = next((p for p in _chemins_outlook() if p.exists()), None)
             if exe:
                 say("   Ouverture de l'Outlook classique (connecte-toi si une fenêtre le demande)...")
                 subprocess.Popen([str(exe)])
-                time.sleep(20)
+                time.sleep(int(reglages.valeur("outlook.attente_ouverture_s")))
         self.app = win32com.client.Dispatch("Outlook.Application")
         self.ns = self.app.GetNamespace("MAPI")
         self.inbox = self.ns.GetDefaultFolder(6)

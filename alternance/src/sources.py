@@ -7,6 +7,7 @@ import urllib.parse
 import urllib.request
 
 import refus
+import reglages
 from commun import CFG, say
 from modele import llm_json
 
@@ -88,7 +89,7 @@ def ordre_pondere(c):
 
 # Activités (codes NAF) acceptées pour les candidatures spontanées : logiciel ou matériel informatique.
 # Un préfixe suffit : "62" couvre 62.01Z, 62.02A… Modifiable dans config_alternance.json (« naf_acceptes »).
-NAF_ACCEPTES = ["62", "63.11", "63.12", "58.2", "26.1", "26.2", "26.3", "26.4", "26.5", "46.51", "61"]
+NAF_ACCEPTES = reglages.NAF_ACCEPTES   # modifiable dans la page Paramètres (section « La Bonne Alternance »)
 
 
 def activite_acceptee(code, c):

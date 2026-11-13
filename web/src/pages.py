@@ -31,11 +31,12 @@ def suivi():
 @pages.route("/parametres")
 def page_parametres():
     import parametres
+    import reglages_web
     signature, debut = parametres.lire()
     ajouter, fichier = parametres.ajouter_signature()
     return render_template("parametres.html", page="parametres", champs=parametres.CHAMPS,
                            signature=signature, debut=debut, ajouter=ajouter, fichier=fichier,
-                           interdits=parametres.lire_interdits())
+                           interdits=parametres.lire_interdits(), sections=reglages_web.sections())
 
 
 @pages.route("/postuler")

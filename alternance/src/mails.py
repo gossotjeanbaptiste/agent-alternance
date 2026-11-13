@@ -1,13 +1,11 @@
 """Petits outils sur les adresses et le texte des mails."""
 import re
 
-DOMAINES_PERSO = {"gmail.com", "outlook.fr", "outlook.com", "hotmail.fr", "hotmail.com", "yahoo.fr",
-                  "yahoo.com", "orange.fr", "free.fr", "laposte.net", "wanadoo.fr", "icloud.com",
-                  "live.fr", "sfr.fr"}
-GENERIQUES = ("contact", "rh", "recrutement", "recrutements", "jobs", "job", "carriere", "carrieres",
-              "emploi", "info", "infos", "hello", "bonjour", "accueil", "secretariat", "candidature",
-              "candidatures", "drh", "admin", "direction", "talent", "talents")
+import reglages
 
+# modifiables dans la page Paramètres (section « Adresses mail »)
+DOMAINES_PERSO = set(reglages.valeur("adresses.domaines_perso"))
+GENERIQUES = tuple(reglages.valeur("adresses.prefixes_generiques"))
 
 def texte_vers_html(t):
     t = t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")

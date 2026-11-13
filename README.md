@@ -72,7 +72,7 @@ Le navigateur s'ouvre sur **http://127.0.0.1:8765**. Pour arrêter : bouton **�
 | **Tour** | état, réveil, LM Studio, mise en veille |
 | **LinkedIn** | tes relations (`linkedin/Connections.csv`) qui travaillent dans une entreprise du tableau |
 | **Journal** | journaux des routines |
-| **Paramètres** | signature des lettres de formulaire (avec aperçu), signature ou non sous les mails, **ce que tu ne veux pas dans tes mails** |
+| **Paramètres** | signature des lettres de formulaire (avec aperçu), signature ou non sous les mails, **ce que tu ne veux pas dans tes mails**, et **tous les réglages** des deux configs (sections 3 et 4), par section, avec une aide sous chaque champ |
 
 Sécurité : l'interface n'écoute que sur 127.0.0.1 (aucun autre appareil ne peut s'y connecter), refuse les en-têtes Host
 étrangers, et chaque action exige un jeton secret renouvelé à chaque démarrage. Rien n'est chargé depuis Internet.
@@ -149,7 +149,14 @@ Les valeurs par défaut de la rubrique `tour` (dans `tour.py`) ne servent que si
 
 ## 4. Réglages de la routine : `config_alternance.json`
 
-Fichier `alternance/donnees/config_alternance.json`.
+Fichier `alternance/donnees/config_alternance.json`. **Tout se règle aussi dans la page Paramètres** de l'interface
+(liste complète, valeurs par défaut et aides dans `alternance/src/reglages.py`) ; un réglage absent du fichier prend sa valeur par défaut.
+
+Réglages plus fins, absents de la config d'exemple : longueur des relances et des réponses (`redaction.longueur_relance`,
+`redaction.longueur_reponses`), intitulés et consignes des trois questions La Bonne Alternance (`redaction.questions`),
+sites ignorés, mots des pages contact, pages essayées et pages lues par site (`sites.*`), messageries grand public et
+débuts d'adresse génériques (`adresses.*`), chemins d'Outlook et délais (`outlook.*`), cache de la page À postuler et
+passages max (`interface.*`).
 
 ### À changer obligatoirement
 
@@ -221,7 +228,7 @@ Les relances que tu programmes dans Gmail sont reconnues (statut « Relance prog
 une fois parties. Avec une autre messagerie IMAP, qui ne montre pas les mails programmés, une relance qui quitte
 les Brouillons sans être encore envoyée est supposée programmée ; si tu l'as supprimée, `python alternance\maj_tableau.py` corrige la ligne.
 
-Si Office est installé ailleurs que d'habitude, adapte `OUTLOOK_EXE` dans `alternance/src/outlook.py`.
+Si Office est installé ailleurs que d'habitude, indique le chemin d'`OUTLOOK.EXE` dans Paramètres (section Messagerie, `outlook.chemins_exe`).
 
 ---
 
@@ -282,6 +289,7 @@ lm_agent/
 | Module (`alternance/src/`) | Rôle |
 |---|---|
 | `commun.py` | réglages partagés (config, profil, contre-prompt, mode essai) |
+| `reglages.py` | liste de tous les réglages modifiables (valeurs par défaut, aides) ; lue par le code et la page Paramètres |
 | `donnees.py` | emplacement des données personnelles (`alternance/donnees/`), rangement automatique des anciens fichiers |
 | `jours.py` | jours ouvrables, fériés, heure d'envoi des relances |
 | `modele.py` | appels au modèle IA |

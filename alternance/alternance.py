@@ -26,6 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))  # modules internes (alternance/src)
 import commun  # noqa: E402
+import reglages  # noqa: E402
 from candidatures import nouvelles_candidatures  # noqa: E402
 from commun import CFG, P, agent, say  # noqa: E402
 from messagerie import nom_messagerie, ouvrir  # noqa: E402
@@ -52,12 +53,13 @@ def main(mode=None):
     # Garde-fou : si la LECTURE d'Outlook dépasse 10 min (connexion demandée, Outlook bloqué...),
     # on arrête proprement. Il est désactivé dès qu'Outlook a été lu (voir mettre_a_jour).
     def outlook_bloque():
-        say(f"❌ {nom_messagerie()} ne répond pas depuis 10 min. Avec Outlook : ouvre l'Outlook classique, "
+        say(f"❌ {nom_messagerie()} ne répond pas depuis {reglages.valeur('outlook.garde_minutes')} min. Avec Outlook : ouvre l'Outlook classique, "
             "connecte-toi si demandé, attends la fin de la synchronisation, puis relance. "
             "Avec IMAP : vérifie ta connexion Internet.")
         agent.liberer_modele()  # os._exit saute le nettoyage automatique : on libère la VRAM avant
         os._exit(2)
-    commun.GARDE = threading.Timer(600, outlook_bloque)
+    garde = int(reglages.valeur("outlook.garde_minutes"))
+    commun.GARDE = threading.Timer(garde * 60, outlook_bloque)
     commun.GARDE.daemon = True
     commun.GARDE.start()
     ol = ouvrir()
