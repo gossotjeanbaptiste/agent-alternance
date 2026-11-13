@@ -2,5 +2,6 @@
 openpyxl>=3.1
 pywin32>=306
 flask>=3.0
-# génération du logo (outils/generer_logo.py) et tests du logo
+# icône de la zone de notification, génération du logo (outils/generer_logo.py) et tests du logo
 pillow>=10.0
+pystray>=0.19

@@ -86,6 +86,65 @@ class TestRoutine:
         assert faux_alternance["mode"] == "relances"
 
 
+class TestSansConsole:
+    """Exe compilé sans console (sys.stdout / sys.stderr à None, simulé : pytest capture déjà la sortie)."""
+
+    @pytest.fixture
+    def exe(self, monkeypatch, tmp_path):
+        ouverts = []
+
+        def ouvrir(*a, **k):
+            f = open(*a, **k)
+            ouverts.append(f)
+            return f
+        avant = sys.stdout, sys.stderr
+        monkeypatch.setattr(lmagent, "sans_console", lambda: True)
+        monkeypatch.setattr(lmagent, "open", ouvrir, raising=False)
+        monkeypatch.delenv("LMAGENT_SORTIE", raising=False)
+        monkeypatch.setattr(lmagent, "ouvrir_console", lambda: setattr(sys, "stdout", "console"))
+        monkeypatch.setattr("emplacements.dossier", lambda nom: tmp_path / nom)
+        yield tmp_path
+        sys.stdout, sys.stderr = avant
+        for f in ouverts:
+            f.close()
+
+    def test_interface_dans_un_fichier(self, exe):
+        lmagent.preparer_sortie([])
+        print("bonjour")
+        sys.stdout.flush()
+        f, = (exe / "logs").glob("interface_*.txt")
+        assert f.read_text(encoding="utf-8") == "bonjour\n"
+        assert "LMAGENT_SORTIE" not in lmagent_env()
+
+    def test_routine_planifiee_dans_l_historique(self, exe):
+        lmagent.preparer_sortie(["--routine", "relances"])
+        f, = (exe / "logs").glob("web_*_relances_planifiee.txt")
+        assert lmagent_env()["LMAGENT_SORTIE"] == str(f)          # transmis aux passages suivants
+
+    def test_fichier_impose_par_l_interface(self, exe, monkeypatch):
+        cible = exe / "web_routine.txt"
+        monkeypatch.setenv("LMAGENT_SORTIE", str(cible))
+        lmagent.preparer_sortie(["--routine", "tout"])
+        print("passage")
+        sys.stdout.flush()
+        assert cible.read_text(encoding="utf-8") == "passage\n"
+
+    @pytest.mark.parametrize("args", [["--postuler"], ["--maj-tableau"], ["--agent"]])
+    def test_commandes_interactives_ouvrent_une_console(self, exe, args):
+        lmagent.preparer_sortie(args)
+        assert sys.stdout == "console" and not (exe / "logs").exists()
+
+    def test_avec_console_rien_ne_change(self, monkeypatch):
+        sortie = sys.stdout
+        lmagent.preparer_sortie([])
+        assert sys.stdout is sortie
+
+
+def lmagent_env():
+    import os
+    return os.environ
+
+
 def test_script_transmet_seulement_les_options_prevues(monkeypatch):
     vu = {}
     mod = types.ModuleType("faux_script")
