@@ -7,7 +7,7 @@
   "heure_envoi_relance": "09:30",
   "fenetre_aleatoire_minutes": 15,
   "jours_feries_alsace": false,
-  "tableau_suivi": "~/Documents/lm_agent/alternance/suivi_alternance.xlsx",
+  "tableau_suivi": "~/Documents/lm_agent/alternance/donnees/suivi_alternance.xlsx",
   "pieces_jointes": [
     "~/Documents/lm_agent/pieces_jointes/CV.pdf",
     "~/Documents/lm_agent/pieces_jointes/Calendrier_alternance.pdf"

@@ -1,6 +1,6 @@
 # Profil candidat — à utiliser pour rédiger les mails
 
-> Copie ce fichier en `profil.md` et remplis-le. `profil.md` n'est pas versionné (données personnelles).
+> Copie ce fichier en `profil.md` dans ce même dossier et remplis-le. `profil.md` n'est pas versionné (données personnelles).
 
 ## Identité
 - Prénom NOM, étudiant en … à …

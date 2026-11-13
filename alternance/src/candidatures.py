@@ -3,7 +3,7 @@ from datetime import date
 
 import commun
 import reponses
-from commun import CFG, PROFIL, say
+from commun import CFG, PROFIL, interdits, say
 from mails import domaine, est_generique, texte_vers_html
 from modele import llm_json
 from sites import explorer_site, trouver_site
@@ -19,6 +19,7 @@ def rediger_candidature(o):
         f"- Lieu : {o.get('lieu') or '?'}\n- Contact : {o.get('contact') or 'inconnu'}\n"
         f"- Ce qu'on sait de l'entreprise / de l'offre : {o.get('infos') or 'rien de plus'}\n"
         f"Ton : {'formel, « Madame, Monsieur, »' if formel else 'vouvoiement, plus direct, « Bonjour Madame/Monsieur Nom, »'}.\n"
+        f"{interdits()}"
         '{"objet": "objet du mail", "corps": "corps du mail, paragraphes séparés par une ligne vide"}')
     return r["objet"], r["corps"]
 
@@ -102,7 +103,7 @@ def nouvelles_candidatures(suivi, ol):
             statut = "Brouillon (adresse à trouver)"
         if statut in (LBA, FORMULAIRE):
             # candidature par formulaire : pas de brouillon dans la messagerie, la lettre est gardée
-            # à part et affichée sur la page « À postuler » (et dans postuler_lba.py)
+            # à part et affichée sur la page « À postuler » (et dans postuler.py)
             reponses.enregistrer_lettre(o["lien"], corps.split("\n\n", 1)[1])
         else:
             ol.brouillon(o.get("email"), objet, texte_vers_html(corps), pieces=CFG["pieces_jointes"])

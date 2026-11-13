@@ -1,7 +1,7 @@
 """Page « Paramètres » : signature des candidatures par formulaire (La Bonne Alternance, site de l'entreprise)
 et choix d'ajouter ou non une signature sous les mails.
 
-Les valeurs sont écrites dans alternance/config_alternance.json (non versionné) et appliquées
+Les valeurs sont écrites dans alternance/donnees/config_alternance.json (non versionné) et appliquées
 tout de suite au serveur web (sans le redémarrer).
 """
 import json
@@ -10,7 +10,7 @@ import chemins  # noqa: F401
 import commun
 import lettres
 
-FICHIER = commun.HERE / "config_alternance.json"
+FICHIER = commun.donnees.chemin("config_alternance.json")
 
 # (clé, libellé, exemple)
 CHAMPS = [
@@ -35,6 +35,24 @@ def ajouter_signature():
     m = c.get("messagerie") or {}
     f = (m.get("imap") or {}).get("signature_html") if m.get("type", "outlook") == "imap" else c.get("signature_html")
     return bool(c.get("ajouter_signature", False)), (f if f and commun.P(f).is_file() else "")
+
+
+def lire_interdits():
+    """Texte du « contre-prompt » (alternance/donnees/interdits.md), ou le modèle s'il n'existe pas encore."""
+    for f in (commun.INTERDITS, commun.DONNEES / "interdits.example.md"):
+        if f.exists():
+            return f.read_text(encoding="utf-8")
+    return ""
+
+
+def enregistrer_interdits(texte):
+    """Écrit alternance/donnees/interdits.md ; relu à chaque mail écrit par le modèle. Renvoie (ok, message)."""
+    try:
+        commun.INTERDITS.write_text(str(texte or "")[:20000].replace("\r\n", "\n"), encoding="utf-8")
+    except Exception as e:
+        return False, f"Écriture impossible : {e}"
+    n = commun.interdits().count("\n- ")
+    return True, f"Enregistré : {n} interdiction(s) ajoutée(s) aux consignes des prochains mails."
 
 
 def enregistrer(signature, debut, ajouter=None):

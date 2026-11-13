@@ -4,7 +4,7 @@ from collections import Counter
 from datetime import date, datetime
 
 import commun
-from commun import CFG, PROFIL, say
+from commun import CFG, PROFIL, interdits, say
 from jours import date_relance, heure_aleatoire, prochain_ouvrable
 from mails import DOMAINES_PERSO, domaine, est_adresse, est_generique, texte_vers_html
 from modele import llm, llm_json
@@ -187,7 +187,7 @@ def preparer_relance(suivi, ol, row, t_envoi, sujet, item):
             + ("Le mail précédent sera transféré en dessous. " if item is not None
                else "Le CV et le calendrier d'alternance sont joints à nouveau. ")
             + "Termine par « Cordialement, ». "
-            "Pas de signature, pas d'objet : uniquement le corps du mail.")
+            "Pas de signature, pas d'objet : uniquement le corps du mail." + interdits())
     except Exception as e:
         say(f"   ⚠️ relance {ent} : échec de rédaction ({e})")
         return

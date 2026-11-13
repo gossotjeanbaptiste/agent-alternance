@@ -34,7 +34,8 @@ def page_parametres():
     signature, debut = parametres.lire()
     ajouter, fichier = parametres.ajouter_signature()
     return render_template("parametres.html", page="parametres", champs=parametres.CHAMPS,
-                           signature=signature, debut=debut, ajouter=ajouter, fichier=fichier)
+                           signature=signature, debut=debut, ajouter=ajouter, fichier=fichier,
+                           interdits=parametres.lire_interdits())
 
 
 @pages.route("/postuler")
