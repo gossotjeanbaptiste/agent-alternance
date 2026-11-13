@@ -62,7 +62,10 @@ a { color: var(--accent); }
 .connexion { width: 100%; max-width: 380px; }
 .connexion h1 { display: flex; justify-content: center; margin: 4px 0 12px; }
 .erreur-texte { color: var(--erreur); min-height: 1.2em; margin: 6px 0; }
+nav .utilisateur { margin-left: auto; align-self: center; color: var(--doux); padding: 0 8px; max-width: 220px;
+                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 nav .deconnexion { margin-left: auto; background: transparent; }
+nav .utilisateur + .deconnexion { margin-left: 0; }
 nav .deconnexion + .quitter { margin-left: 6px; }
 .assistant { width: 100%; max-width: 560px; }
 .assistant h1 { display: flex; justify-content: center; margin: 4px 0 4px; }

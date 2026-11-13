@@ -2,9 +2,9 @@
 {% block titre %}Paramètres{% endblock %}
 {% block contenu %}
 <h1>Paramètres</h1>
-<p class="doux">Ouvre une section pour la modifier. <a href="/assistant">Revoir l'assistant de premier lancement</a></p>
+<p class="doux">LMAgent <span id="version-courante">v{{ version }}</span> · Ouvre une section pour la modifier. <a href="/assistant">Revoir l'assistant de premier lancement</a></p>
 <details class="carte pli-section" id="pli-version">
-  <summary><h2 style="display:inline">Version et mises à jour</h2></summary>
+  <summary><h2 style="display:inline">Version et mises à jour</h2> <span class="doux">— v{{ version }}</span></summary>
   <p>LMAgent version <b>{{ version }}</b>{% if not installee %} (lancé depuis le code : mise à jour par git){% endif %}.</p>
   <p class="doux">Les mises à jour s'installent toutes seules (réglage dans « Tous les réglages » → Mises à jour).</p>
   <div class="actions"><button onclick="verifierMaj()">🔄 Vérifier maintenant</button></div>
