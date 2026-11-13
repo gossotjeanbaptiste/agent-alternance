@@ -34,7 +34,7 @@ def signature():
     d = request.get_json(force=True)
     if not isinstance(d.get("signature"), dict):
         return jsonify(ok=False, message="Données invalides."), 400
-    ok, message = parametres.enregistrer(d["signature"], d.get("debut"))
+    ok, message = parametres.enregistrer(d["signature"], d.get("debut"), d.get("ajouter"))
     return jsonify(ok=ok, message=message)
 
 

@@ -20,6 +20,8 @@ Par mail : le brouillon t'attend dans {{ messagerie }}, relis-le et envoie-le ; 
     <summary><span class="voir">📄 Afficher la lettre</span><span class="masquer">📄 Masquer la lettre</span></summary>
     <div class="lettre" id="l{{ l['_ligne'] }}">{{ l['_lettre'] }}</div>
   </details>
+  {% elif l['_mail'] and l['_ferme'] %}
+  <p class="doux">Lettre non affichée : l'Outlook classique est fermé.</p>
   {% elif l['_mail'] %}
   <p class="doux">Brouillon introuvable dans {{ messagerie }} (déjà envoyé ou supprimé ?) : le prochain suivi mettra la ligne à jour.</p>
   {% else %}

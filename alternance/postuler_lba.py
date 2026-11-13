@@ -68,13 +68,14 @@ def nettoyer(corps):
     return re.sub(r"\n{3,}", "\n\n", t).strip()
 
 
-def lettres_des_brouillons():
+def lettres_des_brouillons(lire_messagerie=True):
     """{lien pour postuler: texte de la lettre} depuis les brouillons « [À postuler…] »,
-    et {adresse: texte} pour les candidatures par mail (clé = adresse du destinataire)."""
+    et {adresse: texte} pour les candidatures par mail (clé = adresse du destinataire).
+    lire_messagerie=False : seulement les lettres enregistrées (sans ouvrir la messagerie)."""
     from messagerie import ouvrir
     res = {}
     try:
-        brouillons = ouvrir().textes_brouillons()
+        brouillons = ouvrir().textes_brouillons() if lire_messagerie else []
     except Exception:  # messagerie indisponible : on garde au moins les lettres enregistrées
         brouillons = []
     for sujet, corps, destinataires in brouillons:
