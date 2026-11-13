@@ -45,7 +45,7 @@ dans le dépôt et où en est le projet.
 | `lmagent.py` | point d'entrée unique (devient `LMAgent.exe`) : interface, `--routine`, `--postuler`, `--maj-tableau`, `--agent` ; `commande_soi()` pour se relancer |
 | `web/src/icone_tache.py` | icône près de l'horloge (pystray) : Ouvrir / Quitter LMAgent ; l'exe n'a pas de console, sa sortie va dans `logs/` (`interface_…`, `web_…_planifiee`), les commandes interactives ouvrent leur console (`lmagent.preparer_sortie`) |
 | `web/src/planification.py` | routines quotidiennes via le Planificateur de tâches (`LMAgent_<routine>`) |
-| `version.py`, `mise_a_jour.py` | numéro de version (remplacé par le tag à la publication) ; mises à jour automatiques de la version installée (GitHub Releases, empreinte SHA-256, `msiexec /qn`) |
+| `version.py`, `mise_a_jour.py` | numéro de version (remplacé par le tag à la publication) ; mises à jour automatiques de la version installée (GitHub Releases, empreinte SHA-256, `msiexec /passive` : barre de progression sans questions, comme MyCMS) |
 | `installeur/`, `.github/workflows/publier.yml` | `LMAgent.spec` (PyInstaller), `LMAgent.wxs` (WiX v5, installation par utilisateur) ; un tag `vX.Y.Z` sur le dépôt public publie l'installeur |
 | `emplacements.py` | où vivent les fichiers personnels : dossier du projet (lancé depuis le code), `%APPDATA%\LMAgent` (version installée) ou `LMAGENT_DOSSIER` (tests) |
 | `agent.py` | agent en chat / tâches, connexion LM Studio (tour puis ce PC), choix du moteur GPU, journal (`logs/`) |
