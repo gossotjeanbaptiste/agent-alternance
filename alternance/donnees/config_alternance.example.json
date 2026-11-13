@@ -7,11 +7,8 @@
   "heure_envoi_relance": "09:30",
   "fenetre_aleatoire_minutes": 15,
   "jours_feries_alsace": false,
-  "tableau_suivi": "~/Documents/lm_agent/alternance/donnees/suivi_alternance.xlsx",
-  "pieces_jointes": [
-    "~/Documents/lm_agent/pieces_jointes/CV.pdf",
-    "~/Documents/lm_agent/pieces_jointes/Calendrier_alternance.pdf"
-  ],
+  "tableau_suivi": "",
+  "pieces_jointes": [],
   "_ajouter_signature": "true = signature sous chaque brouillon de mail : le fichier signature_html (Outlook) ou messagerie.imap.signature_html (Gmail) s'il existe, sinon nom, titre, téléphone, mail et liens de signature_formulaire. Laisse false si ta messagerie l'ajoute déjà. Réglable aussi dans la page Paramètres.",
   "ajouter_signature": false,
   "signature_html": "~/AppData/Roaming/Microsoft/Signatures/Signature (ton.adresse@exemple.fr).htm",

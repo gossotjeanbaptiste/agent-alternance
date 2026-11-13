@@ -7,7 +7,7 @@ from pathlib import Path
 
 from chemins import ALT, LOGS, ROOT
 
-SCRIPTS = {"relances": ALT / "relances.py", "recherche": ALT / "recherche.py", "tout": ALT / "alternance.py"}
+SCRIPTS = {"relances": ALT / "relances.py", "recherche": ALT / "recherche.py", "tout": ALT / "alternance.py"}  # noms connus
 ROUTINE = {"proc": None, "nom": None, "fichier": None, "debut": None}
 
 
@@ -16,18 +16,11 @@ def en_cours():
     return p is not None and p.poll() is None
 
 
-# Relance le script N fois d'affilée (chaque passage démarre quand le précédent est fini).
-# Tourne dans le processus séparé : la boucle continue même si l'interface est arrêtée.
-BOUCLE = """
-import subprocess, sys
-script, n, *args = sys.argv[1:]
-n, code = int(n), 0
-for i in range(n):
-    if n > 1:
-        print(f"\\n===== Passage {i + 1}/{n} =====\\n", flush=True)
-    code = subprocess.call([sys.executable, "-u", script, *args]) or code
-sys.exit(code)
-"""
+def commande(nom, essai=False, fois=1):
+    """lmagent --routine <nom> [--fois N] [--essai] : l'exe dans la version installée, python lmagent.py sinon.
+    La boucle des passages tourne dans ce processus séparé : elle continue même si l'interface est arrêtée."""
+    import lmagent
+    return lmagent.commande_soi() + ["--routine", nom, "--fois", str(fois)] + (["--essai"] if essai else [])
 
 
 def lancer(nom, essai=False, fois=1):
@@ -40,7 +33,7 @@ def lancer(nom, essai=False, fois=1):
     fichier = LOGS / f"web_{datetime.now():%Y%m%d_%H%M%S}_{nom}{suffixe}.txt"
     sortie = open(fichier, "w", encoding="utf-8")
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
-    cmd = [sys.executable, "-u", "-c", BOUCLE, str(SCRIPTS[nom]), str(fois)] + (["--essai"] if essai else [])
+    cmd = commande(nom, essai, fois)
     proc = subprocess.Popen(cmd, cwd=ROOT, stdout=sortie, stderr=subprocess.STDOUT, env=env,
                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     libelle = nom + (f" ×{fois}" if fois > 1 else "") + (" (essai)" if essai else "")

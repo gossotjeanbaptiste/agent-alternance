@@ -8,7 +8,15 @@ async function poster(url, donnees) {
   });
   let json = {};
   try { json = await r.json(); } catch (e) { json = { ok: false, message: "Erreur " + r.status }; }
+  if (r.status === 401 && json.connexion) {  // session expirée : retour à la page de connexion
+    location.href = "/connexion?suite=" + encodeURIComponent(location.pathname);
+  }
   return json;
+}
+
+async function deconnecter() {
+  await poster("/api/deconnexion");
+  location.href = "/connexion";
 }
 
 function annoncer(texte, erreur) {

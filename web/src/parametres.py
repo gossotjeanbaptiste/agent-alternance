@@ -37,9 +37,24 @@ def ajouter_signature():
     return bool(c.get("ajouter_signature", False)), (f if f and commun.P(f).is_file() else "")
 
 
+def lire_profil():
+    f = commun.donnees.chemin("profil.md")
+    return f.read_text(encoding="utf-8") if f.exists() else ""
+
+
+def enregistrer_profil(texte):
+    """Écrit profil.md (relu au lancement de chaque routine). Renvoie (ok, message)."""
+    texte = str(texte or "").replace("\r\n", "\n").strip()
+    if len(texte) < 50:
+        return False, "Profil trop court : c'est ce qui guide l'écriture des mails."
+    commun.donnees.chemin("profil.md").write_text(texte[:50000] + "\n", encoding="utf-8")
+    return True, "Profil enregistré (pris en compte à la prochaine routine)."
+
+
 def lire_interdits():
     """Texte du « contre-prompt » (alternance/donnees/interdits.md), ou le modèle s'il n'existe pas encore."""
-    for f in (commun.INTERDITS, commun.DONNEES / "interdits.example.md"):
+    import emplacements
+    for f in (commun.INTERDITS, emplacements.modeles() / "interdits.example.md"):
         if f.exists():
             return f.read_text(encoding="utf-8")
     return ""

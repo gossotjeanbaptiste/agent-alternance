@@ -1,3 +1,5 @@
+<p align="center"><img src="web/static/logo.png" alt="LMAgent" width="160"></p>
+
 # lm_agent
 
 Agent IA local (LM Studio + Qwen3.5 9B) et routine automatique de recherche d'alternance —
@@ -12,11 +14,26 @@ suivi dans un tableau Excel, et une interface web locale pour tout piloter. Rien
 5. [Ton profil et ce que tu ne veux pas dans tes mails](#5-ton-profil-et-ce-que-tu-ne-veux-pas-dans-tes-mails)
 6. [Fonctionnement](#6-fonctionnement)
 7. [Organisation du dépôt](#7-organisation-du-dépôt)
-8. [Ce qui n'est pas versionné](#8-ce-qui-nest-pas-versionné)
+8. [Publier une version (installeur)](#8-publier-une-version-installeur)
+9. [Ce qui n'est pas versionné](#9-ce-qui-nest-pas-versionné)
 
 ---
 
 ## 1. Installation
+
+### Avec l'installeur (le plus simple)
+
+1. Télécharge **`LMAgent-X.Y.Z.msi`** dans les *Releases* du dépôt et lance-le : installation pour ton compte,
+   sans droits administrateur (Windows peut afficher « éditeur inconnu » : l'installeur n'est pas signé).
+2. Ouvre **LMAgent** (menu Démarrer ou bureau) : crée ton compte, puis l'**assistant** te guide (deuxième PC pour
+   l'IA ou non, messagerie, villes, profil, CV ; import possible d'une installation existante).
+3. Installe **LM Studio** et le modèle `qwen/qwen3.5-9b` (sauf si l'IA tourne sur un deuxième PC).
+
+Tes données vivent dans `%APPDATA%\LMAgent\` (config, tableau, profil, journaux…) : jamais touchées par les mises à
+jour ni la désinstallation. Les **mises à jour s'installent toutes seules** au lancement (et toutes les 6 h), après
+vérification de leur empreinte SHA-256 ; désactivable dans **Paramètres** (section Mises à jour).
+
+### Depuis le code source
 
 ### Prérequis
 
@@ -26,7 +43,7 @@ suivi dans un tableau Excel, et une interface web locale pour tout piloter. Rien
 - **Excel n'est pas nécessaire** : le script lit et écrit le `.xlsx` lui-même. Pour le consulter, LibreOffice Calc, Excel en ligne ou la page Suivi de l'interface suffisent (garde le format `.xlsx`).
 - **Python 3** puis :
   ```bash
-  pip install openpyxl pywin32 flask
+  pip install openpyxl pywin32 flask pillow
   ```
 - **LM Studio** avec le modèle `qwen/qwen3.5-9b` (ou un autre, voir `modele`).
 - Une carte graphique est fortement conseillée (voir § 3 : le bon moteur est choisi automatiquement).
@@ -64,6 +81,15 @@ python web\app.py
 Le navigateur s'ouvre sur **http://127.0.0.1:8765**. Pour arrêter : bouton **⏻ Quitter** en haut à droite
 (ou ferme la fenêtre noire). Après une mise à jour du code, quitte et relance l'interface.
 
+**Premier lancement** : après la création du compte, un **assistant** pose quelques questions (deuxième PC pour l'IA
+ou non, messagerie, villes et jeton La Bonne Alternance, profil et signature, CV) et peut importer une installation
+existante ; il reste accessible depuis Paramètres.
+
+**Connexion** : au premier lancement, l'interface te demande de créer un identifiant et un mot de passe
+(8 caractères minimum) ; ensuite, il faut se connecter (case « Rester connecté 30 jours » possible).
+Bouton **Se déconnecter** en haut à droite, mot de passe modifiable dans **Paramètres**.
+Mot de passe oublié : supprime `alternance/donnees/acces_interface.json`, la page de création revient.
+
 | Page | Ce qu'on y fait |
 |---|---|
 | **Tableau de bord** | chiffres, graphique des envois, relances à venir |
@@ -75,12 +101,14 @@ Le navigateur s'ouvre sur **http://127.0.0.1:8765**. Pour arrêter : bouton **�
 | **Paramètres** | signature des lettres de formulaire (avec aperçu), signature ou non sous les mails, **ce que tu ne veux pas dans tes mails**, et **tous les réglages** des deux configs (sections 3 et 4), par section, avec une aide sous chaque champ |
 
 Sécurité : l'interface n'écoute que sur 127.0.0.1 (aucun autre appareil ne peut s'y connecter), refuse les en-têtes Host
-étrangers, et chaque action exige un jeton secret renouvelé à chaque démarrage. Rien n'est chargé depuis Internet.
+étrangers, exige d'être connecté (mot de passe haché, jamais stocké en clair ; attente croissante après 5 essais
+ratés), et chaque action exige en plus un jeton secret renouvelé à chaque démarrage. Rien n'est chargé depuis Internet.
 
 ### En ligne de commande
 
 | Commande | Rôle |
 |---|---|
+| `python lmagent.py` | point d'entrée unique (= `LMAgent.exe` de la version installée) : interface ; `--routine relances|recherche|tout [--essai] [--fois N]`, `--postuler`, `--maj-tableau`, `--agent` |
 | `python alternance\relances.py` | suivi des réponses + relances en brouillon |
 | `python alternance\recherche.py` | nouvelles candidatures |
 | `python alternance\alternance.py` | les deux à la suite |
@@ -91,6 +119,19 @@ Sécurité : l'interface n'écoute que sur 127.0.0.1 (aucun autre appareil ne pe
 
 Ajoute `--essai` aux scripts de la routine pour tout simuler sans rien écrire.
 
+### Tests
+
+```bash
+pip install pytest
+python -m pytest
+```
+Plus de 500 tests (dossier `tests/`, un fichier par partie du code) : outils de mails, jours fériés, tableau,
+rangement des données, réglages, sites des entreprises, La Bonne Alternance, orientation des candidatures,
+suivi et relances, Gmail / IMAP (faux serveur), Outlook (sans le logiciel), assistant de candidature, interface web
+(protection, pages, actions, réglages), outils de fichiers de l'agent, logo.
+Ils ne touchent jamais à tes données (dossier temporaire via `LMAGENT_DONNEES`), n'accèdent pas au réseau,
+n'utilisent ni le modèle, ni ta messagerie, ni la tour (tout est simulé).
+
 ### Tous les jours automatiquement
 
 ```bash
@@ -98,6 +139,7 @@ Ajoute `--essai` aux scripts de la routine pour tout simuler sans rien écrire.
 .\planifier.ps1 -Tache recherche -Heure 10:15
 ```
 `-Lister` affiche les tâches, `-Supprimer` en retire une, `-Maintenant` la lance tout de suite.
+Plus simple : page **Routines** → « Tous les jours automatiquement » (tâches `LMAgent_<routine>`, marche aussi avec la version installée).
 Le PC doit être allumé, session ouverte.
 
 ### Avant de lancer
@@ -159,7 +201,7 @@ passages max (`interface.*`).
 | `la_bonne_alternance.jeton_api` | Ton jeton API gratuit : créer un compte sur **api.apprentissage.beta.gouv.fr**. Vide = source ignorée |
 | `la_bonne_alternance.villes` | Points de recherche `{"nom", "lat", "lon"}` (coordonnées sur geo.api.gouv.fr ou Google Maps) |
 | `pieces_jointes` | Chemins de ton CV et de ton calendrier d'alternance (à mettre dans `pieces_jointes/`) |
-| `tableau_suivi` | Chemin du tableau Excel (créé automatiquement s'il n'existe pas ; modèle : `suivi_alternance.example.xlsx`, 4 lignes fictives) |
+| `tableau_suivi` | Chemin du tableau Excel ; vide = `suivi_alternance.xlsx` dans le dossier de données (créé automatiquement ; modèle : `suivi_alternance.example.xlsx`, 4 lignes fictives) |
 | `signature_formulaire` | Ton nom, titre, téléphone, mail, LinkedIn, portfolio, GitHub : signature des lettres de formulaire (réglable aussi dans **Paramètres**) ; le nom sert aussi à l'objet par défaut d'une relance |
 | `debut_signature` | 1re ligne de ta signature de mail (ex. `"Prénom NOM"`) : elle est retirée du mail d'origine relu avant d'écrire une relance |
 | `domaines_ignores` | Domaines de ton école / employeur (ex. `["mon-ecole.fr"]`) : leurs mails ne sont jamais comptés comme des réponses d'entreprise |
@@ -307,7 +349,18 @@ Les modules de l'interface (`web/src/`) sont décrits dans l'en-tête de `web/ap
 
 ---
 
-## 8. Ce qui n'est pas versionné
+## 8. Publier une version (installeur)
+
+```bash
+git tag v1.2.0
+git push origin v1.2.0
+```
+Sur le dépôt public, GitHub Actions (`.github/workflows/publier.yml`) lance les tests, compile `LMAgent.exe`
+(PyInstaller, `installeur/LMAgent.spec`), fabrique `LMAgent-1.2.0.msi` (WiX, `installeur/LMAgent.wxs`) et son
+empreinte `.sha256`, puis crée la version GitHub : les installations existantes s'y mettent à jour seules.
+Compilation locale de l'exe : `python -m PyInstaller installeur/LMAgent.spec --noconfirm` (dossier `dist/LMAgent/`).
+
+## 9. Ce qui n'est pas versionné
 
 `config.json`, tout `alternance/donnees/` sauf les modèles `*.example.*` (config, profil, contre-prompt, tableau,
 lettres et réponses, liste des refus), `linkedin/`, CV / PDF, `logs/`, `workspace/`, `corbeille/` — voir `.gitignore`.

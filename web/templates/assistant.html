@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="jeton" content="{{ jeton }}">
+<title>LMAgent — Premier lancement</title>
+<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="page-connexion">
+<div class="carte assistant">
+  <h1><img src="{{ url_for('static', filename='logo.png') }}" alt="LMAgent" width="80" height="80"></h1>
+  <p class="doux etapes" id="progression"></p>
+
+  <!-- 1. Bienvenue -->
+  <section class="etape" data-etape="bienvenue">
+    <h2>Bienvenue</h2>
+    <p>Quelques questions pour préparer LMAgent. Tout reste modifiable ensuite dans <b>Paramètres</b>.</p>
+    {% if e.lm_studio %}
+    <p>✅ LM Studio est installé.</p>
+    {% else %}
+    <p>⚠️ LM Studio n'a pas été trouvé sur ce PC. Installe-le depuis <b>lmstudio.ai</b> puis télécharge le modèle
+      <code>qwen/qwen3.5-9b</code> (inutile si l'IA tourne sur un deuxième PC).</p>
+    {% endif %}
+    {% if not e.depuis_le_code %}
+    <h3>Déjà utilisé LMAgent sur ce PC ?</h3>
+    <p class="doux">Importe la config, le tableau, le profil, l'export LinkedIn et les pièces jointes d'une copie du projet.</p>
+    <label class="champ">Dossier de l'ancienne installation
+      <input type="text" id="chemin_import" value="{{ e.ancienne }}" placeholder="C:\Users\…\Documents\lm_agent">
+    </label>
+    <div class="actions"><button onclick="importer()">📥 Importer</button></div>
+    {% endif %}
+  </section>
+
+  <!-- 2. Deuxième PC -->
+  <section class="etape" data-etape="tour" hidden>
+    <h2>Un deuxième PC pour l'IA ?</h2>
+    <p class="doux">Le modèle peut tourner sur un autre PC plus puissant (carte graphique), réveillé à distance.
+      Sinon, il tourne sur ce PC.</p>
+    <label class="champ" style="display:flex;gap:8px;align-items:center">
+      <input type="radio" name="tour" value="non" {% if not e.utiliser_tour %}checked{% endif %} onchange="voirTour()" style="width:auto"> Non, tout sur ce PC
+    </label>
+    <label class="champ" style="display:flex;gap:8px;align-items:center">
+      <input type="radio" name="tour" value="oui" {% if e.utiliser_tour %}checked{% endif %} onchange="voirTour()" style="width:auto"> Oui, j'ai un deuxième PC (la « tour »)
+    </label>
+    <div id="details_tour" {% if not e.utiliser_tour %}hidden{% endif %}>
+      <label class="champ">Adresse du serveur LM Studio de la tour
+        <input type="text" id="tour_url" value="{{ e.tour_url }}" placeholder="http://nom-de-la-tour:1236/v1"></label>
+      <label class="champ">Adresse MAC de sa carte Ethernet (réveil à distance, facultatif)
+        <input type="text" id="tour_mac" value="{{ e.tour_mac }}" placeholder="AA:BB:CC:DD:EE:FF"></label>
+      <label class="champ">Accès SSH (facultatif)
+        <input type="text" id="tour_ssh" value="{{ e.tour_ssh }}" placeholder="utilisateur@nom-de-la-tour"></label>
+    </div>
+  </section>
+
+  <!-- 3. Messagerie -->
+  <section class="etape" data-etape="messagerie" hidden>
+    <h2>Ta messagerie</h2>
+    <p class="doux">LMAgent n'envoie jamais rien : il dépose des brouillons, que tu relis et envoies.</p>
+    <label class="champ" style="display:flex;gap:8px;align-items:center">
+      <input type="radio" name="messagerie" value="outlook" {% if e.messagerie != 'imap' %}checked{% endif %} onchange="voirImap()" style="width:auto"> Outlook classique (installé sur ce PC)
+    </label>
+    <label class="champ" style="display:flex;gap:8px;align-items:center">
+      <input type="radio" name="messagerie" value="imap" {% if e.messagerie == 'imap' %}checked{% endif %} onchange="voirImap()" style="width:auto"> Gmail (ou une autre messagerie IMAP)
+    </label>
+    <div id="details_imap" {% if e.messagerie != 'imap' %}hidden{% endif %}>
+      <label class="champ">Adresse mail <input type="text" id="imap_adresse" value="{{ e.imap_adresse }}" placeholder="toi@gmail.com"></label>
+      <label class="champ">Mot de passe d'application
+        <input type="password" id="imap_mdp" autocomplete="new-password"
+               placeholder="{{ 'déjà enregistré (laisser vide pour le garder)' if e.imap_mdp_defini else '16 lettres' }}"></label>
+      <p class="doux" style="font-size:12px">Gmail : active la validation en deux étapes, puis crée-le sur
+        myaccount.google.com/apppasswords. Jamais ton mot de passe normal.</p>
+    </div>
+  </section>
+
+  <!-- 4. La Bonne Alternance -->
+  <section class="etape" data-etape="lba" hidden>
+    <h2>Où chercher ?</h2>
+    <label class="champ">Villes (une par ligne, la première sert de référence)
+      <textarea id="villes" class="zone" rows="5" placeholder="Lyon&#10;Villeurbanne">{{ e.villes }}</textarea></label>
+    <label class="champ">Rayon autour de chaque ville (km) <input type="text" id="rayon" value="{{ e.rayon }}"></label>
+    <label class="champ">Jeton API La Bonne Alternance (gratuit : compte sur api.apprentissage.beta.gouv.fr)
+      <input type="password" id="jeton" autocomplete="off"
+             placeholder="{{ 'déjà enregistré (laisser vide pour le garder)' if e.jeton_defini else 'facultatif' }}"></label>
+  </section>
+
+  <!-- 5. Profil -->
+  <section class="etape" data-etape="profil" hidden>
+    <h2>Ton profil</h2>
+    <p class="doux">C'est ce qui guide l'écriture des mails : formation, poste visé, rythme, projets, et un exemple de mail qui te plaît.</p>
+    <textarea id="profil" class="zone" rows="12">{{ e.profil }}</textarea>
+    <h3>Signature</h3>
+    {% for cle, libelle in (("nom", "Nom"), ("titre", "Titre"), ("telephone", "Téléphone"), ("email", "Adresse mail"), ("linkedin", "LinkedIn"), ("portfolio", "Portfolio"), ("github", "GitHub")) %}
+    <label class="champ">{{ libelle }} <input type="text" id="sig_{{ cle }}" value="{{ e.signature.get(cle, '') }}"></label>
+    {% endfor %}
+    <label class="champ">Domaines de ton école / employeur (facultatif, un par ligne)
+      <textarea id="domaines" class="zone" rows="2" placeholder="mon-ecole.fr">{{ e.domaines }}</textarea></label>
+  </section>
+
+  <!-- 6. CV -->
+  <section class="etape" data-etape="cv" hidden>
+    <h2>Ton CV</h2>
+    <p class="doux">Joint à chaque candidature par mail (tu peux ajouter d'autres pièces, ex. calendrier d'alternance).</p>
+    <p id="liste_cv">{% if e.cv %}Déjà joint : {{ e.cv|join(', ') }}{% else %}Aucune pièce jointe pour l'instant.{% endif %}</p>
+    <input type="file" id="fichier_cv" accept=".pdf,.doc,.docx,.odt">
+    <div class="actions"><button onclick="envoyerCv()">📎 Ajouter</button></div>
+  </section>
+
+  <!-- 7. Fin -->
+  <section class="etape" data-etape="fin" hidden>
+    <h2>C'est prêt</h2>
+    <p>Tu peux lancer une première recherche depuis la page <b>Routines</b> (coche « mode essai » pour voir sans rien écrire).</p>
+  </section>
+
+  <p id="erreur" class="erreur-texte" role="alert"></p>
+  <div class="actions">
+    <button id="precedent" onclick="aller(-1)">← Précédent</button>
+    <button id="suivant" class="principal" onclick="suivant()">Suivant →</button>
+  </div>
+</div>
+<script>
+const JETON = document.querySelector('meta[name="jeton"]').content;
+const etapes = [...document.querySelectorAll(".etape")];
+let i = 0;
+const v = id => (document.getElementById(id) || {}).value || "";
+const choix = nom => (document.querySelector(`input[name="${nom}"]:checked`) || {}).value;
+
+async function poster(url, donnees) {
+  const r = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json", "X-Jeton": JETON},
+                              body: JSON.stringify(donnees || {})});
+  try { return await r.json(); } catch (e) { return {ok: false, message: "Erreur " + r.status}; }
+}
+function montrer() {
+  etapes.forEach((e, k) => e.hidden = k !== i);
+  document.getElementById("progression").textContent = `Étape ${i + 1} sur ${etapes.length}`;
+  document.getElementById("precedent").hidden = i === 0;
+  document.getElementById("suivant").textContent = i === etapes.length - 1 ? "Ouvrir LMAgent" : "Suivant →";
+  document.getElementById("erreur").textContent = "";
+}
+function aller(d) { i = Math.max(0, Math.min(etapes.length - 1, i + d)); montrer(); }
+function voirTour() { document.getElementById("details_tour").hidden = choix("tour") !== "oui"; }
+function voirImap() { document.getElementById("details_imap").hidden = choix("messagerie") !== "imap"; }
+function erreur(m) { document.getElementById("erreur").textContent = m || "Erreur"; }
+
+const enregistrements = {
+  tour: () => poster("/api/assistant/tour", {utiliser: choix("tour") === "oui", url: v("tour_url"), mac: v("tour_mac"), ssh: v("tour_ssh")}),
+  messagerie: () => poster("/api/assistant/messagerie", {type: choix("messagerie"), adresse: v("imap_adresse"), mot_de_passe_app: v("imap_mdp")}),
+  lba: () => poster("/api/assistant/lba", {villes: v("villes"), rayon: v("rayon"), jeton: v("jeton")}),
+  profil: () => {
+    const signature = {};
+    for (const c of ["nom", "titre", "telephone", "email", "linkedin", "portfolio", "github"]) signature[c] = v("sig_" + c);
+    return poster("/api/assistant/profil", {profil: v("profil"), signature, domaines: v("domaines")});
+  },
+  fin: () => poster("/api/assistant/terminer"),
+};
+async function suivant() {
+  const nom = etapes[i].dataset.etape;
+  if (enregistrements[nom]) {
+    const r = await enregistrements[nom]();
+    if (!r.ok) { erreur(r.message); return; }
+  }
+  if (nom === "fin") { location.href = "/"; return; }
+  aller(1);
+}
+async function importer() {
+  const r = await poster("/api/assistant/importer", {chemin: v("chemin_import")});
+  if (!r.ok) { erreur(r.message); return; }
+  alert(r.message + "\n\nVérifie les étapes suivantes (elles reprennent tes réglages importés).");
+  location.reload();
+}
+async function envoyerCv() {
+  const f = document.getElementById("fichier_cv").files[0];
+  if (!f) { erreur("Choisis un fichier."); return; }
+  const fd = new FormData();
+  fd.append("fichier", f);
+  const r = await fetch("/api/assistant_cv", {method: "POST", headers: {"X-Jeton": JETON}, body: fd});
+  const j = await r.json().catch(() => ({ok: false, message: "Erreur " + r.status}));
+  if (!j.ok) { erreur(j.message); return; }
+  document.getElementById("liste_cv").textContent = j.message;
+  document.getElementById("erreur").textContent = "";
+}
+montrer();
+</script>
+</body>
+</html>

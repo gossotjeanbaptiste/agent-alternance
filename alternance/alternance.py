@@ -48,7 +48,7 @@ def main(mode=None):
     agent.log(f"===== ROUTINE ALTERNANCE ({mode}) =====")
     t0 = datetime.now()
     agent.ensure_server()
-    suivi = Suivi(P(CFG["tableau_suivi"]))
+    suivi = Suivi(commun.chemin_tableau())
 
     # Garde-fou : si la LECTURE d'Outlook dépasse 10 min (connexion demandée, Outlook bloqué...),
     # on arrête proprement. Il est désactivé dès qu'Outlook a été lu (voir mettre_a_jour).

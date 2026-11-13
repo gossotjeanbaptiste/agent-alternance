@@ -3,7 +3,7 @@ import os
 import threading
 from datetime import date
 
-from flask import Blueprint, abort, jsonify, request
+from flask import Blueprint, abort, current_app, jsonify, request, session
 
 import lettres
 import routines
@@ -12,6 +12,62 @@ import tour_web
 from tableau import STATUTS
 
 api = Blueprint("api", __name__, url_prefix="/api")
+
+
+@api.post("/connexion")
+def connexion():
+    """Premier lancement : crée le compte puis connecte ; sinon vérifie l'identifiant et le mot de passe."""
+    import auth
+    d = request.get_json(force=True, silent=True) or {}
+    ident, mdp = str(d.get("identifiant") or ""), str(d.get("mot_de_passe") or "")
+    if not auth.compte_existe():
+        ok, message = auth.creer_compte(ident, mdp, str(d.get("confirmation") or ""))
+        if ok:
+            current_app.secret_key = auth.cle_secrete()
+    else:
+        ok, message = auth.verifier(ident, mdp)
+    if not ok:
+        return jsonify(ok=False, message=message), 401
+    session.clear()
+    session["connecte"] = auth.identifiant()
+    session.permanent = bool(d.get("rester"))
+    return jsonify(ok=True, message=message)
+
+
+@api.post("/assistant/<etape>")
+def assistant(etape):
+    import assistant as a
+    if etape not in a.ETAPES:
+        abort(404)
+    d = request.get_json(force=True, silent=True) or {}
+    ok, message = a.ETAPES[etape](d)
+    return jsonify(ok=ok, message=message), (200 if ok else 400)
+
+
+@api.post("/assistant_cv")
+def assistant_cv():
+    import assistant as a
+    ok, message = a.etape_cv(request.files.get("fichier"))
+    return jsonify(ok=ok, message=message), (200 if ok else 400)
+
+
+@api.post("/deconnexion")
+def deconnexion():
+    session.clear()
+    return jsonify(ok=True, message="Déconnecté.")
+
+
+@api.post("/mot_de_passe")
+def mot_de_passe():
+    """Change le mot de passe ; les autres sessions (autres navigateurs) sont déconnectées, pas celle-ci."""
+    import auth
+    d = request.get_json(force=True, silent=True) or {}
+    ok, message = auth.changer_mot_de_passe(str(d.get("actuel") or ""), str(d.get("nouveau") or ""),
+                                             str(d.get("confirmation") or ""))
+    if ok:
+        current_app.secret_key = auth.cle_secrete()   # nouvelle clé : les anciens cookies ne valent plus rien
+        session["connecte"] = auth.identifiant()       # celui-ci est re-signé avec la nouvelle clé
+    return jsonify(ok=ok, message=message), (200 if ok else 400)
 
 
 @api.post("/statut")
@@ -41,6 +97,16 @@ def signature():
     return jsonify(ok=ok, message=message)
 
 
+@api.post("/profil")
+def profil():
+    import parametres
+    d = request.get_json(force=True, silent=True) or {}
+    if not isinstance(d.get("texte"), str):
+        return jsonify(ok=False, message="Données invalides."), 400
+    ok, message = parametres.enregistrer_profil(d["texte"])
+    return jsonify(ok=ok, message=message), (200 if ok else 400)
+
+
 @api.post("/interdits")
 def interdits():
     import parametres
@@ -59,6 +125,16 @@ def enregistrer_reglages():
         return jsonify(ok=False, message="Données invalides."), 400
     ok, message = reglages_web.enregistrer(d["valeurs"])
     return jsonify(ok=ok, message=message)
+
+
+@api.post("/mise_a_jour")
+def mise_a_jour_maintenant():
+    """Vérifie tout de suite ; si une version plus récente s'installe, l'interface se ferme puis redémarre."""
+    import mise_a_jour
+    lancee, message = mise_a_jour.verifier()
+    if lancee:
+        threading.Timer(1.0, lambda: os._exit(0)).start()
+    return jsonify(ok=True, message=message, redemarrage=lancee)
 
 
 @api.post("/quitter")
@@ -82,6 +158,22 @@ def lancer_routine(nom):
         fois = 1
     routines.lancer(nom, bool(donnees.get("essai")), fois)
     return jsonify(ok=True)
+
+
+@api.get("/planification")
+def liste_planification():
+    import planification
+    return jsonify(planification.taches())
+
+
+@api.post("/planification")
+def planifier():
+    """{"nom": "relances", "heure": "10:00"} planifie ; heure vide supprime la tâche."""
+    import planification
+    d = request.get_json(force=True, silent=True) or {}
+    nom, heure = str(d.get("nom") or ""), str(d.get("heure") or "").strip()
+    ok, message = planification.planifier(nom, heure) if heure else planification.supprimer(nom)
+    return jsonify(ok=ok, message=message), (200 if ok else 400)
 
 
 @api.get("/routine")

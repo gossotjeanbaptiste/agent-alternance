@@ -3,6 +3,7 @@ from collections import Counter
 from datetime import date, timedelta
 
 import chemins  # noqa: F401  (rend les modules d'alternance importables)
+import commun
 import routines
 from commun import CFG, P
 from tableau import A_POSTULER, Suivi, as_date
@@ -16,7 +17,7 @@ COLONNES_DATES = ("Date ajout", "Date envoi", "Dernière action", "Relance prév
 
 def lire():
     """Toutes les lignes du tableau, sous forme de dictionnaires (avec leur numéro de ligne Excel)."""
-    s = Suivi(P(CFG["tableau_suivi"]))
+    s = Suivi(commun.chemin_tableau())
     lignes = []
     for r in s.rows():
         d = {c: s.get(r, c) for c in s.h}
@@ -59,7 +60,7 @@ def modifier(n_ligne, entreprise, champs):
     """Modifie une ligne (après avoir vérifié que c'est bien la bonne entreprise). Renvoie (ok, message)."""
     if routines.en_cours():
         return False, "Une routine est en cours : attends qu'elle se termine pour modifier le tableau."
-    s = Suivi(P(CFG["tableau_suivi"]))
+    s = Suivi(commun.chemin_tableau())
     row = next((r for r in s.rows() if r[0].row == n_ligne), None)
     if not row or str(s.get(row, "Entreprise")) != entreprise:
         return False, "Ligne introuvable (le tableau a changé) : recharge la page."

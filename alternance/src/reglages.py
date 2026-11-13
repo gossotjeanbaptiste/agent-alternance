@@ -68,7 +68,8 @@ REGLAGES = [
         _r("Questions du formulaire La Bonne Alternance", A, f"redaction.questions.{cle}.consigne",
            f"Question « {cle} » : consigne pour le modèle", "texte", consigne))],
     # --- fichiers
-    _r("Fichiers", A, "tableau_suivi", "Tableau de suivi (chemin)", "texte", "~/Documents/lm_agent/alternance/donnees/suivi_alternance.xlsx"),
+    _r("Fichiers", A, "tableau_suivi", "Tableau de suivi (chemin)", "texte", "",
+       "Vide = suivi_alternance.xlsx dans le dossier de données (créé automatiquement)."),
     _r("Fichiers", A, "pieces_jointes", "Pièces jointes des candidatures (chemins)", "liste", [],
        "CV, calendrier d'alternance… un chemin par ligne."),
     # --- messagerie
@@ -121,6 +122,8 @@ REGLAGES = [
     _r("Interface", A, "interface.cache_lettres_minutes", "Relecture des lettres de la page À postuler (minutes)", "entier", 5),
     _r("Interface", A, "interface.passages_max", "Passages max d'une routine", "entier", 50),
     # --- agent et modèle (config.json)
+    _r("Agent et modèle", G, "utiliser_tour", "Utiliser un deuxième PC (la tour) pour faire tourner l'IA", "oui_non", False,
+       "Décoché : l'IA tourne sur ce PC uniquement, la page et les réglages de la tour sont cachés."),
     _r("Agent et modèle", G, "modele", "Modèle LM Studio", "texte", "qwen/qwen3.5-9b"),
     _r("Agent et modèle", G, "contexte", "Taille du contexte", "entier", 16384),
     _r("Agent et modèle", G, "gpu", "Moteur sur ce PC", "choix", "auto", choix=["auto", "cuda", "vulkan", "cpu"]),
@@ -133,6 +136,11 @@ REGLAGES = [
     _r("Agent et modèle", G, "dossiers_autorises", "Dossiers accessibles à l'agent", "liste", []),
     _r("Agent et modèle", G, "powershell_en_auto", "PowerShell dans les tâches automatiques", "oui_non", False, "Risqué."),
     _r("Agent et modèle", G, "etapes_max", "Actions max par demande", "entier", 20),
+    # --- mises à jour (version installée)
+    _r("Mises à jour", G, "mises_a_jour_auto", "Installer automatiquement les mises à jour", "oui_non", True,
+       "Version installée : au lancement (puis toutes les 6 h), la dernière version publiée est installée sans rien demander."),
+    _r("Mises à jour", G, "mises_a_jour_depot", "Dépôt GitHub des versions publiées", "texte",
+       "gossotjeanbaptiste/agent-alternance"),
     # --- tour (branche main seulement)
     *[_r("Tour", G, f"tour.{c}", l, t, d, a, tour=True) for c, l, t, d, a in (
         ("mac", "Adresse MAC (Ethernet) de la tour", "texte", "", "Pour le Wake-on-LAN."),
@@ -151,7 +159,7 @@ REGLAGES = [
         ("vram_libre_min_mo", "Mémoire graphique libre nécessaire (Mo)", "entier", 7000, ""),
         ("gpu_utilisation_max", "Utilisation max de la carte (%)", "entier", 40, ""),
         ("wol_internet.hote", "Adresse publique de ta box (réveil depuis l'extérieur)", "texte", "", ""),
-        ("wol_internet.ports", "Ports UDP du Wake-on-LAN", "liste", ["9", "7"], ""))],
+        ("wol_internet.ports", "Ports UDP du Wake-on-LAN", "liste", [9, 7], ""))],
 ]
 
 PAR_CHEMIN = {(r["fichier"], r["chemin"]): r for r in REGLAGES}

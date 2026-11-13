@@ -25,6 +25,7 @@ logs/
 corbeille/
 workspace/
 __pycache__/
+.pytest_cache/
 *.pyc
 
 # Exception : tableau d exemple (donnees fictives)
@@ -34,3 +35,7 @@ __pycache__/
 linkedin/
 *.csv
 
+
+# Compilation de l'installeur
+dist/
+build/

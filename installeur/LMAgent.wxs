@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Installeur LMAgent (WiX Toolset v5), à partir du dossier compilé par PyInstaller :
+      wix build installeur/LMAgent.wxs -arch x64 -d Version=1.2.3 -bindpath Dist=dist/LMAgent -o dist/LMAgent-1.2.3.msi
+  - installation par utilisateur dans %LOCALAPPDATA%\Programs\LMAgent : aucune demande d'autorisation Windows,
+    ce qui permet les mises à jour silencieuses (msiexec /qn) ;
+  - une nouvelle version remplace l'ancienne (MajorUpgrade, même UpgradeCode pour toujours) ;
+  - les données de l'utilisateur sont ailleurs (%APPDATA%\LMAgent) : jamais touchées par l'installation,
+    la mise à jour ni la désinstallation.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="LMAgent" Manufacturer="LMAgent" Version="$(var.Version)" Language="1036" Codepage="1252"
+           UpgradeCode="aedd1e4e-a8ca-4f7f-9e73-0999efb9a61c" Scope="perUser" Compressed="yes">
+    <MajorUpgrade DowngradeErrorMessage="Une version plus récente de LMAgent est déjà installée." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="icone" SourceFile="web\static\favicon.ico" />
+    <Property Id="ARPPRODUCTICON" Value="icone" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/gossotjeanbaptiste/agent-alternance" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="DossierPrograms" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="LMAgent" />
+      </Directory>
+    </StandardDirectory>
+
+    <!-- tout le dossier produit par PyInstaller -->
+    <ComponentGroup Id="Fichiers" Directory="INSTALLFOLDER">
+      <Files Include="!(bindpath.Dist)\**" />
+    </ComponentGroup>
+
+    <!-- nettoyage des dossiers à la désinstallation (installation par utilisateur) -->
+    <Component Id="Dossiers" Directory="INSTALLFOLDER">
+      <RemoveFolder Id="SupprimerInstall" Directory="INSTALLFOLDER" On="uninstall" />
+      <RemoveFolder Id="SupprimerPrograms" Directory="DossierPrograms" On="uninstall" />
+      <RegistryValue Root="HKCU" Key="Software\LMAgent" Name="installe" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="RaccourciMenu">
+        <Shortcut Id="MenuLMAgent" Name="LMAgent" Description="Recherche d'alternance assistée par IA"
+                  Target="[INSTALLFOLDER]LMAgent.exe" WorkingDirectory="INSTALLFOLDER" Icon="icone" />
+        <RegistryValue Root="HKCU" Key="Software\LMAgent" Name="menu" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <StandardDirectory Id="DesktopFolder">
+      <Component Id="RaccourciBureau">
+        <Shortcut Id="BureauLMAgent" Name="LMAgent" Target="[INSTALLFOLDER]LMAgent.exe"
+                  WorkingDirectory="INSTALLFOLDER" Icon="icone" />
+        <RegistryValue Root="HKCU" Key="Software\LMAgent" Name="bureau" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <Feature Id="Principal" Title="LMAgent">
+      <ComponentGroupRef Id="Fichiers" />
+      <ComponentRef Id="Dossiers" />
+      <ComponentRef Id="RaccourciMenu" />
+      <ComponentRef Id="RaccourciBureau" />
+    </Feature>
+  </Package>
+</Wix>

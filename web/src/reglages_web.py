@@ -11,10 +11,11 @@ import chemins  # noqa: F401
 import commun
 import lettres
 import reglages
+import emplacements
 from chemins import ROOT
 
 FICHIERS = {"alternance": lambda: commun.donnees.chemin("config_alternance.json"),
-            "agent": lambda: ROOT / "config.json"}
+            "agent": lambda: emplacements.config_agent()}
 
 
 def _lire(fichier):
@@ -39,13 +40,16 @@ def _affichage(r, v):
 
 def sections():
     """[(titre, [champ, …])] pour la page ; la section Tour n'apparaît que sur la branche avec la tour."""
-    avec_tour = (ROOT / "tour.py").exists()
     donnees = {f: _lire(f) for f in FICHIERS}
+    import tour_web
+    avec_tour = tour_web.tour is not None and commun.agent.utiliser_tour(donnees["agent"])
     res = {}
     for r in reglages.REGLAGES:
         if r["tour"] and not avec_tour:
             continue
         v = reglages.lire_chemin(donnees[r["fichier"]], r["chemin"], r["defaut"])
+        if (r["fichier"], r["chemin"]) == ("agent", "utiliser_tour"):
+            v = commun.agent.utiliser_tour(donnees["agent"])   # déduit des serveurs s'il n'est pas écrit
         res.setdefault(r["section"], []).append({
             **r, "cle": f"{r['fichier']}|{r['chemin']}", "valeur": _affichage(r, v),
             "defini": bool(v) if r["type"] == "secret" else True,
