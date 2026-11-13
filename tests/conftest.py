@@ -7,6 +7,7 @@ Garanties :
 - aucun modèle IA, aucune messagerie, aucune tour : tout est remplacé par des faux objets ;
 - la config est remise dans son état d'origine après chaque test.
 """
+import atexit
 import copy
 import json
 import os
@@ -22,6 +23,7 @@ EXEMPLES = RACINE / "alternance" / "donnees"
 
 # --- dossier de données temporaire, AVANT tout import du code ---------------------------------
 TEMP = Path(tempfile.mkdtemp(prefix="lmagent_tests_"))
+atexit.register(shutil.rmtree, TEMP, ignore_errors=True)   # supprimé à la fin des tests
 DONNEES_TEST = TEMP / "donnees"
 DONNEES_TEST.mkdir()
 for exemple, reel in (("config_alternance.example.json", "config_alternance.json"),

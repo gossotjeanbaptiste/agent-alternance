@@ -13,9 +13,9 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
-import tempfile
 import urllib.request
 from pathlib import Path
 
@@ -81,9 +81,17 @@ def empreinte(fichier):
     return h.hexdigest()
 
 
+def dossier_telechargement():
+    """Dossier mises_a_jour/ (à côté de logs/), vidé à chaque téléchargement : rien ne s'accumule."""
+    d = emplacements.dossier("mises_a_jour")
+    shutil.rmtree(d, ignore_errors=True)
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
 def preparer(info, dossier=None):
     """Télécharge le .msi et vérifie son empreinte. Renvoie son chemin, ou lève une erreur."""
-    dossier = Path(dossier or tempfile.mkdtemp(prefix="lmagent_maj_"))
+    dossier = Path(dossier or dossier_telechargement())
     msi = dossier / info["nom"]
     req = urllib.request.Request(info["sha256"], headers={"User-Agent": ENTETES["User-Agent"]})
     with urllib.request.urlopen(req, timeout=30) as r:
@@ -97,15 +105,33 @@ def preparer(info, dossier=None):
     return msi
 
 
+def _ps(texte):
+    """Chaîne PowerShell entre apostrophes (une apostrophe s'écrit '')."""
+    return "'" + str(texte).replace("'", "''") + "'"
+
+
+def commande_installation(msi, pid=None, exe=None):
+    """Commande PowerShell : attend la fermeture de LMAgent, installe en silence (journal dans logs/), relance LMAgent."""
+    logs = emplacements.dossier("logs")
+    logs.mkdir(parents=True, exist_ok=True)
+    journal = logs / f"installation_{Path(msi).stem}.txt"
+    script = (f"Wait-Process -Id {pid or os.getpid()} -ErrorAction SilentlyContinue; "
+              f"Start-Process msiexec.exe -Wait -ArgumentList "
+              f"'/i',{_ps(chr(34) + str(msi) + chr(34))},'/qn','/norestart','/l*v',{_ps(chr(34) + str(journal) + chr(34))}; "
+              f"Start-Process {_ps(exe or sys.executable)}")
+    return ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script]
+
+
 def lancer_installation(msi):
-    """Attend la fermeture de LMAgent, installe en silence, puis relance LMAgent (processus détaché)."""
-    exe = sys.executable
-    script = (f"Wait-Process -Id {os.getpid()} -ErrorAction SilentlyContinue; "
-              f"Start-Process msiexec.exe -ArgumentList '/i','\"{msi}\"','/qn','/norestart' -Wait; "
-              f"Start-Process '{exe}'")
-    subprocess.Popen(["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", script],
-                     creationflags=getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                     close_fds=True)
+    """Lance la commande d'installation dans un PowerShell sans fenêtre qui survit à la fermeture de LMAgent.
+    Pas de DETACHED_PROCESS : sans console, PowerShell se ferme aussitôt sans rien faire (bug de la 1.0.0 à 1.0.3)."""
+    sans_fenetre = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    hors_job = getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0)
+    cmd = commande_installation(msi)
+    try:
+        subprocess.Popen(cmd, creationflags=sans_fenetre | hors_job, close_fds=True)
+    except OSError:   # le processus n'a pas le droit de sortir de son groupe (job) : sans cette option
+        subprocess.Popen(cmd, creationflags=sans_fenetre, close_fds=True)
 
 
 def verifier(appliquer=True, journal=print):
