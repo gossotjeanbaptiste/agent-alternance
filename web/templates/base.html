@@ -20,7 +20,7 @@
   <a href="/linkedin" class="{{ 'actif' if page == 'linkedin' }}">LinkedIn</a>
   <a href="/journal" class="{{ 'actif' if page == 'journal' }}">Journal</a>
   <a href="/parametres" class="{{ 'actif' if page == 'parametres' }}">Paramètres</a>
-  {% if connecte %}<button class="deconnexion" onclick="deconnecter()" title="Se déconnecter ({{ connecte }})">Se déconnecter</button>{% endif %}
+  {% if connecte %}<span class="utilisateur" title="Compte connecté">👤 {{ connecte }}</span><button class="deconnexion" onclick="deconnecter()" title="Se déconnecter ({{ connecte }})">Se déconnecter</button>{% endif %}
   <button class="quitter" onclick="quitter()" title="Arrêter l'interface">⏻ Quitter</button>
 </nav>
 <main>{% block contenu %}{% endblock %}</main>

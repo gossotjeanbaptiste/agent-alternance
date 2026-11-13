@@ -172,6 +172,14 @@ def test_bouton_verifier_maintenant(client, monkeypatch):
     assert 'id="pli-version"' in h and "version" in h
 
 
+def test_numero_de_version_visible_sans_ouvrir_la_section(client):
+    import version
+    h = client.get("/parametres").get_data(as_text=True)
+    assert f'<span id="version-courante">v{version.__version__}</span>' in h
+    entete = h.split('id="pli-version"')[1].split("</summary>")[0]
+    assert f"v{version.__version__}" in entete
+
+
 def test_lancer_installation_commande(monkeypatch, tmp_path):
     vu = {}
     monkeypatch.setattr(mise_a_jour.subprocess, "Popen", lambda cmd, **k: vu.update(cmd=cmd, **k))

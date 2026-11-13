@@ -167,6 +167,17 @@ class TestConnexion:
         h = client.get("/").get_data(as_text=True)
         assert "Se déconnecter" in h and "deconnecter()" in h
 
+    def test_nom_du_compte_a_cote_de_se_deconnecter(self, client):
+        h = client.get("/").get_data(as_text=True)
+        nom = auth.identifiant()
+        assert nom and f'<span class="utilisateur" title="Compte connecté">👤 {nom}</span><button class="deconnexion"' in h
+
+    def test_nom_du_compte_echappe(self, appli):
+        from flask import render_template
+        with appli.test_request_context("/"):
+            h = render_template("base.html", connecte="<script>alert(1)</script>", jeton="x", avec_tour=False)
+        assert "<script>alert(1)</script>" not in h and "&lt;script&gt;" in h
+
     def test_changer_le_mot_de_passe_garde_cette_session(self, client, appli):
         r = client.post("/api/mot_de_passe", json={"actuel": MOT_DE_PASSE, "nouveau": "tout-nouveau-mot",
                                                    "confirmation": "tout-nouveau-mot"})
