@@ -81,6 +81,15 @@ def _valeur(args, option, defaut=None):
     return defaut
 
 
+def _fichier_de_sortie():
+    """sys.stdout s'il correspond à un vrai fichier (à transmettre aux passages), sinon None (console : hérité)."""
+    try:
+        sys.stdout.fileno()
+    except (AttributeError, OSError, ValueError):
+        return None
+    return sys.stdout
+
+
 def routine(args):
     nom = _valeur(args, "--routine")
     if nom not in ROUTINES:
@@ -91,10 +100,23 @@ def routine(args):
     except ValueError:
         fois = 1
     if fois > 1:  # chaque passage dans un processus neuf (comme un lancement manuel)
+        import os
+        import boucle
         code = 0
-        for i in range(fois):
-            print(f"\n===== Passage {i + 1}/{fois} =====\n", flush=True)
-            code = subprocess.call(commande_soi() + ["--routine", nom] + essai) or code
+        sortie = _fichier_de_sortie()
+        ident = os.getpid()
+        try:
+            for i in range(fois):
+                print(f"\n===== Passage {i + 1}/{fois} =====\n", flush=True)
+                # le passage écrit dans le MÊME fichier ouvert que la boucle (sinon chacun écrit à sa propre position
+                # et les repères « Passage N » écrasent le début du journal) ; modèle et LM Studio restent ouverts
+                # jusqu'au dernier passage (boucle.py)
+                code = subprocess.call(commande_soi() + ["--routine", nom] + essai, stdout=sortie,
+                                       stderr=subprocess.STDOUT if sortie else None,
+                                       env=boucle.environnement(ident, i + 1, fois)) or code
+                sys.stdout.flush()
+        finally:
+            boucle.nettoyer(ident)
         return code
     sys.argv = ["alternance"] + essai
     import alternance

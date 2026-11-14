@@ -72,6 +72,12 @@ def postuler():
                            messagerie=nom_messagerie())
 
 
+@pages.route("/ecartees")
+def ecartees():
+    import ecartees as e
+    return render_template("ecartees.html", page="ecartees", g=e.lire())
+
+
 @pages.route("/routines")
 def page_routines():
     return render_template("routines.html", page="routines", historique=routines.historique())

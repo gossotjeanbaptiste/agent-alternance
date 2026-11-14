@@ -60,7 +60,8 @@ dans le dépôt et où en est le projet.
 | `alternance/src/messagerie.py` | choisit `outlook.py` (COM) ou `imap.py` selon `messagerie.type` — même interface |
 | `alternance/src/suivi.py` | mise à jour du suivi, réponses, non-remises, relances |
 | `alternance/src/candidatures.py`, `sources.py`, `sites.py` | choix des entreprises (liste perso, alertes LinkedIn, API La Bonne Alternance), site et contact de l'entreprise |
-| `alternance/src/reponses.py`, `refus.py` | lettres et réponses des candidatures par formulaire ; liste des entreprises écartées |
+| `alternance/src/reponses.py`, `refus.py` | lettres et réponses des candidatures par formulaire ; liste des entreprises écartées (raison, site, décision) |
+| `web/src/ecartees.py` | page « Écartées » : raison, site / recherche Google, « Candidater quand même » (ajout à la feuille « À contacter »), « Abandonner » (ne revient plus), « Remettre » |
 | `alternance/src/tableau.py` | tableau Excel (openpyxl, Excel non nécessaire), statuts et couleurs |
 | `web/src/assistant.py` | assistant de premier lancement (tour oui/non, messagerie, villes, profil, CV, import) ; s'affiche tant que `config.json` manque ou contient `assistant_a_faire: true` |
 | `web/app.py`, `web/src/`, `web/templates/` | interface : tableau de bord, Suivi, À postuler, Routines, Tour, LinkedIn, Journal, Paramètres |
@@ -97,7 +98,6 @@ des formulaires de contact, réponses aux questions de La Bonne Alternance, cont
 
 Pistes ouvertes, non demandées :
 - exceptions au filtre d'activité (éditeurs de logiciels déclarés comme commerces, réparation d'ordinateurs 95.11Z) ;
-- afficher la liste des entreprises écartées dans l'interface ;
 - mettre à jour le dépôt public (voir ci-dessous) après chaque série de changements, sur demande.
 
 ## Dépôt public

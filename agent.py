@@ -285,8 +285,47 @@ def _charger_distant(nom, url):
         say(f"   ⚠️ Chargement explicite impossible sur {nom} ({e}) : chargement automatique à la première demande")
 
 
+def _reprendre_boucle():
+    """Reprend ce que les passages précédents d'une boucle ont laissé ouvert (à refermer par le dernier)."""
+    global TOUR_REVEILLEE, LMSTUDIO_LOCAL_OUVERT_PAR_SCRIPT
+    import boucle
+    etat = boucle.reprendre()
+    for x in etat.get("a_decharger", []):
+        if tuple(x) not in A_DECHARGER:
+            A_DECHARGER.append(tuple(x))
+    TOUR_REVEILLEE = TOUR_REVEILLEE or bool(etat.get("tour_reveillee"))
+    LMSTUDIO_LOCAL_OUVERT_PAR_SCRIPT = LMSTUDIO_LOCAL_OUVERT_PAR_SCRIPT or bool(etat.get("lmstudio_local"))
+    if etat.get("lmstudio_tour"):
+        try:
+            import tour
+            tour.LMSTUDIO_OUVERT_PAR_SCRIPT = True
+        except ImportError:
+            pass
+
+
+def _garder_pour_le_passage_suivant():
+    """Passage d'une boucle qui n'est pas le dernier : rien n'est fermé, le suivant reprend le tout."""
+    import boucle
+    if not boucle.garder_ouvert():
+        return False
+    try:
+        import tour
+        lmstudio_tour = bool(tour.LMSTUDIO_OUVERT_PAR_SCRIPT)
+    except ImportError:
+        lmstudio_tour = False
+    boucle.transmettre({"a_decharger": [list(x) for x in A_DECHARGER], "tour_reveillee": TOUR_REVEILLEE,
+                        "lmstudio_local": LMSTUDIO_LOCAL_OUVERT_PAR_SCRIPT, "lmstudio_tour": lmstudio_tour})
+    A_DECHARGER.clear()
+    say("⏭️ Modèle et LM Studio gardés ouverts pour le passage suivant")
+    return True
+
+
 def liberer_modele():
-    """Décharge les modèles chargés par le script (appelé automatiquement à la fin)."""
+    """Décharge les modèles chargés par le script (appelé automatiquement à la fin).
+    Dans une boucle de passages, seul le dernier passage referme (voir boucle.py)."""
+    _reprendre_boucle()
+    if _garder_pour_le_passage_suivant():
+        return
     while A_DECHARGER:
         genre, nom, base, inst = A_DECHARGER.pop()
         try:

@@ -87,6 +87,18 @@ def statut():
     return jsonify(ok=ok, message=message)
 
 
+@api.post("/ecartee")
+def ecartee():
+    """Décision sur une entreprise écartée : candidater (quand même), abandonner, remettre."""
+    import ecartees
+    d = request.get_json(force=True, silent=True) or {}
+    action = ecartees.ACTIONS.get(d.get("action"))
+    if action is None:
+        return jsonify(ok=False, message="Action inconnue."), 400
+    ok, message = action(str(d.get("cle") or ""))
+    return jsonify(ok=ok, message=message), (200 if ok else 400)
+
+
 @api.post("/signature")
 def signature():
     import parametres

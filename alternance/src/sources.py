@@ -22,6 +22,7 @@ def depuis_a_contacter(suivi):
         if v("Entreprise") and not v("Traité"):
             out.append({"entreprise": v("Entreprise"), "poste": v("Poste") or "", "lieu": v("Lieu") or "",
                         "contact": v("Contact") or "", "email": (v("Email") or "").strip(),
+                        "site": (v("Site") or "").strip(),
                         "lien": v("Lien") or "", "infos": v("Infos") or "", "source": "Liste perso",
                         "_ligne": (suivi.ac, r[0].row, h.get("Traité"))})
     return out
@@ -134,9 +135,12 @@ def depuis_lba():
             # (logiciel ou matériel). Les vraies offres d'emploi passent toujours (poste déjà ciblé).
             if not offer and not activite_acceptee(naf_info.get("code"), c):
                 ecartees.append(f"{nom} ({naf or 'activité inconnue'})")
+                code = f" ({naf_info['code']})" if naf_info.get("code") else ""
                 a_noter.append({"Entreprise": nom.title() if nom.isupper() else nom, "SIRET": str(wp.get("siret") or ""),
                                 "Code NAF": naf_info.get("code") or "", "Activité": naf or "inconnue",
-                                "Adresse": loc.get("address") or "", "Recherche": v["nom"]})
+                                "Adresse": loc.get("address") or "", "Site": wp.get("website") or "",
+                                "Recherche": v["nom"],
+                                "Raison": f"Activité hors informatique : {naf or 'inconnue'}{code}"})
                 continue
             infos = [str(offer.get("description") or wp.get("description") or "")[:1200]]
             if naf:

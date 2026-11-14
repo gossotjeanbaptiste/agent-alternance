@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block titre %}Écartées{% endblock %}
+{% macro carte(l, abandonnee=False) %}
+<div class="carte" data-cle="{{ l['_cle'] }}" data-entreprise="{{ l['Entreprise'] }}">
+  <h2>{{ l['Entreprise'] }} <span class="doux" style="font-weight:400">— {{ l['Adresse'] or l['Recherche'] or '' }}</span></h2>
+  <p>🚫 <b>Raison :</b> {{ l['_raison'] }}</p>
+  <p class="doux">Écartée {{ l['Passages'] or 1 }} fois{% if l['Première fois'] %}, depuis le {{ l['Première fois'] }}{% endif %}{% if l['Dernière fois'] and l['Dernière fois'] != l['Première fois'] %}, dernière fois le {{ l['Dernière fois'] }}{% endif %}{% if l['Recherche'] %} · recherche autour de {{ l['Recherche'] }}{% endif %}{% if l['SIRET'] %} · SIRET {{ l['SIRET'] }}{% endif %}</p>
+  <div class="actions">
+    {% if l['_site'] %}<a href="{{ l['_site'] }}" target="_blank" rel="noopener"><button>🌐 Site de l'entreprise</button></a>{% endif %}
+    <a href="{{ l['_recherche'] }}" target="_blank" rel="noopener"><button>🔎 Rechercher sur Google</button></a>
+    {% if abandonnee %}
+    <button onclick="decider(this, 'remettre')">↩️ Remettre dans la liste</button>
+    {% else %}
+    <button class="principal" onclick="decider(this, 'candidater')" title="Ajoute l'entreprise à la feuille « À contacter » : sa candidature sera écrite à la prochaine recherche">✉️ Candidater quand même</button>
+    <button onclick="decider(this, 'abandonner')" title="Ne plus l'afficher ici (même si elle est de nouveau écartée)">Abandonner</button>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}
+{% block contenu %}
+<h1>Entreprises écartées <span class="doux">({{ g.a_examiner|length }})</span></h1>
+<p class="doux">Entreprises trouvées par La Bonne Alternance mais écartées par le filtre d'activité (candidatures spontanées
+limitées à l'informatique, réglage « Activités acceptées » dans Paramètres). Regarde ce qu'elles font, puis
+<b>candidate quand même</b> (la candidature sera écrite à la prochaine recherche) ou <b>abandonne</b>.</p>
+{% for l in g.a_examiner %}{{ carte(l) }}{% else %}
+<div class="carte">Aucune entreprise écartée à examiner. 👍</div>
+{% endfor %}
+{% if g.demandees %}
+<details class="carte pli-section" id="pli-demandees">
+  <summary><h2 style="display:inline">Candidature demandée ({{ g.demandees|length }})</h2></summary>
+  <p class="doux">Dans la feuille « À contacter » du tableau : la candidature est écrite à la prochaine recherche, puis apparaît dans Suivi.</p>
+  <ul>{% for l in g.demandees %}<li>{{ l['Entreprise'] }} <span class="doux">— {{ l['Décision'] }}</span></li>{% endfor %}</ul>
+</details>
+{% endif %}
+{% if g.abandonnees %}
+<details class="pli-section" id="pli-abandonnees">
+  <summary><h2 style="display:inline">Abandonnées ({{ g.abandonnees|length }})</h2></summary>
+  {% for l in g.abandonnees %}{{ carte(l, True) }}{% endfor %}
+</details>
+{% endif %}
+{% endblock %}
+{% block script %}
+<script>
+async function decider(bouton, action) {
+  const carte = bouton.closest(".carte");
+  if (action === "candidater" && !confirm("Ajouter " + carte.dataset.entreprise + " à la feuille « À contacter » ? Sa candidature sera écrite à la prochaine recherche.")) return;
+  const r = await poster("/api/ecartee", { cle: carte.dataset.cle, action });
+  annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
+  if (r.ok) action === "remettre" ? location.reload() : carte.remove();
+}
+</script>
+{% endblock %}

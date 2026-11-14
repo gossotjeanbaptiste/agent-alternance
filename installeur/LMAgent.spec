@@ -14,10 +14,10 @@ MODULES = [
     # alternance/ (scripts appelés par lmagent)
     "alternance", "postuler", "maj_tableau",
     # web/src et web/app.py
-    "api", "assistant", "auth", "chemins", "lettres", "pages", "parametres", "planification", "reglages_web",
+    "api", "assistant", "auth", "chemins", "ecartees", "lettres", "pages", "parametres", "planification", "reglages_web",
     "relations", "routines", "securite", "suivi_donnees", "tour_web", "icone_tache", "app",
     # racine
-    "agent", "tour", "emplacements", "version", "mise_a_jour",
+    "agent", "tour", "emplacements", "version", "mise_a_jour", "boucle",
     # dépendances chargées dynamiquement
     "win32com", "win32com.client", "pythoncom", "pywintypes", "win32timezone",
     # icône de la zone de notification
