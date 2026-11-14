@@ -128,6 +128,8 @@ class TestDepuisLba:
         notes = refus.lire()
         assert set(notes) == {"3", "4"}
         assert notes["3"]["Code NAF"] == "47.41Z" and notes["3"]["Recherche"] == "Lyon"
+        assert notes["3"]["Raison"] == "Activité hors informatique : Commerce de détail (47.41Z)"
+        assert notes["3"]["Décision"] == ""
 
     def test_vraies_offres_jamais_filtrees(self, api):
         offre = recruteur("Magasin", naf="47.41Z", label="Commerce de détail")
@@ -238,6 +240,33 @@ class TestRefus:
         monkeypatch.setattr(builtins, "open", ouvre)
         refus.noter([self.e()])
         assert "ouvert" in capsys.readouterr().out
+
+    def test_raison_notee_ou_deduite(self):
+        assert refus.raison({"Raison": "Trop loin"}) == "Trop loin"
+        assert refus.raison({"Activité": "Commerce", "Code NAF": "47.41Z"}) == "Activité hors informatique : Commerce (47.41Z)"
+        assert refus.raison({}) == "Activité hors informatique : inconnue"
+
+    def test_decision_gardee_quand_elle_revient(self):
+        refus.noter([self.e()])
+        assert refus.decider("1", refus.ABANDONNEE) == (True, "Enregistré.")
+        tout = refus.lire()
+        tout["1"]["Dernière fois"] = "01/01/2026"
+        refus.ecrire(tout)
+        refus.noter([self.e()])
+        l = refus.lire()["1"]
+        assert l["Décision"] == refus.ABANDONNEE and l["Passages"] == "2"
+
+    def test_decider_entreprise_inconnue(self):
+        ok, msg = refus.decider("rien", refus.ABANDONNEE)
+        assert not ok and "introuvable" in msg
+
+    def test_ancien_fichier_sans_nouvelles_colonnes(self):
+        refus.FICHIER.write_text("Entreprise;SIRET;Code NAF;Activité;Adresse;Recherche;Première fois;Dernière fois;"
+                                 "Passages\nBoutique;1;47.41Z;Commerce;;Lyon;01/01/2026;01/01/2026;3\n", encoding="utf-8-sig")
+        l = refus.lire()["1"]
+        assert l["Décision"] == "" and l["Site"] == "" and l["Passages"] == "3"
+        assert refus.decider("1", refus.ABANDONNEE)[0]
+        assert refus.lire()["1"]["Passages"] == "3"
 
     def test_format_excel(self):
         refus.noter([self.e("Z"), self.e("A", "2")])

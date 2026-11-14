@@ -57,7 +57,7 @@ def statut_par_canal(canal):
     if any(m in c for m in ("formulaire", "form ", "form contact", "site", "contact", "http")):
         return C_FORMULAIRE
     return C_AUTRE
-COLS_A_CONTACTER = ["Entreprise", "Poste", "Lieu", "Contact", "Email", "Lien", "Infos", "Traité"]
+COLS_A_CONTACTER = ["Entreprise", "Poste", "Lieu", "Contact", "Email", "Lien", "Infos", "Traité", "Site"]
 
 
 class Suivi:

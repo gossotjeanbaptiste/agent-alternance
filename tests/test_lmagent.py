@@ -60,21 +60,45 @@ class TestRoutine:
 
     def test_plusieurs_passages_dans_des_processus_neufs(self, monkeypatch, capsys):
         lances = []
-        monkeypatch.setattr(lmagent.subprocess, "call", lambda cmd: lances.append(cmd) or 0)
+        monkeypatch.setattr(lmagent.subprocess, "call", lambda cmd, **k: lances.append(cmd) or 0)
         assert lmagent.routine(["--routine", "relances", "--fois", "3"]) == 0
         assert len(lances) == 3 and all(c[-2:] == ["--routine", "relances"] for c in lances)
         assert "Passage 3/3" in capsys.readouterr().out
 
     def test_code_d_erreur_garde(self, monkeypatch):
         codes = iter([0, 2, 0])
-        monkeypatch.setattr(lmagent.subprocess, "call", lambda cmd: next(codes))
+        monkeypatch.setattr(lmagent.subprocess, "call", lambda cmd, **k: next(codes))
         assert lmagent.routine(["--routine", "tout", "--fois", "3"]) == 2
 
     def test_essai_transmis_a_chaque_passage(self, monkeypatch):
         lances = []
-        monkeypatch.setattr(lmagent.subprocess, "call", lambda cmd: lances.append(cmd) or 0)
+        monkeypatch.setattr(lmagent.subprocess, "call", lambda cmd, **k: lances.append(cmd) or 0)
         lmagent.routine(["--routine", "relances", "--fois", "2", "--essai"])
         assert all(c[-1] == "--essai" for c in lances)
+
+    def test_journal_dans_l_ordre(self, tmp_path):
+        """Comme depuis l'interface : la boucle écrit dans un fichier, chaque passage aussi. Avant, les repères
+        « Passage N/3 » étaient tous écrits en haut du fichier, par-dessus le texte des passages."""
+        import os
+        from pathlib import Path
+        sans_console = Path(sys.executable).with_name("pythonw.exe")      # comme LMAgent.exe : pas de console
+        if not sans_console.exists():
+            pytest.skip("pythonw.exe introuvable")
+        # passage simulé : sans sortie reçue, il écrit lui-même dans LMAGENT_SORTIE (comme lmagent.preparer_sortie)
+        passage = ("import os, sys\n"
+                   "if sys.stdout is None: sys.stdout = open(os.environ['LMAGENT_SORTIE'], 'a', encoding='utf-8')\n"
+                   "print('texte du passage ' * 3)\n")
+        script = (f"import sys, lmagent; lmagent.commande_soi = lambda: [{str(sans_console)!r}, '-c', {passage!r}]; "
+                  "lmagent.routine(['--routine', 'relances', '--fois', '3'])")
+        journal = tmp_path / "web_routine.txt"
+        with open(journal, "w", encoding="utf-8") as sortie:
+            subprocess.run([sys.executable, "-c", script], cwd=os.path.dirname(lmagent.__file__), stdout=sortie,
+                           stderr=subprocess.STDOUT, check=True, env={**os.environ, "LMAGENT_SORTIE": str(journal)})
+        lignes = [l for l in journal.read_text(encoding="utf-8").splitlines() if l.strip()]
+        attendu = []
+        for i in range(1, 4):
+            attendu += [f"===== Passage {i}/3 =====", "texte du passage " * 3]
+        assert [l.strip() for l in lignes] == [a.strip() for a in attendu]
 
     @pytest.mark.parametrize("args", [["--routine", "formatage"], ["--routine"]])
     def test_routine_inconnue(self, args):

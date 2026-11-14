@@ -371,8 +371,34 @@ def ensure_server():
     say(f"🧠 Modèle prêt ({BASE_URL})")
 
 
+def _reprendre_boucle():
+    """Reprend ce que les passages précédents d'une boucle ont laissé ouvert (à refermer par le dernier)."""
+    global LMSTUDIO_OUVERT_PAR_SCRIPT
+    import boucle
+    etat = boucle.reprendre()
+    for m in etat.get("a_decharger", []):
+        if m not in A_DECHARGER:
+            A_DECHARGER.append(m)
+    LMSTUDIO_OUVERT_PAR_SCRIPT = LMSTUDIO_OUVERT_PAR_SCRIPT or bool(etat.get("lmstudio_local"))
+
+
+def _garder_pour_le_passage_suivant():
+    """Passage d'une boucle qui n'est pas le dernier : rien n'est fermé, le suivant reprend le tout."""
+    import boucle
+    if not boucle.garder_ouvert():
+        return False
+    boucle.transmettre({"a_decharger": list(A_DECHARGER), "lmstudio_local": LMSTUDIO_OUVERT_PAR_SCRIPT})
+    A_DECHARGER.clear()
+    say("⏭️ Modèle et LM Studio gardés ouverts pour le passage suivant")
+    return True
+
+
 def liberer_modele():
-    """Décharge le modèle s'il a été chargé par le script (appelé automatiquement à la fin)."""
+    """Décharge le modèle s'il a été chargé par le script (appelé automatiquement à la fin).
+    Dans une boucle de passages, seul le dernier passage referme (voir boucle.py)."""
+    _reprendre_boucle()
+    if _garder_pour_le_passage_suivant():
+        return
     while A_DECHARGER:
         m = A_DECHARGER.pop()
         try:
