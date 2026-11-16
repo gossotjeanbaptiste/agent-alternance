@@ -1,29 +1,43 @@
 {% extends "base.html" %}
 {% block titre %}À postuler{% endblock %}
 {% block contenu %}
-<h1>À postuler <span class="doux">({{ lignes|length }})</span></h1>
+<h1>À postuler <span class="doux" id="compte">({{ lignes|length }})</span></h1>
 <p class="doux">Formulaires (La Bonne Alternance ou site de l'entreprise) : ouvre la page, copie la lettre et les réponses aux questions, colle-les (Ctrl+V) et envoie, puis clique « Envoyée ».
 Par mail : le brouillon t'attend dans {{ messagerie }}, relis-le et envoie-le ; l'envoi est repéré tout seul au prochain suivi, ou clique « Envoyée » si tu l'as déjà envoyé.
 Adresse à trouver : le brouillon est dans {{ messagerie }} sans destinataire ; trouve l'adresse (site, recherche), ajoute-la au brouillon et envoie-le, puis clique « Envoyée ».</p>
 {% if erreur %}<div class="carte erreur">{{ erreur }}</div>{% endif %}
 {% if lignes|length > 1 %}
-<div class="tri">
-  <label for="tri">Trier par</label>
-  <select id="tri">
-    <option value="type:asc" data-nombre>Type (formulaires, mails, adresses à trouver)</option>
-    <option value="date:desc">Plus récentes d'abord</option>
-    <option value="date:asc">Plus anciennes d'abord</option>
-    <option value="entreprise:asc">Entreprise (A → Z)</option>
-    <option value="entreprise:desc">Entreprise (Z → A)</option>
-    <option value="ville:asc">Ville (A → Z)</option>
+<div class="filtres">
+  <input type="search" id="recherche" placeholder="Rechercher (entreprise, poste, ville, adresse…)" size="34">
+  <select id="f-type">
+    <option value="">Tous les types</option>
+    <option value="0">Formulaire La Bonne Alternance</option>
+    <option value="1">Formulaire du site</option>
+    <option value="2">Mail à envoyer</option>
+    <option value="3">Adresse à trouver</option>
   </select>
+  <select id="f-source"><option value="">Toutes les sources</option></select>
+  <select id="f-ville"><option value="">Toutes les villes</option></select>
+  <span class="tri">
+    <label for="tri">Trier par</label>
+    <select id="tri">
+      <option value="type:asc" data-nombre>Type (formulaires, mails, adresses à trouver)</option>
+      <option value="date:desc">Plus récentes d'abord</option>
+      <option value="date:asc">Plus anciennes d'abord</option>
+      <option value="entreprise:asc">Entreprise (A → Z)</option>
+      <option value="entreprise:desc">Entreprise (Z → A)</option>
+      <option value="ville:asc">Ville (A → Z)</option>
+    </select>
+  </span>
 </div>
+<div class="carte doux" id="aucun" style="display:none">Aucune candidature ne correspond à la recherche ou aux filtres.</div>
 {% endif %}
 <div id="cartes">
 {% for l in lignes %}
 <div class="carte" id="c{{ l['_ligne'] }}" data-entreprise="{{ l['Entreprise'] }}" data-email="{{ l['Email'] or '' }}"
      data-type="{{ 3 if l['_a_trouver'] else (2 if l['_mail'] else (0 if l['_lba'] else 1)) }}" data-date="{{ l['Date ajout'].isoformat() if l['Date ajout'] else '' }}"
-     data-ville="{{ l['_ville'] }}">
+     data-ville="{{ l['_ville'] }}" data-villenom="{{ l['_villenom'] }}" data-source="{{ l['_source'] }}"
+     data-texte="{{ l['Entreprise'] }} {{ l['Poste'] or '' }} {{ l['Lieu'] or '' }} {{ l['Email'] or '' }} {{ l['Source'] or '' }} {{ l['Contact'] or '' }}">
   <h2>{{ l['Entreprise'] }} <span class="doux" style="font-weight:400">— {{ l['Poste'] or '' }} · {{ l['Lieu'] or '' }}</span></h2>
   {% if l['_a_trouver'] %}
   <p class="doux">📭 <b>Adresse à trouver</b> — brouillon sans destinataire dans {{ messagerie }}</p>
@@ -88,11 +102,16 @@ Adresse à trouver : le brouillon est dans {{ messagerie }} sans destinataire ; 
 {% endblock %}
 {% block script %}
 <script src="{{ url_for('static', filename='tri.js') }}"></script>
+<script src="{{ url_for('static', filename='filtres.js') }}"></script>
 <script>
 activerTri("tri", "cartes", "tri-postuler");
+const refiltrer = activerFiltres({recherche: "recherche", boites: ["cartes"], compte: "compte", vide: "aucun",
+  filtres: [{id: "f-type", champ: "type"}, {id: "f-source", champ: "source", dynamique: true},
+            {id: "f-ville", champ: "villenom", dynamique: true}]}) || (() => {});
+function retirer(carte) { carte.remove(); refiltrer(); }
 async function fait(ligne, statut, postule) {
   const carte = document.getElementById("c" + ligne);
-  if (await changerStatut(ligne, carte.dataset.entreprise, statut, postule)) carte.remove();
+  if (await changerStatut(ligne, carte.dataset.entreprise, statut, postule)) retirer(carte);
 }
 async function envoyeeSansAdresse(ligne) {
   const carte = document.getElementById("c" + ligne);
@@ -102,12 +121,12 @@ async function envoyeeSansAdresse(ligne) {
   const r = await poster("/api/statut", { ligne, entreprise: carte.dataset.entreprise, statut: "Candidaté (mail)",
                                          postule: true, email: adresse.trim() });
   annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
-  if (r.ok) carte.remove();
+  if (r.ok) retirer(carte);
 }
 async function abandonnerMail(ligne) {
   const carte = document.getElementById("c" + ligne);
   if (!confirm("Abandonner " + carte.dataset.entreprise + " et mettre son brouillon à la corbeille ?")) return;
-  if (await changerStatut(ligne, carte.dataset.entreprise, "Abandonné", false, carte.dataset.email)) carte.remove();
+  if (await changerStatut(ligne, carte.dataset.entreprise, "Abandonné", false, carte.dataset.email)) retirer(carte);
 }
 </script>
 {% endblock %}

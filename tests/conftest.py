@@ -47,7 +47,8 @@ os.environ["LMAGENT_DOSSIER"] = str(TEMP)   # config.json, journaux, workspaceâ€
 CONFIG_AGENT_TEST = {"assistant_a_faire": False, "utiliser_tour": False, "serveurs": [{"nom": "ce PC", "url": "local"}]}
 (TEMP / "config.json").write_text(json.dumps(CONFIG_AGENT_TEST), encoding="utf-8")
 
-for p in (RACINE / "alternance" / "src", RACINE / "alternance", RACINE / "web" / "src", RACINE / "web", RACINE):
+for p in (RACINE / "alternance" / "src", RACINE / "alternance", RACINE / "web" / "src", RACINE / "web",
+          RACINE / "src", RACINE):
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 

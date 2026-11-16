@@ -16,7 +16,7 @@ MODULES = [
     # web/src et web/app.py
     "api", "assistant", "auth", "chemins", "ecartees", "lettres", "pages", "parametres", "planification", "reglages_web",
     "relations", "routines", "securite", "suivi_donnees", "tour_web", "icone_tache", "app",
-    # racine
+    # src/ (modules de la racine du projet)
     "agent", "tour", "emplacements", "version", "mise_a_jour", "boucle",
     # dépendances chargées dynamiquement
     "win32com", "win32com.client", "pythoncom", "pywintypes", "win32timezone",
@@ -26,7 +26,7 @@ MODULES = [
 
 a = Analysis(
     [str(RACINE / "lmagent.py")],
-    pathex=[str(RACINE / p) for p in ("alternance/src", "alternance", "web/src", "web", ".")],
+    pathex=[str(RACINE / p) for p in ("alternance/src", "alternance", "web/src", "web", "src", ".")],
     datas=[
         (str(RACINE / "web" / "templates"), "web/templates"),
         (str(RACINE / "web" / "static"), "web/static"),

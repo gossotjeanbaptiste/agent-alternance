@@ -3,7 +3,8 @@
 {% macro carte(l, abandonnee=False) %}
 <div class="carte" data-cle="{{ l['_cle'] }}" data-entreprise="{{ l['Entreprise'] }}" data-activite="{{ l['Activité'] }}"
      data-ville="{{ l['_ville'] }}" data-derniere="{{ l['_derniere'] }}" data-premiere="{{ l['_premiere'] }}"
-     data-passages="{{ l['Passages'] or 1 }}">
+     data-passages="{{ l['Passages'] or 1 }}" data-villenom="{{ l['_villenom'] }}"
+     data-texte="{{ l['Entreprise'] }} {{ l['Activité'] }} {{ l['_raison'] }} {{ l['Adresse'] }} {{ l['Recherche'] }} {{ l['SIRET'] }} {{ l['Code NAF'] }}">
   <h2>{{ l['Entreprise'] }} <span class="doux" style="font-weight:400">— {{ l['Adresse'] or l['Recherche'] or '' }}</span></h2>
   <p>🚫 <b>Raison :</b> {{ l['_raison'] }}</p>
   <p class="doux">Écartée {{ l['Passages'] or 1 }} fois{% if l['Première fois'] %}, depuis le {{ l['Première fois'] }}{% endif %}{% if l['Dernière fois'] and l['Dernière fois'] != l['Première fois'] %}, dernière fois le {{ l['Dernière fois'] }}{% endif %}{% if l['Recherche'] %} · recherche autour de {{ l['Recherche'] }}{% endif %}{% if l['SIRET'] %} · SIRET {{ l['SIRET'] }}{% endif %}</p>
@@ -20,23 +21,29 @@
 </div>
 {% endmacro %}
 {% block contenu %}
-<h1>Entreprises écartées <span class="doux">({{ g.a_examiner|length }})</span></h1>
+<h1>Entreprises écartées <span class="doux" id="compte">({{ g.a_examiner|length }})</span></h1>
 <p class="doux">Entreprises trouvées par La Bonne Alternance mais écartées par le filtre d'activité (candidatures spontanées
 limitées à l'informatique, réglage « Activités acceptées » dans Paramètres). Regarde ce qu'elles font, puis
 <b>candidate quand même</b> (la candidature sera écrite à la prochaine recherche) ou <b>abandonne</b>.</p>
 {% if (g.a_examiner|length) + (g.abandonnees|length) > 1 %}
-<div class="tri">
-  <label for="tri">Trier par</label>
-  <select id="tri">
-    <option value="entreprise:asc">Entreprise (A → Z)</option>
-    <option value="entreprise:desc">Entreprise (Z → A)</option>
-    <option value="activite:asc">Activité (A → Z)</option>
-    <option value="ville:asc">Ville (A → Z)</option>
-    <option value="derniere:desc">Écartées récemment d'abord</option>
-    <option value="premiere:asc">Écartées depuis le plus longtemps</option>
-    <option value="passages:desc" data-nombre>Le plus souvent écartées</option>
-  </select>
+<div class="filtres">
+  <input type="search" id="recherche" placeholder="Rechercher (entreprise, activité, adresse, SIRET…)" size="34">
+  <select id="f-activite"><option value="">Toutes les activités</option></select>
+  <select id="f-ville"><option value="">Toutes les villes</option></select>
+  <span class="tri">
+    <label for="tri">Trier par</label>
+    <select id="tri">
+      <option value="entreprise:asc">Entreprise (A → Z)</option>
+      <option value="entreprise:desc">Entreprise (Z → A)</option>
+      <option value="activite:asc">Activité (A → Z)</option>
+      <option value="ville:asc">Ville (A → Z)</option>
+      <option value="derniere:desc">Écartées récemment d'abord</option>
+      <option value="premiere:asc">Écartées depuis le plus longtemps</option>
+      <option value="passages:desc" data-nombre>Le plus souvent écartées</option>
+    </select>
+  </span>
 </div>
+<div class="carte doux" id="aucun" style="display:none">Aucune entreprise à examiner ne correspond à la recherche ou aux filtres.</div>
 {% endif %}
 <div id="cartes">
 {% for l in g.a_examiner %}{{ carte(l) }}{% else %}
@@ -61,15 +68,20 @@ limitées à l'informatique, réglage « Activités acceptées » dans Paramètr
 {% endblock %}
 {% block script %}
 <script src="{{ url_for('static', filename='tri.js') }}"></script>
+<script src="{{ url_for('static', filename='filtres.js') }}"></script>
 <script>
 activerTri("tri", "cartes", "tri-ecartees");
 activerTri("tri", "cartes-abandonnees", "tri-ecartees");   // même menu pour les abandonnées
+// recherche et filtres : la liste à examiner et les abandonnées (le compteur suit la liste à examiner)
+const refiltrer = activerFiltres({recherche: "recherche", boites: ["cartes", "cartes-abandonnees"], compte: "compte",
+  vide: "aucun", filtres: [{id: "f-activite", champ: "activite", dynamique: true},
+                           {id: "f-ville", champ: "villenom", dynamique: true}]}) || (() => {});
 async function decider(bouton, action) {
   const carte = bouton.closest(".carte");
   if (action === "candidater" && !confirm("Ajouter " + carte.dataset.entreprise + " à la feuille « À contacter » ? Sa candidature sera écrite à la prochaine recherche.")) return;
   const r = await poster("/api/ecartee", { cle: carte.dataset.cle, action });
   annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
-  if (r.ok) action === "remettre" ? location.reload() : carte.remove();
+  if (r.ok) { if (action === "remettre") location.reload(); else { carte.remove(); refiltrer(); } }
 }
 </script>
 {% endblock %}

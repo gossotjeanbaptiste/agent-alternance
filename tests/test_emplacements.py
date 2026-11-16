@@ -26,10 +26,18 @@ def recharger(monkeypatch, **env):
 class TestEmplacements:
     def test_depuis_le_code(self, monkeypatch):
         m = recharger(monkeypatch)
-        assert m.DEPUIS_LE_CODE and m.BASE == m.SOURCE
-        assert m.config_agent() == m.SOURCE / "config.json"
-        assert m.donnees() == m.SOURCE / "alternance" / "donnees"
-        assert m.dossier("logs") == m.SOURCE / "logs"
+        assert m.DEPUIS_LE_CODE and m.BASE == m.SOURCE / "perso"
+        assert m.config_agent() == m.SOURCE / "perso" / "config.json"
+        assert m.donnees() == m.SOURCE / "alternance" / "donnees"           # à côté de leurs modèles d'exemple
+        assert m.dossier("logs") == m.SOURCE / "perso" / "logs"
+
+    def test_charger_le_module_ne_deplace_rien(self, monkeypatch):
+        """Le rangement dans perso/ ne se fait qu'au démarrage de l'appli, jamais au chargement du module
+        (un test qui recharge emplacements.py avait déplacé de vrais fichiers)."""
+        appels = []
+        monkeypatch.setattr("shutil.move", lambda *a: appels.append(a))
+        recharger(monkeypatch)
+        assert appels == []
 
     def test_version_installee_dans_appdata(self, monkeypatch, tmp_path):
         monkeypatch.setattr(sys, "frozen", True, raising=False)
@@ -93,6 +101,45 @@ class TestCheminTableau:
         assert ex["tableau_suivi"] == "" and ex["pieces_jointes"] == []
 
 
+class TestRangerRacine:
+    """Lancé depuis le code : les fichiers personnels de la racine du projet vont dans perso/."""
+
+    def test_deplace_les_anciens_fichiers(self, tmp_path):
+        racine, perso = tmp_path / "projet", tmp_path / "projet" / "perso"
+        (racine / "logs").mkdir(parents=True)
+        (racine / "logs" / "2026-11-16.log").write_text("journal", encoding="utf-8")
+        (racine / "config.json").write_text("{}", encoding="utf-8")
+        (racine / "pieces_jointes").mkdir()
+        (racine / "pieces_jointes" / "cv.pdf").write_bytes(b"%PDF")
+        (racine / "lmagent.py").write_text("# code", encoding="utf-8")
+        messages = []
+        assert emplacements.ranger_racine(racine, perso, journal=messages.append) == ["config.json", "logs", "pieces_jointes"]
+        assert (perso / "logs" / "2026-11-16.log").read_text(encoding="utf-8") == "journal"
+        assert (perso / "pieces_jointes" / "cv.pdf").exists() and (perso / "config.json").exists()
+        assert not (racine / "logs").exists() and (racine / "lmagent.py").exists()      # le code ne bouge pas
+        assert "perso" in messages[0]
+        assert emplacements.ranger_racine(racine, perso, journal=messages.append) == []  # rien de plus la 2e fois
+
+    def test_n_ecrase_jamais(self, tmp_path):
+        racine, perso = tmp_path / "projet", tmp_path / "projet" / "perso"
+        (racine / "linkedin").mkdir(parents=True)
+        (racine / "linkedin" / "Connections.csv").write_text("ancien", encoding="utf-8")
+        (perso / "linkedin").mkdir(parents=True)
+        (perso / "linkedin" / "Connections.csv").write_text("récent", encoding="utf-8")
+        messages = []
+        assert emplacements.ranger_racine(racine, perso, journal=messages.append) == []
+        assert (perso / "linkedin" / "Connections.csv").read_text(encoding="utf-8") == "récent"
+        assert (racine / "linkedin" / "Connections.csv").read_text(encoding="utf-8") == "ancien"
+        assert "linkedin" in messages[0]
+
+    def test_depuis_le_code_dossier_perso(self, monkeypatch):
+        monkeypatch.delenv("LMAGENT_DOSSIER", raising=False)
+        monkeypatch.setattr(emplacements, "INSTALLEE", False)
+        base, depuis_le_code = emplacements._base()
+        assert depuis_le_code and base == emplacements.SOURCE / "perso"
+        assert (emplacements.SOURCE / "lmagent.py").exists()                        # SOURCE = racine du projet
+
+
 class TestUtiliserTour:
     @pytest.mark.parametrize("config, attendu", [
         ({"utiliser_tour": True}, True),
@@ -106,7 +153,7 @@ class TestUtiliserTour:
 
     def test_sans_tour_seul_ce_pc_est_essaye(self, monkeypatch):
         """ensure_server n'essaie ni de réveiller ni de joindre la tour quand elle n'est pas utilisée."""
-        if not (Path(emplacements.SOURCE) / "tour.py").exists():
+        if not (Path(emplacements.SOURCE) / "src" / "tour.py").exists():
             pytest.skip("branche sans tour.py : ensure_server n'utilise que ce PC")
         monkeypatch.setitem(agent.CONFIG, "utiliser_tour", False)
         monkeypatch.setitem(agent.CONFIG, "serveurs", [{"nom": "tour", "url": "http://t:1236/v1", "reveil": True},
@@ -133,7 +180,7 @@ class TestUtiliserTour:
 
     def test_tour_py_sans_config(self, monkeypatch, tmp_path):
         """tour.py se charge même sans config.json (installation neuve)."""
-        chemin = Path(emplacements.SOURCE) / "tour.py"
+        chemin = Path(emplacements.SOURCE) / "src" / "tour.py"
         if not chemin.exists():
             pytest.skip("branche sans tour.py")
         monkeypatch.setattr(emplacements, "config_agent", lambda: tmp_path / "absent.json")

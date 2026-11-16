@@ -288,6 +288,24 @@ class TestImport:
         assert c["utiliser_tour"] is True and c["assistant_a_faire"] is False
         assert not assistant.a_faire()
 
+    def test_import_installation_rangee_dans_perso(self, neuve, client, ancienne):
+        """Installation lancée depuis le code après le rangement : config, LinkedIn et CV dans perso/."""
+        perso = ancienne / "perso"
+        perso.mkdir()
+        for nom in ("config.json", "linkedin", "pieces_jointes"):
+            shutil.move(str(ancienne / nom), str(perso / nom))
+        r = client.post("/api/assistant/importer", json={"chemin": str(ancienne)}).get_json()
+        assert r["ok"] and "config.json" in r["message"] and "linkedin/" in r["message"]
+        assert (emplacements.dossier("linkedin") / "Connections.csv").exists()
+        assert (emplacements.dossier("pieces_jointes") / "cv.pdf").exists()
+        assert config_agent()["utiliser_tour"] is True
+
+    def test_ne_se_propose_pas_de_s_importer_soi_meme(self, monkeypatch, ancienne):
+        """Lancé depuis le code, le projet lui-même n'est pas une « ancienne installation » à importer."""
+        monkeypatch.setattr(emplacements, "DEPUIS_LE_CODE", True)
+        monkeypatch.setattr(emplacements, "SOURCE", ancienne)
+        assert assistant.chercher_ancienne_installation(str(ancienne)) is None
+
     def test_compte_de_l_interface_non_importe(self, neuve, client, ancienne):
         import auth
         avant = auth.FICHIER.read_text(encoding="utf-8")

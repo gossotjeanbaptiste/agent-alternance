@@ -13,7 +13,7 @@ dans le dépôt et où en est le projet.
 - **Petits fichiers** : un module par sujet ; les scripts à lancer à la racine de `alternance/`, les modules internes
   dans `alternance/src/` ; dans `web/`, seul `app.py` à la racine, le reste dans `web/src/`.
 - **Deux branches à garder synchronisées** : `main` (avec « la tour », PC distant à carte graphique, via Tailscale/SSH/
-  Wake-on-LAN) et `local-simple` (100 % local : pas de `tour.py`, pas de `GUIDE_TOUR.md`, pas de page Tour).
+  Wake-on-LAN) et `local-simple` (100 % local : pas de `tour.py`, pas de `docs/GUIDE_TOUR.md`, pas de page Tour).
   Tout changement pertinent va sur les deux (commit sur `main`, puis cherry-pick sur `local-simple`). Le `README.md`
   diffère entre les branches : en cas de conflit, garder la version de la branche et y réappliquer la modification.
 - **Récupérer avant de travailler** (`git fetch`) : un autre PC pousse aussi sur les deux branches.
@@ -31,7 +31,7 @@ dans le dépôt et où en est le projet.
   `LMAGENT_DONNEES`, réseau bloqué, modèle / messagerie simulés, config remise à zéro après chaque test).
   Toute nouvelle fonction testable reçoit ses tests ; ne pas tester la tour ni la connexion au serveur LM Studio.
 - **Chemins** : ne jamais construire un chemin de fichier personnel à partir du dossier du code ; passer par
-  `emplacements.py` (config, journaux, workspace, LinkedIn…) ou `donnees.chemin()` / `commun.chemin_tableau()`.
+  `src/emplacements.py` (config, journaux, workspace, LinkedIn…) ou `donnees.chemin()` / `commun.chemin_tableau()`.
 - **Tour facultative** : réglage `utiliser_tour` (config.json) ; désactivée, seul « ce PC » est utilisé et tout ce qui
   concerne la tour est caché (`agent.utiliser_tour()`, `tour_web.disponible()`).
 - **Interface web** : uniquement sur 127.0.0.1, connexion obligatoire (`web/src/auth.py` : un seul compte,
@@ -45,11 +45,11 @@ dans le dépôt et où en est le projet.
 | `lmagent.py` | point d'entrée unique (devient `LMAgent.exe`) : interface, `--routine`, `--postuler`, `--maj-tableau`, `--agent` ; `commande_soi()` pour se relancer |
 | `web/src/icone_tache.py` | icône près de l'horloge (pystray) : Ouvrir / Quitter LMAgent ; l'exe n'a pas de console, sa sortie va dans `logs/` (`interface_…`, `web_…_planifiee`), les commandes interactives ouvrent leur console (`lmagent.preparer_sortie`) |
 | `web/src/planification.py` | routines quotidiennes via le Planificateur de tâches (`LMAgent_<routine>`) |
-| `version.py`, `mise_a_jour.py` | numéro de version (remplacé par le tag à la publication) ; mises à jour automatiques de la version installée (GitHub Releases, empreinte SHA-256, `msiexec /passive` : barre de progression sans questions, comme MyCMS) |
+| `src/version.py`, `src/mise_a_jour.py` | numéro de version (remplacé par le tag à la publication) ; mises à jour automatiques de la version installée (GitHub Releases, empreinte SHA-256, `msiexec /passive` : barre de progression sans questions, comme MyCMS) |
 | `installeur/`, `.github/workflows/publier.yml` | `LMAgent.spec` (PyInstaller), `LMAgent.wxs` (WiX v5, installation par utilisateur) ; un tag `vX.Y.Z` sur le dépôt public publie l'installeur |
-| `emplacements.py` | où vivent les fichiers personnels : dossier du projet (lancé depuis le code), `%APPDATA%\LMAgent` (version installée) ou `LMAGENT_DOSSIER` (tests) |
-| `agent.py` | agent en chat / tâches, connexion LM Studio (tour puis ce PC), choix du moteur GPU, journal (`logs/`) |
-| `tour.py` (main) | réveil, veille, état de la tour ; `GUIDE_TOUR.md` pour l'installer |
+| `src/emplacements.py` | où vivent les fichiers personnels : dossier du projet (lancé depuis le code), `%APPDATA%\LMAgent` (version installée) ou `LMAGENT_DOSSIER` (tests) |
+| `src/agent.py` | agent en chat / tâches, connexion LM Studio (tour puis ce PC), choix du moteur GPU, journal (`logs/`) |
+| `src/tour.py` (main) | réveil, veille, état de la tour ; `docs/GUIDE_TOUR.md` pour l'installer |
 | `alternance/relances.py`, `recherche.py`, `alternance.py` | routines (suivi + relances, nouvelles candidatures, les deux) |
 | `alternance/postuler.py` | assistant de candidature par formulaire (La Bonne Alternance, formulaire du site) |
 | `alternance/maj_tableau.py` | mise à jour interactive du tableau |

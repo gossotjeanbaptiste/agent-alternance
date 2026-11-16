@@ -112,10 +112,16 @@ def _config_dans(base):
 def chercher_ancienne_installation(chemin=None):
     """Dossier d'une installation existante (copie du projet lancée depuis le code), à importer."""
     candidats = [Path(chemin).expanduser()] if chemin else [Path.home() / "Documents" / "lm_agent"]
+    soi = {emplacements.BASE.resolve()} | ({emplacements.SOURCE.resolve()} if emplacements.DEPUIS_LE_CODE else set())
     for base in candidats:
-        if base.resolve() != emplacements.BASE.resolve() and _config_dans(base):
+        if base.resolve() not in soi and _config_dans(base):
             return base
     return None
+
+
+def _perso(base):
+    """Dossier des fichiers personnels d'une installation lancée depuis le code : perso/, ou la racine (avant)."""
+    return base / "perso" if (base / "perso" / "config.json").exists() or (base / "perso").is_dir() else base
 
 
 def importer(chemin=None):
@@ -131,11 +137,12 @@ def importer(chemin=None):
         if (source_donnees / nom).exists():
             shutil.copy2(source_donnees / nom, dest / nom)
             copies.append(nom)
+    perso = _perso(base)
     for sous in ("linkedin", "pieces_jointes"):
-        if (base / sous).is_dir():
-            shutil.copytree(base / sous, emplacements.dossier(sous), dirs_exist_ok=True)
+        if (perso / sous).is_dir():
+            shutil.copytree(perso / sous, emplacements.dossier(sous), dirs_exist_ok=True)
             copies.append(sous + "/")
-    ancienne_cfg = _lire(base / "config.json")
+    ancienne_cfg = _lire(perso / "config.json")
     if ancienne_cfg is not None:
         ancienne_cfg["assistant_a_faire"] = False
         emplacements.config_agent().parent.mkdir(parents=True, exist_ok=True)
@@ -172,7 +179,7 @@ def etape_tour(d):
                                                        {"nom": "ce PC", "url": "local"}],
                    "tour.url_lmstudio": url, "tour.mac": str(d.get("mac") or "").strip(),
                    "tour.ssh": str(d.get("ssh") or "").strip()})
-    return True, "Tour enregistrée (ce PC sert de secours). Détails dans Paramètres et GUIDE_TOUR.md."
+    return True, "Tour enregistrée (ce PC sert de secours). Détails dans Paramètres et docs/GUIDE_TOUR.md."
 
 
 def etape_messagerie(d):

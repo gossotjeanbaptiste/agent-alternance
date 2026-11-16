@@ -1,3 +1,6 @@
+# --- Fichiers personnels quand l'appli est lancée depuis le code (config, journaux, LinkedIn, CV…)
+perso/
+
 # --- Secrets et réglages personnels (des modèles *.example.* sont versionnés à la place)
 config.json
 .env

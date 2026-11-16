@@ -5,10 +5,11 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent.parent   # dossier alternance/
-sys.path.insert(0, str(HERE.parent))            # racine du projet (agent.py)
+sys.path.insert(0, str(HERE.parent / "src"))    # modules de la racine du projet (src/agent.py…)
 import agent  # noqa: E402,F401  (connexion LM Studio, journal)
 import donnees  # noqa: E402  (données personnelles : alternance/donnees/ ou %APPDATA%\LMAgent\donnees)
 
+donnees.emplacements.ranger_au_demarrage()  # lancé depuis le code : racine du projet -> perso/
 donnees.ranger()  # anciens emplacements (directement dans alternance/) -> alternance/donnees/
 donnees.initialiser()  # installation neuve : config, profil et contre-prompt créés depuis les modèles
 DONNEES = donnees.DONNEES
