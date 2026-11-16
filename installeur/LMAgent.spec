@@ -10,7 +10,7 @@ RACINE = Path(SPECPATH).resolve().parent
 MODULES = [
     # alternance/src
     "candidatures", "commun", "donnees", "imap", "jours", "mails", "messagerie", "modele", "outlook",
-    "refus", "reglages", "reponses", "sites", "sources", "suivi", "tableau",
+    "pays", "refus", "reglages", "reponses", "sites", "sources", "suivi", "tableau",
     # alternance/ (scripts appelés par lmagent)
     "alternance", "postuler", "maj_tableau",
     # web/src et web/app.py

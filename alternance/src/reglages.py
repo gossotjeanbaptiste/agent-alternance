@@ -105,6 +105,9 @@ REGLAGES = [
     _r("La Bonne Alternance", A, "la_bonne_alternance.recherches_site_max", "Sites d'entreprise fouillés par passage", "entier", 30),
     # --- sites des entreprises
     _r("Sites des entreprises", A, "sites.pages_max", "Pages lues par site", "entier", 6),
+    _r("Sites des entreprises", A, "sites.verifier_france", "N'utiliser que des sites d'entreprises en France", "oui_non",
+       True, "Écarte les sites d'un autre pays (.lu, .be, .ch, .us…) ; un site en .com / .net… doit montrer une preuve "
+             "française : code postal ou ville de l'entreprise, téléphone français, SIRET / RCS."),
     _r("Sites des entreprises", A, "sites.attente_recherche_s", "Pause entre deux recherches web (secondes)", "decimal", 4),
     _r("Sites des entreprises", A, "sites.annuaires", "Sites ignorés (annuaires, réseaux sociaux…)", "liste", ANNUAIRES),
     _r("Sites des entreprises", A, "sites.mots_contact", "Mots repérant une page contact / recrutement", "liste", MOTS_CONTACT),

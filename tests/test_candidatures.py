@@ -100,7 +100,7 @@ def scenario(monkeypatch, cfg, faux_modele):
     monkeypatch.setattr(candidatures, "depuis_lba", lambda: iter(S.lba))
     monkeypatch.setattr(candidatures, "trouver_site", lambda nom, lieu="": S.sites.get(nom, {}).get("site", ""))
     monkeypatch.setattr(candidatures, "explorer_site",
-                        lambda site: next((dict(v) for v in S.sites.values() if v.get("site") == site),
+                        lambda site, **k: next((dict(v) for v in S.sites.values() if v.get("site") == site),
                                           {"site": site, "email": "", "formulaire": ""}))
     monkeypatch.setattr(reponses, "rediger_reponses",
                         lambda o: {"motivations": "M", "missions": "Mi", "experiences": "E"})
