@@ -81,7 +81,9 @@ def ajouter_lettres(lignes):
         l["_lba"] = l.get("Statut") == "À postuler (La Bonne Alternance)"
         m = re.search(r"Formulaire : (\S+)", str(l.get("Notes") or ""))
         l["_formulaire"] = m.group(1) if m and l["_lba"] else ""  # 2e solution : le formulaire du site
-        l["_reponses"] = reponses.en_liste(deja.get((l.get("Lien") or "").strip()) or {})
+        # réponses aux trois questions : seulement pour une OFFRE La Bonne Alternance (spontanée : la lettre seule)
+        l["_questions"] = reponses.questions_attendues(l.get("Statut"), l.get("Poste"))
+        l["_reponses"] = reponses.en_liste(deja.get((l.get("Lien") or "").strip()) or {}) if l["_questions"] else []
         l["_site"], l["_recherche"] = site_ou_recherche(l)
         if l["_mail"]:  # brouillon de mail : la signature est déjà celle de la messagerie
             l["_lettre"] = lettres.get(str(l.get("Email") or "").strip().lower())

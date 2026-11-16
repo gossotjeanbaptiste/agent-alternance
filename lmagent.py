@@ -50,9 +50,21 @@ def ouvrir_console():
     sys.stdin = open("CONIN$", "r", encoding="utf-8", errors="replace")
 
 
+def sortie_utf8():
+    """Sortie en UTF-8 (emojis du journal) : sinon un fichier reçu de l'interface ou de la boucle est écrit en
+    cp1252 et le premier emoji fait planter le script (l'exe compilé ignore PYTHONIOENCODING)."""
+    for flux in (sys.stdout, sys.stderr):
+        if flux is not None and hasattr(flux, "reconfigure"):
+            try:
+                flux.reconfigure(encoding="utf-8", errors="replace")
+            except (ValueError, OSError):
+                pass
+
+
 def preparer_sortie(args):
-    """Choisit où va la sortie quand l'exe tourne sans console."""
+    """Choisit où va la sortie quand l'exe tourne sans console, et la met en UTF-8."""
     if not sans_console():
+        sortie_utf8()
         return
     from datetime import datetime
     quand = f"{datetime.now():%Y%m%d_%H%M%S}"

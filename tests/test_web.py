@@ -102,7 +102,7 @@ class TestPages:
 # --- page À postuler ---------------------------------------------------------------------------------
 class TestPostuler:
     def test_cartes_par_type(self, client, tableau):
-        ajouter(tableau, **{"Entreprise": "Lba Co", "Statut": LBA, "Lien": "https://lba/1",
+        ajouter(tableau, **{"Entreprise": "Lba Co", "Statut": LBA, "Lien": "https://lba/1", "Poste": "Développeur web",
                             "Notes": "Formulaire : https://lbaco.fr/contact"})
         ajouter(tableau, **{"Entreprise": "Form Co", "Statut": FORMULAIRE, "Lien": "https://formco.fr/contact"})
         ajouter(tableau, **{"Entreprise": "Mail Co", "Statut": "Brouillon", "Email": "rh@mailco.fr", "Lieu": "69003 Lyon"})
@@ -123,9 +123,18 @@ class TestPostuler:
         assert "Accepter" not in h
 
     def test_reponses_manquantes_signalees(self, client, tableau):
-        ajouter(tableau, **{"Entreprise": "Lba Co", "Statut": LBA, "Lien": "https://lba/1"})
+        ajouter(tableau, **{"Entreprise": "Lba Co", "Statut": LBA, "Lien": "https://lba/1", "Poste": "Développeur web"})
         reponses.enregistrer_lettre("https://lba/1", "Lettre")
         assert "pas encore écrites" in client.get("/postuler").get_data(as_text=True)
+
+    def test_candidature_spontanee_lettre_seulement(self, client, tableau):
+        """Pas d'offre sur la page de l'entreprise : ni réponses affichées (même anciennes), ni rappel de les écrire."""
+        ajouter(tableau, **{"Entreprise": "Spontanée Co", "Statut": LBA, "Lien": "https://lba/2",
+                            "Poste": "Candidature spontanée"})
+        reponses.enregistrer("https://lba/2", {"lettre": "Lettre spontanée", "motivations": "Ancienne réponse"})
+        h = client.get("/postuler").get_data(as_text=True)
+        assert "Lettre spontanée" in h
+        assert "Ancienne réponse" not in h and "pas encore écrites" not in h and "Copier la réponse" not in h
 
     def test_site_ou_recherche(self):
         assert lettres.site_ou_recherche({"Notes": "SIRET 1 | Site : https://a.fr | x", "Entreprise": "A"})[0] == "https://a.fr"

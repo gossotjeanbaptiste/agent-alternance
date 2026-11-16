@@ -62,6 +62,37 @@ def test_candidater_deja_dans_le_suivi(tableau):
     assert not ok and "déjà dans le tableau" in msg
 
 
+def test_candidater_meme_nom_autre_adresse(tableau):
+    """Un établissement du même nom, ailleurs, est déjà dans le tableau : la candidature est quand même possible."""
+    tableau.add(**{"Entreprise": "Boutique", "Statut": "Brouillon", "Lieu": "1 rue Z 38000 Grenoble"})
+    tableau.wb.save(tableau.path)
+    noter(("Boutique", "12345678900011", ""))                          # adresse : 12 rue X 69003 Lyon
+    ok, msg = ecartees.candidater("12345678900011")
+    assert ok, msg
+    o = sources.depuis_a_contacter(Suivi(commun.chemin_tableau()))[0]
+    assert o["siret"] == "12345678900011"                               # SIRET repris pour la suite
+    s = Suivi(commun.chemin_tableau())
+    assert not __import__("tableau").deja_contactee(o, *s.deja_vus())   # la recherche ne l'ignorera pas
+
+
+def test_deux_etablissements_ecartes_du_meme_nom(tableau):
+    refus.noter([{"Entreprise": "Garage", "SIRET": s, "Code NAF": "45.20A", "Activité": "Garage", "Adresse": a,
+                  "Recherche": "Lyon"} for s, a in (("11111111100011", "69003 Lyon"), ("22222222200022", "38000 Grenoble"))])
+    assert len(ecartees.lire()["a_examiner"]) == 2
+    assert ecartees.candidater("11111111100011")[0]
+    assert ecartees.candidater("22222222200022")[0]                    # l'autre établissement aussi
+    noms = [o["lieu"] for o in sources.depuis_a_contacter(Suivi(commun.chemin_tableau()))]
+    assert noms == ["69003 Lyon", "38000 Grenoble"]
+
+
+def test_meme_nom_meme_ville_refuse(tableau):
+    tableau.add(**{"Entreprise": "Boutique", "Statut": "Brouillon", "Lieu": "69001 Lyon"})
+    tableau.wb.save(tableau.path)
+    noter(("Boutique", "1", ""))                                        # 12 rue X 69003 Lyon : même ville
+    ok, msg = ecartees.candidater("1")
+    assert not ok and "déjà dans le tableau" in msg
+
+
 def test_candidater_ancien_tableau_sans_feuille(tableau):
     del tableau.wb["À contacter"]
     tableau.wb.save(tableau.path)

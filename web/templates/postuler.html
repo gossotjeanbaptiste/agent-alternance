@@ -34,7 +34,7 @@ Par mail : le brouillon t'attend dans {{ messagerie }}, relis-le et envoie-le ; 
     <button onclick="copier(document.getElementById('r{{ l['_ligne'] }}_{{ loop.index }}').textContent, 'Réponse copiée')">📋 Copier la réponse</button>
   </details>
   {% else %}
-  {% if l['_lettre'] and l['_lba'] %}<p class="doux">Réponses au formulaire pas encore écrites : lance <code>python alternance\postuler.py --reponses</code>.</p>{% endif %}
+  {% if l['_lettre'] and l['_questions'] %}<p class="doux">Réponses au formulaire pas encore écrites : lance <code>python alternance\postuler.py --reponses</code>.</p>{% endif %}
   {% endfor %}
   <div class="actions">
     {% if l['_mail'] %}
