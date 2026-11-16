@@ -100,6 +100,70 @@ def test_page_ecartees_abandonnees_triees_aussi(client):
     assert 'activerTri("tri", "cartes-abandonnees", "tri-ecartees")' in h
 
 
+# --- recherche et filtres (web/static/filtres.js) ------------------------------------------------------
+FILTRES_JS = TRI_JS.with_name("filtres.js")
+
+
+def filtrer(cartes, recherche, filtres):
+    """Noms des cartes retenues par filtres.js (recherche + [{champ, valeur}])."""
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node.js non installé")
+    script = (f"const f = require({json.dumps(str(FILTRES_JS))});"
+              f"const cartes = {json.dumps(cartes)}.map(d => ({{dataset: d}}));"
+              f"console.log(JSON.stringify(cartes.filter(c => f.carteCorrespond(c, {json.dumps(recherche)}, "
+              f"{json.dumps(filtres)})).map(c => c.dataset.entreprise)));"
+              f"console.log(JSON.stringify(f.valeursDistinctes(cartes, 'villenom')));")
+    r = subprocess.run([node, "-e", script], capture_output=True, text=True, encoding="utf-8", timeout=30)
+    assert r.returncode == 0, r.stderr
+    retenues, villes = r.stdout.strip().splitlines()
+    return json.loads(retenues), json.loads(villes)
+
+
+CARTES_F = [
+    {"entreprise": "Xefi", "texte": "Xefi Technicien 69003 Lyon rh@xefi.fr", "type": "2", "villenom": "Lyon", "source": "LinkedIn"},
+    {"entreprise": "Écureuil", "texte": "Écureuil Développeur Bron", "type": "0", "villenom": "Bron", "source": "La Bonne Alternance"},
+    {"entreprise": "Martin", "texte": "Martin Développeur web Lyon", "type": "1", "villenom": "Lyon", "source": "La Bonne Alternance"},
+]
+
+
+@pytest.mark.parametrize("recherche, filtres, attendu", [
+    ("", [], ["Xefi", "Écureuil", "Martin"]),
+    ("ecureuil", [], ["Écureuil"]),                                     # sans accent, sans majuscule
+    ("developpeur lyon", [], ["Martin"]),                               # tous les mots, dans n'importe quel ordre
+    ("xefi.fr", [], ["Xefi"]),                                          # adresse mail
+    ("", [{"champ": "villenom", "valeur": "Lyon"}], ["Xefi", "Martin"]),
+    ("", [{"champ": "type", "valeur": "0"}], ["Écureuil"]),
+    ("developpeur", [{"champ": "source", "valeur": "La Bonne Alternance"}, {"champ": "villenom", "valeur": "Bron"}],
+     ["Écureuil"]),
+    ("", [{"champ": "villenom", "valeur": ""}], ["Xefi", "Écureuil", "Martin"]),   # « Toutes les villes »
+    ("introuvable", [], []),
+])
+def test_filtres(recherche, filtres, attendu):
+    assert filtrer(CARTES_F, recherche, filtres)[0] == attendu
+
+
+def test_valeurs_des_menus():
+    assert filtrer(CARTES_F, "", [])[1] == ["Bron", "Lyon"]            # distinctes et triées
+
+
+def test_barre_de_filtres_sur_les_pages(client, tableau):
+    ajouter(tableau, **{"Entreprise": "Lba Co", "Statut": LBA, "Lien": "https://lba/1", "Lieu": "12 RUE X 69003 LYON",
+                        "Source": "La Bonne Alternance (Lyon)", "Poste": "Candidature spontanée"})
+    ajouter(tableau, **{"Entreprise": "Mail Co", "Statut": "Brouillon", "Email": "rh@mailco.fr", "Source": "LinkedIn"})
+    h = client.get("/postuler").get_data(as_text=True)
+    for id_ in ('id="recherche"', 'id="f-type"', 'id="f-source"', 'id="f-ville"', 'id="compte"', 'id="aucun"', "filtres.js"):
+        assert id_ in h, id_
+    assert 'data-villenom="Lyon" data-source="La Bonne Alternance"' in h          # source sans la ville de recherche
+    assert 'data-texte="Lba Co Candidature spontanée 12 RUE X 69003 LYON' in h
+    refus.noter([{"Entreprise": n, "SIRET": s, "Code NAF": "47.41Z", "Activité": "Commerce", "Adresse": "38000 GRENOBLE",
+                  "Recherche": "Lyon"} for n, s in (("A", "1"), ("B", "2"))])
+    e = client.get("/ecartees").get_data(as_text=True)
+    for id_ in ('id="recherche"', 'id="f-activite"', 'id="f-ville"', 'id="compte"', "filtres.js"):
+        assert id_ in e, id_
+    assert 'data-villenom="Grenoble"' in e and "47.41Z" in e
+
+
 @pytest.mark.parametrize("jour, iso", [("13/11/2026", "2026-11-13"), ("1/2/2026", "2026-02-01"), ("", ""),
                                        ("pas une date", ""), (None, "")])
 def test_iso(jour, iso):

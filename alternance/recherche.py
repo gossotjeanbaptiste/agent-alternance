@@ -3,7 +3,7 @@ LinkedIn, La Bonne Alternance), écrit les candidatures en brouillon et les ajou
 Ne touche pas au suivi ni aux relances.
 
     python alternance\\recherche.py           (ajoute --essai pour ne rien écrire)
-    .\\planifier.ps1 -Tache recherche -Heure 10:30
+    .\\outils\\planifier.ps1 (ou page Routines de l'interface) -Tache recherche -Heure 10:30
 """
 import sys
 from pathlib import Path

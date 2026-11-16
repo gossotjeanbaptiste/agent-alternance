@@ -53,11 +53,11 @@ async function quitter() {
   try { await fetch("/api/routine", { cache: "no-store" }); repondEncore = true; } catch (e) {}
   if (repondEncore) {
     afficher("L'interface répond encore",
-      "Une autre copie de l'interface tourne sans doute en parallèle. Ferme toutes les fenêtres noires " +
-      "« lancer_interface » (ou Ctrl+C dans les terminaux), puis relance-la une seule fois.");
+      "Une autre copie de l'interface tourne sans doute en parallèle : quitte-la par son icône près de " +
+      "l'horloge (ou Ctrl+C dans le terminal), puis relance LMAgent une seule fois.");
   } else {
     afficher("Interface arrêtée",
-      "Tu peux fermer cet onglet. Pour la relancer : double-clic sur <code>lancer_interface.bat</code>.");
+      "Tu peux fermer cet onglet. Pour la relancer : raccourci LMAgent (menu Démarrer ou bureau).");
     window.close();  // ne marche que si le navigateur l'autorise ; sinon le message reste affiché
   }
 }

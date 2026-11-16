@@ -2,7 +2,7 @@
 et prépare les relances dues en brouillon. Ne cherche pas de nouvelles entreprises.
 
     python alternance\\relances.py            (ajoute --essai pour ne rien écrire)
-    .\\planifier.ps1 -Tache relances -Heure 10:00
+    .\\outils\\planifier.ps1 (ou page Routines de l'interface) -Tache relances -Heure 10:00
 """
 import sys
 from pathlib import Path

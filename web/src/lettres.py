@@ -3,7 +3,7 @@ import re
 import time
 
 import chemins  # noqa: F401
-from tableau import cle_lieu
+from tableau import cle_lieu, ville
 
 CACHE = {"quand": 0, "lettres": {}, "signature": "", "note": None}
 
@@ -101,13 +101,15 @@ def ajouter_lettres(lignes):
     from postuler import SANS_DESTINATAIRE
     from tableau import ADRESSE_A_TROUVER
     for l in lignes:
+        # tri et filtres de la page : ville (comparable et lisible), source sans la ville de recherche
+        l["_ville"], l["_villenom"] = cle_lieu(l.get("Lieu")), ville(l.get("Lieu"))
+        l["_source"] = str(l.get("Source") or "").split(" (")[0].strip()
         l["_a_trouver"] = l.get("Statut") == ADRESSE_A_TROUVER
         if l["_a_trouver"]:   # brouillon sans destinataire : retrouvé par le nom de l'entreprise
             l["_lba"] = l["_mail"] = l["_questions"] = False
             l["_formulaire"], l["_reponses"] = "", []
             l["_site"], l["_recherche"] = site_ou_recherche(l)
             l["_contact"] = recherche_contact(l)
-            l["_ville"] = cle_lieu(l.get("Lieu"))
             l["_lettre"] = lettre_sans_destinataire(l.get("Entreprise"), lettres.get(SANS_DESTINATAIRE) or [])
             continue
         l["_mail"] = l.get("Statut") == "Brouillon"
@@ -118,7 +120,6 @@ def ajouter_lettres(lignes):
         l["_questions"] = reponses.questions_attendues(l.get("Statut"), l.get("Poste"))
         l["_reponses"] = reponses.en_liste(deja.get((l.get("Lien") or "").strip()) or {}) if l["_questions"] else []
         l["_site"], l["_recherche"] = site_ou_recherche(l)
-        l["_ville"] = cle_lieu(l.get("Lieu"))           # pour le tri par ville
         if l["_mail"]:  # brouillon de mail : la signature est déjà celle de la messagerie
             l["_lettre"] = lettres.get(str(l.get("Email") or "").strip().lower())
             continue

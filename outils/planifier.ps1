@@ -2,14 +2,14 @@
 Planifie une tâche de l'agent dans le Planificateur de tâches Windows.
 
 Exemples :
-  .\planifier.ps1 -Tache trier_telechargements -Heure 09:00          # tous les jours à 9h
-  .\planifier.ps1 -Tache rapport_disque -Heure 18:30 -Jours Lundi,Vendredi
-  .\planifier.ps1 -Tache trier_telechargements -AuDemarrage          # à chaque ouverture de session
-  .\planifier.ps1 -Lister
-  .\planifier.ps1 -Tache trier_telechargements -Supprimer
-  .\planifier.ps1 -Tache trier_telechargements -Maintenant           # lance tout de suite (test)
+  .\outils\planifier.ps1 -Tache trier_telechargements -Heure 09:00          # tous les jours à 9h
+  .\outils\planifier.ps1 -Tache rapport_disque -Heure 18:30 -Jours Lundi,Vendredi
+  .\outils\planifier.ps1 -Tache trier_telechargements -AuDemarrage          # à chaque ouverture de session
+  .\outils\planifier.ps1 -Lister
+  .\outils\planifier.ps1 -Tache trier_telechargements -Supprimer
+  .\outils\planifier.ps1 -Tache trier_telechargements -Maintenant           # lance tout de suite (test)
 
-La consigne est dans taches\<nom>.txt
+La consigne est dans perso\taches\<nom>.txt (lancé depuis le code)
 #>
 param(
     [string]$Tache,
@@ -22,7 +22,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$Dossier = $PSScriptRoot
+$Dossier = Split-Path $PSScriptRoot -Parent      # racine du projet (ce script est dans outils\)
+$Perso = Join-Path $Dossier "perso"                # fichiers personnels (lancé depuis le code)
 $Prefixe = "lm_agent_"
 $JoursMap = @{ Lundi="Monday"; Mardi="Tuesday"; Mercredi="Wednesday"; Jeudi="Thursday";
                Vendredi="Friday"; Samedi="Saturday"; Dimanche="Sunday" }
@@ -41,7 +42,7 @@ if ($Lister) {
     exit
 }
 
-if (-not $Tache) { Write-Host "Indique -Tache <nom> (voir le dossier taches\)"; exit 1 }
+if (-not $Tache) { Write-Host "Indique -Tache <nom> (voir le dossier perso\taches\)"; exit 1 }
 $Nom = "$Prefixe$Tache"
 
 if ($Supprimer) {
@@ -60,10 +61,10 @@ if ($Maintenant) {
 $Script = Get-ChildItem "$Dossier\*\$Tache.py", "$Dossier\$Tache.py" -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($Script) {
     $Arguments = "`"$($Script.FullName)`""
-} elseif (Test-Path "$Dossier\taches\$Tache.txt") {
-    $Arguments = "`"$Dossier\agent.py`" --tache $Tache"
+} elseif (Test-Path "$Perso\taches\$Tache.txt") {
+    $Arguments = "`"$Dossier\lmagent.py`" --agent --tache $Tache"
 } else {
-    Write-Host "Introuvable : taches\$Tache.txt ou $Tache.py"; exit 1
+    Write-Host "Introuvable : perso\taches\$Tache.txt ou $Tache.py"; exit 1
 }
 
 # pythonw = pas de fenêtre noire qui s'ouvre
@@ -98,4 +99,4 @@ Register-ScheduledTask -TaskName $Nom -Action $Action -Trigger $Declencheur `
     -Settings $Reglages -Description "Agent IA local : $Tache" -Force | Out-Null
 
 Write-Host "OK : '$Tache' planifiée $Quand."
-Write-Host "Journal : $Dossier\logs\"
+Write-Host "Journal : $Perso\logs\"

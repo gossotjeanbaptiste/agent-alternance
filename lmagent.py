@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 ICI = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
-for p in (ICI / "alternance" / "src", ICI / "alternance", ICI / "web" / "src", ICI / "web", ICI):
+for p in (ICI / "alternance" / "src", ICI / "alternance", ICI / "web" / "src", ICI / "web", ICI / "src", ICI):
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 

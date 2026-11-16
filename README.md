@@ -54,18 +54,21 @@ Les fichiers réels contiennent des secrets et des données personnelles : ils *
 Toutes tes données de la routine vivent dans **`alternance/donnees/`**, à côté de leurs modèles `*.example.*` :
 
 ```bash
-copy config.example.json config.json
+mkdir perso
+copy config.example.json perso\config.json
 copy alternance\donnees\config_alternance.example.json alternance\donnees\config_alternance.json
 copy alternance\donnees\profil.example.md alternance\donnees\profil.md
 copy alternance\donnees\interdits.example.md alternance\donnees\interdits.md
 copy alternance\donnees\suivi_alternance.example.xlsx alternance\donnees\suivi_alternance.xlsx
-mkdir pieces_jointes
+mkdir perso\pieces_jointes
 ```
 
 Puis remplir chaque fichier (sections 3 à 5).
 
 > Ancienne installation, avec ces fichiers directement dans `alternance/` : ils sont rangés tout seuls dans
 > `alternance/donnees/` au premier lancement (et le chemin du tableau est corrigé dans la config).
+> De même, `config.json`, `logs/`, `linkedin/`, `pieces_jointes/`… encore à la racine du projet sont rangés
+> tout seuls dans **`perso/`** (rien n'est écrasé).
 
 ---
 
@@ -73,10 +76,10 @@ Puis remplir chaque fichier (sections 3 à 5).
 
 ### Avec l'interface web (le plus simple)
 
-Double-clique sur **`lancer_interface.bat`**, ou dans PowerShell :
+Double-clique sur **`outils\lancer_interface.bat`**, ou dans PowerShell :
 ```bash
 cd ~/Documents/lm_agent
-python web\app.py
+python lmagent.py
 ```
 Le navigateur s'ouvre sur **http://127.0.0.1:8765**. Pour arrêter : bouton **⏻ Quitter** en haut à droite
 (ou ferme la fenêtre noire). Après une mise à jour du code, quitte et relance l'interface.
@@ -96,7 +99,7 @@ Mot de passe oublié : supprime `alternance/donnees/acces_interface.json`, la pa
 | **Suivi** | toutes les candidatures, filtres, changement de statut |
 | **À postuler** | candidatures par formulaire (La Bonne Alternance, formulaire de contact du site) : ouvrir la page, copier la lettre et, pour La Bonne Alternance, les réponses aux trois questions (motivations, missions, expériences), puis « Envoyée ». Les candidatures **📧 par mail** y sont aussi : site de l'entreprise, recherche Google, « Envoyée » (statut « Candidaté (mail) », date d'envoi et relance prévue), « Abandonner » (brouillon mis à la corbeille) |
 | **Routines** | lancer « Relances » / « Recherche » (« mode essai » pour tester sans rien écrire ; « passages » pour l'enchaîner N fois d'affilée, 1 par défaut), sortie en direct |
-| **LinkedIn** | tes relations (`linkedin/Connections.csv`) qui travaillent dans une entreprise du tableau |
+| **LinkedIn** | tes relations (`perso/linkedin/Connections.csv` depuis le code) qui travaillent dans une entreprise du tableau |
 | **Journal** | journaux des routines |
 | **Paramètres** | signature des lettres de formulaire (avec aperçu), signature ou non sous les mails, **ce que tu ne veux pas dans tes mails**, et **tous les réglages** des deux configs (sections 3 et 4), par section, avec une aide sous chaque champ |
 
@@ -115,7 +118,7 @@ ratés), et chaque action exige en plus un jeton secret renouvelé à chaque dé
 | `python alternance\postuler.py` | assistant de candidature par formulaire : ouvre la page, copie la lettre signée (touches 1 à 3 : réponses aux questions de La Bonne Alternance), met le tableau à jour |
 | `python alternance\postuler.py --reponses` | écrit seulement les réponses aux questions qui manquent |
 | `python alternance\maj_tableau.py` | met le tableau à jour d'après ta messagerie et te pose des questions (`--voir` = lecture seule) |
-| `python agent.py` | agent en chat (fichiers, PowerShell, web) |
+| `python lmagent.py --agent` | agent en chat (fichiers, PowerShell, web) |
 
 Ajoute `--essai` aux scripts de la routine pour tout simuler sans rien écrire.
 
@@ -135,8 +138,8 @@ n'utilisent ni le modèle, ni ta messagerie, ni la tour (tout est simulé).
 ### Tous les jours automatiquement
 
 ```bash
-.\planifier.ps1 -Tache relances -Heure 10:00
-.\planifier.ps1 -Tache recherche -Heure 10:15
+.\outils\planifier.ps1 -Tache relances -Heure 10:00
+.\outils\planifier.ps1 -Tache recherche -Heure 10:15
 ```
 `-Lister` affiche les tâches, `-Supprimer` en retire une, `-Maintenant` la lance tout de suite.
 Plus simple : page **Routines** → « Tous les jours automatiquement » (tâches `LMAgent_<routine>`, marche aussi avec la version installée).
@@ -200,7 +203,7 @@ passages max (`interface.*`).
 |---|---|
 | `la_bonne_alternance.jeton_api` | Ton jeton API gratuit : créer un compte sur **api.apprentissage.beta.gouv.fr**. Vide = source ignorée |
 | `la_bonne_alternance.villes` | Points de recherche `{"nom", "lat", "lon"}` (coordonnées sur geo.api.gouv.fr ou Google Maps) |
-| `pieces_jointes` | Chemins de ton CV et de ton calendrier d'alternance (à mettre dans `pieces_jointes/`) |
+| `pieces_jointes` | Chemins de ton CV et de ton calendrier d'alternance (à mettre dans `perso/pieces_jointes/` depuis le code) |
 | `tableau_suivi` | Chemin du tableau Excel ; vide = `suivi_alternance.xlsx` dans le dossier de données (créé automatiquement ; modèle : `suivi_alternance.example.xlsx`, 4 lignes fictives) |
 | `signature_formulaire` | Ton nom, titre, téléphone, mail, LinkedIn, portfolio, GitHub : signature des lettres de formulaire (réglable aussi dans **Paramètres**) ; le nom sert aussi à l'objet par défaut d'une relance |
 | `debut_signature` | 1re ligne de ta signature de mail (ex. `"Prénom NOM"`) : elle est retirée du mail d'origine relu avant d'écrire une relance |
@@ -310,10 +313,9 @@ ou pars d'un fichier vide : il est créé automatiquement s'il n'existe pas.
 
 ```
 lm_agent/
-├── agent.py                   agent IA (connexion LM Studio, choix du moteur, journal)
-├── lancer_interface.bat       lance l'interface web
-├── planifier.ps1              tâches planifiées Windows
-├── config.json                réglages de l'agent (non versionné ; modèle config.example.json)
+├── lmagent.py                 point d'entrée unique (interface, routines…) ; devient LMAgent.exe
+├── config.example.json        modèle de config.json (réglages de l'agent)
+├── src/                       agent IA (LM Studio, journal), emplacements, mises à jour, version
 ├── alternance/
 │   ├── relances.py, recherche.py, alternance.py, postuler.py, maj_tableau.py   scripts à lancer
 │   ├── donnees/               tes données (non versionnées) + leurs modèles *.example.*
@@ -322,8 +324,11 @@ lm_agent/
 │   ├── app.py                 interface web (http://127.0.0.1:8765)
 │   ├── src/                   pages, actions, lecture du tableau…
 │   └── templates/, static/    HTML, style et JavaScript
-├── linkedin/                  ton export LinkedIn (non versionné)
-└── pieces_jointes/, logs/     CV et calendrier, journaux (non versionnés)
+├── outils/                    lancer_interface.bat, planifier.ps1, génération du logo
+├── installeur/                compilation de LMAgent.exe et de l'installeur .msi
+├── tests/                     suite de tests (python -m pytest)
+└── perso/                     tes fichiers quand l'appli est lancée depuis le code (non versionné) :
+                               config.json, linkedin/, pieces_jointes/, logs/, workspace/, corbeille/, taches/
 ```
 
 | Module (`alternance/src/`) | Rôle |
@@ -363,5 +368,6 @@ Essai sans publier : onglet *Actions* → « Publier une version » → *Run wor
 
 ## 9. Ce qui n'est pas versionné
 
-`config.json`, tout `alternance/donnees/` sauf les modèles `*.example.*` (config, profil, contre-prompt, tableau,
-lettres et réponses, liste des refus), `linkedin/`, CV / PDF, `logs/`, `workspace/`, `corbeille/` — voir `.gitignore`.
+Tout `perso/` (config.json, LinkedIn, CV, journaux…), tout `alternance/donnees/` sauf les modèles `*.example.*`
+(config, profil, contre-prompt, tableau, lettres et réponses, liste des refus), CV / PDF — voir `.gitignore`.
+La version installée garde tout dans `%APPDATA%\LMAgent\`.

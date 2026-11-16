@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]   # dossier lm_agent (web/src/chemins.py -> lm_agent)
 ALT = ROOT / "alternance"
 
-for p in (ALT / "src", ALT, ROOT):
+for p in (ALT / "src", ALT, ROOT / "src", ROOT):
     if str(p) not in sys.path:
         sys.path.insert(1, str(p))
 

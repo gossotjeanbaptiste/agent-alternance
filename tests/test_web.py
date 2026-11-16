@@ -406,7 +406,7 @@ class TestReglagesWeb:
         assert "Tour" not in titres                         # config sans serveur distant : pas de tour
         self.agent.write_text(json.dumps({"utiliser_tour": True}), encoding="utf-8")
         titres = [t for t, _ in reglages_web.sections()]
-        assert ("Tour" in titres) == (ROOT / "tour.py").exists()
+        assert ("Tour" in titres) == (ROOT / "src" / "tour.py").exists()
 
     def test_case_utiliser_tour_deduite_des_serveurs(self):
         self.agent.write_text(json.dumps({"serveurs": [{"nom": "tour", "url": "http://t:1236/v1"}]}), encoding="utf-8")

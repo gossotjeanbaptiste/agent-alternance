@@ -7,7 +7,7 @@ import commun
 import lettres
 import refus
 import routines
-from tableau import COLS_A_CONTACTER, Suivi, cle_lieu, deja_contactee, norm
+from tableau import COLS_A_CONTACTER, Suivi, cle_lieu, deja_contactee, norm, ville
 
 
 def _site(adresse):
@@ -58,6 +58,7 @@ def lire():
         site, recherche = lettres.site_ou_recherche({"Entreprise": l["Entreprise"], "Lieu": l["Adresse"]})
         l = {**l, "_cle": refus.cle(l), "_raison": refus.raison(l), "_site": _site(l.get("Site")) or site,
              "_recherche": recherche, "_ville": cle_lieu(l["Adresse"]),        # pour le tri
+             "_villenom": ville(l["Adresse"]),                                 # pour le filtre par ville
              "_premiere": _iso(l.get("Première fois")), "_derniere": _iso(l.get("Dernière fois"))}
         decision = l.get("Décision") or ""
         if decision == refus.ABANDONNEE:
