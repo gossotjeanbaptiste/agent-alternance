@@ -80,17 +80,25 @@ def lettres_des_brouillons(lire_messagerie=True):
         brouillons = ouvrir().textes_brouillons() if lire_messagerie else []
     except Exception:  # messagerie indisponible : on garde au moins les lettres enregistrées
         brouillons = []
+    sans_destinataire = []   # candidatures « adresse à trouver » : brouillon sans adresse, retrouvé par le nom
     for sujet, corps, destinataires in brouillons:
         if not sujet.startswith("[À postuler"):
             for a in destinataires:
                 if a:
                     res.setdefault(a.lower(), nettoyer(corps, garder_signature=True))
+            if not any(destinataires):
+                sans_destinataire.append((sujet, nettoyer(corps, garder_signature=True)))
             continue
         m = re.search(r"Lien pour postuler\s*:\s*(\S+)", corps)
         if m:
             res[m.group(1).strip()] = nettoyer(corps)
     res.update({lien: nettoyer(t) for lien, t in reponses.lettres().items()})  # lettres sans brouillon
+    if sans_destinataire:
+        res[SANS_DESTINATAIRE] = sans_destinataire
     return res
+
+
+SANS_DESTINATAIRE = "#sans_destinataire"   # clé de lettres_des_brouillons : [(objet, lettre)] des brouillons sans adresse
 
 
 def ecrire_lettre(s, row):

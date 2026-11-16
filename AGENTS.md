@@ -86,6 +86,9 @@ dans le dépôt et où en est le projet.
 - **Routines depuis l'interface** : `web/src/routines.py` lance le script dans un processus séparé, enveloppé dans
   une petite boucle (`BOUCLE`) qui le relance N fois d'affilée (champ « passages », 1 à 50) ; un seul journal
   `logs/web_…_xN.txt`, la boucle continue même si l'interface est arrêtée.
+- **Pièces jointes** : `commun.pieces_jointes()` ne renvoie que les fichiers qui existent ; un chemin cassé
+  (config d'un autre PC) est cherché par son nom dans `pieces_jointes/`, sinon signalé dans le journal
+  (avant : ignoré en silence, les brouillons partaient sans CV).
 - **Messagerie** : Outlook classique par COM (le nouvel Outlook n'a pas d'API ; Microsoft Graph refusé par le tenant
   de l'école) ou Gmail par IMAP (mot de passe d'application ; mails programmés trouvés avec `X-GM-RAW "in:scheduled"`,
   reconnexion automatique, lecture des brouillons en une requête sans les pièces jointes).

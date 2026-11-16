@@ -107,7 +107,8 @@ class TestPostuler:
         textes = [("[À postuler sur La Bonne Alternance] Candidature",
                    "Lien pour postuler : https://lba/1\n\nLettre LBA.\n\nCordialement,\nsig", []),
                   ("Candidature développeur", "Madame,\n\nMail.\n\nCordialement,\nCamille", ["RH@Boite.fr"]),
-                  ("[À postuler] sans lien", "Pas de lien ici", [])]
+                  ("[À postuler] sans lien", "Pas de lien ici", []),
+                  ("Candidature chez Sans Adresse", "Madame,\n\nSans adresse.\n\nCordialement,\nCamille", [])]
         import messagerie as mod
         monkeypatch.setattr(mod, "ouvrir", lambda: messagerie(textes=textes))
         reponses.enregistrer_lettre("https://site/contact", "Lettre du fichier.\n\nCordialement,\nsig")
@@ -115,7 +116,10 @@ class TestPostuler:
         assert l["https://lba/1"] == "Lettre LBA.\n\nCordialement,"
         assert l["rh@boite.fr"].endswith("Camille")              # brouillon de mail : signature gardée
         assert l["https://site/contact"] == "Lettre du fichier.\n\nCordialement,"
-        assert len(l) == 3
+        # brouillon « adresse à trouver » (sans destinataire) : gardé à part avec son objet
+        assert l[postuler.SANS_DESTINATAIRE] == [("Candidature chez Sans Adresse",
+                                                  "Madame,\n\nSans adresse.\n\nCordialement,\nCamille")]
+        assert len(l) == 4
 
     def test_lettres_sans_ouvrir_la_messagerie(self, monkeypatch):
         import messagerie as mod

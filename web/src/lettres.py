@@ -3,6 +3,7 @@ import re
 import time
 
 import chemins  # noqa: F401
+from tableau import cle_lieu
 
 CACHE = {"quand": 0, "lettres": {}, "signature": "", "note": None}
 
@@ -68,6 +69,27 @@ def site_ou_recherche(l):
     return site, "https://www.google.com/search?q=" + quote_plus(f"{l.get('Entreprise') or ''} {ville}".strip())
 
 
+def recherche_contact(l):
+    """Recherche Google pour trouver l'adresse de contact (« Entreprise Ville contact recrutement email »)."""
+    from urllib.parse import quote_plus
+    lieu = str(l.get("Lieu") or "")
+    ville = re.split(r"\b\d{5}\b", lieu)[-1].strip(" ,") or lieu
+    return "https://www.google.com/search?q=" + quote_plus(
+        f"{l.get('Entreprise') or ''} {ville} contact recrutement email".replace("  ", " ").strip())
+
+
+def lettre_sans_destinataire(entreprise, brouillons):
+    """Lettre du brouillon sans adresse qui parle de cette entreprise (nom dans l'objet ou le texte), ou None."""
+    from tableau import norm
+    nom = norm(entreprise)
+    if len(nom) < 3:
+        return None
+    for objet, texte in brouillons:
+        if nom in norm(objet) or nom in norm(texte):
+            return texte
+    return None
+
+
 def ajouter_lettres(lignes):
     """Ajoute à chaque ligne « _lettre » (lettre + signature) si un brouillon existe. Renvoie un message d'erreur ou None."""
     try:
@@ -76,7 +98,18 @@ def ajouter_lettres(lignes):
         return f"Lecture des lettres et brouillons impossible : {e}"
     import reponses
     deja = reponses.lire()
+    from postuler import SANS_DESTINATAIRE
+    from tableau import ADRESSE_A_TROUVER
     for l in lignes:
+        l["_a_trouver"] = l.get("Statut") == ADRESSE_A_TROUVER
+        if l["_a_trouver"]:   # brouillon sans destinataire : retrouvé par le nom de l'entreprise
+            l["_lba"] = l["_mail"] = l["_questions"] = False
+            l["_formulaire"], l["_reponses"] = "", []
+            l["_site"], l["_recherche"] = site_ou_recherche(l)
+            l["_contact"] = recherche_contact(l)
+            l["_ville"] = cle_lieu(l.get("Lieu"))
+            l["_lettre"] = lettre_sans_destinataire(l.get("Entreprise"), lettres.get(SANS_DESTINATAIRE) or [])
+            continue
         l["_mail"] = l.get("Statut") == "Brouillon"
         l["_lba"] = l.get("Statut") == "À postuler (La Bonne Alternance)"
         m = re.search(r"Formulaire : (\S+)", str(l.get("Notes") or ""))
@@ -85,6 +118,7 @@ def ajouter_lettres(lignes):
         l["_questions"] = reponses.questions_attendues(l.get("Statut"), l.get("Poste"))
         l["_reponses"] = reponses.en_liste(deja.get((l.get("Lien") or "").strip()) or {}) if l["_questions"] else []
         l["_site"], l["_recherche"] = site_ou_recherche(l)
+        l["_ville"] = cle_lieu(l.get("Lieu"))           # pour le tri par ville
         if l["_mail"]:  # brouillon de mail : la signature est déjà celle de la messagerie
             l["_lettre"] = lettres.get(str(l.get("Email") or "").strip().lower())
             continue
