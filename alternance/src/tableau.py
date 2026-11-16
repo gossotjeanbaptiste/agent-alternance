@@ -23,6 +23,7 @@ STATUTS = {  # statut -> couleur de fond
 LBA = "À postuler (La Bonne Alternance)"
 FORMULAIRE = "À postuler (formulaire du site)"
 A_POSTULER = (LBA, FORMULAIRE)
+ADRESSE_A_TROUVER = "Brouillon (adresse à trouver)"   # brouillon de mail sans destinataire
 # candidature envoyée : par mail (suivie et relancée automatiquement) ou par un autre canal
 MAIL = "Candidaté (mail)"
 C_LBA = "Candidaté (La Bonne Alternance)"

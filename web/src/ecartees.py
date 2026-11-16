@@ -17,6 +17,12 @@ def _site(adresse):
     return adresse
 
 
+def _iso(jour):
+    """« 13/11/2026 » -> « 2026-11-13 » (triable) ; "" si illisible."""
+    j = str(jour or "").strip().split("/")
+    return f"{j[2]}-{j[1].zfill(2)}-{j[0].zfill(2)}" if len(j) == 3 and all(x.isdigit() for x in j) else ""
+
+
 def noter_candidatures_faites():
     """Les candidatures demandées dont la lettre a été écrite (entreprise arrivée dans le tableau de suivi)
     passent à « Candidature faite le … » : elles quittent la page. Renvoie le nombre de lignes mises à jour."""
@@ -51,7 +57,8 @@ def lire():
             continue
         site, recherche = lettres.site_ou_recherche({"Entreprise": l["Entreprise"], "Lieu": l["Adresse"]})
         l = {**l, "_cle": refus.cle(l), "_raison": refus.raison(l), "_site": _site(l.get("Site")) or site,
-             "_recherche": recherche}
+             "_recherche": recherche, "_ville": cle_lieu(l["Adresse"]),        # pour le tri
+             "_premiere": _iso(l.get("Première fois")), "_derniere": _iso(l.get("Dernière fois"))}
         decision = l.get("Décision") or ""
         if decision == refus.ABANDONNEE:
             groupes["abandonnees"].append(l)

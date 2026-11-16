@@ -67,11 +67,25 @@ class TestCheminTableau:
         cfg["tableau_suivi"] = "~/x.xlsx"
         assert commun.chemin_tableau() == Path.home() / "x.xlsx"
 
-    def test_pieces_jointes(self, cfg):
+    def test_pieces_jointes(self, cfg, tmp_path, monkeypatch, capsys):
+        """Seuls les fichiers qui existent sont joints ; un chemin cassé est cherché dans pieces_jointes/,
+        un fichier introuvable est signalé (une fois)."""
+        monkeypatch.setattr(commun, "_PJ_SIGNALEES", set())
         cfg["pieces_jointes"] = None
         assert commun.pieces_jointes() == []
-        cfg["pieces_jointes"] = ["a.pdf"]
-        assert commun.pieces_jointes() == ["a.pdf"]
+        cv = tmp_path / "cv.pdf"
+        cv.write_bytes(b"%PDF")
+        dossier = emplacements.dossier("pieces_jointes")
+        dossier.mkdir(parents=True, exist_ok=True)
+        (dossier / "calendrier.pdf").write_bytes(b"%PDF")
+        try:
+            cfg["pieces_jointes"] = [str(cv), r"D:\autre_pc\calendrier.pdf", "introuvable.pdf"]
+            assert commun.pieces_jointes() == [str(cv), str(dossier / "calendrier.pdf")]
+            assert "introuvable.pdf" in capsys.readouterr().out
+            commun.pieces_jointes()
+            assert "introuvable.pdf" not in capsys.readouterr().out          # signalé une seule fois
+        finally:
+            (dossier / "calendrier.pdf").unlink()
 
     def test_config_d_exemple_sans_chemin_en_dur(self):
         import json

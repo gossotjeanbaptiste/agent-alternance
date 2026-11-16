@@ -136,6 +136,34 @@ class TestPostuler:
         assert "Lettre spontanée" in h
         assert "Ancienne réponse" not in h and "pas encore écrites" not in h and "Copier la réponse" not in h
 
+    def test_adresse_a_trouver_affichee(self, client, tableau, monkeypatch):
+        import postuler
+        ajouter(tableau, **{"Entreprise": "Mail Co", "Statut": "Brouillon", "Email": "rh@mailco.fr"})
+        ajouter(tableau, **{"Entreprise": "Sans Adresse", "Statut": "Brouillon (adresse à trouver)",
+                            "Lieu": "12 rue X 69003 Lyon", "Notes": "Site : https://sansadresse.fr"})
+        ajouter(tableau, **{"Entreprise": "Introuvable", "Statut": "Brouillon (adresse à trouver)"})
+        monkeypatch.setattr(lettres, "_outlook_ferme", lambda: False)
+        monkeypatch.setattr(lettres, "lettres_et_signature", lambda: ({
+            "rh@mailco.fr": "Lettre du mail",
+            postuler.SANS_DESTINATAIRE: [("Candidature spontanée chez Sans Adresse", "Madame, Monsieur, lettre sans adresse")],
+        }, "Camille Test"))
+        lettres.CACHE["note"] = None
+        h = client.get("/postuler").get_data(as_text=True)
+        assert h.count("📭 <b>Adresse à trouver</b>") == 2
+        assert h.index("Mail Co") < h.index("Sans Adresse")                     # après les mails
+        assert "lettre sans adresse" in h and "Chercher l'adresse de contact" in h
+        assert "q=Sans+Adresse+Lyon+contact+recrutement+email" in h and "https://sansadresse.fr" in h
+        assert "envoyeeSansAdresse(" in h and 'data-type="3"' in h
+        assert "aucun brouillon sans destinataire ne parle de Introuvable" in h
+
+    def test_lettre_sans_destinataire(self):
+        brouillons = [("Candidature alternance", "Bonjour, je souhaite rejoindre XEFI SAS à Lyon"),
+                      ("Candidature chez Autre", "...")]
+        assert lettres.lettre_sans_destinataire("Xefi", brouillons).startswith("Bonjour")
+        assert lettres.lettre_sans_destinataire("Autre", brouillons) == "..."
+        assert lettres.lettre_sans_destinataire("Inconnue", brouillons) is None
+        assert lettres.lettre_sans_destinataire("AB", brouillons) is None          # nom trop court : pas de devinette
+
     def test_site_ou_recherche(self):
         assert lettres.site_ou_recherche({"Notes": "SIRET 1 | Site : https://a.fr | x", "Entreprise": "A"})[0] == "https://a.fr"
         assert lettres.site_ou_recherche({"Email": "rh@boite.fr", "Entreprise": "B"})[0] == "https://boite.fr"
@@ -160,6 +188,31 @@ class TestActions:
         assert r.get_json()["ok"]
         _, l = self.ligne(tableau, "A")
         assert l["Statut"] == MAIL and l["Date envoi"].date() == AUJ and l["Relance prévue"] is not None
+
+    def test_envoyee_adresse_trouvee_notee(self, client, tableau):
+        """Adresse à trouver : l'adresse saisie à « Envoyée » est notée (suivi des réponses, relance)."""
+        ajouter(tableau, **{"Entreprise": "A", "Statut": "Brouillon (adresse à trouver)"})
+        n, _ = self.ligne(tableau, "A")
+        r = client.post("/api/statut", json={"ligne": n, "entreprise": "A", "statut": MAIL, "postule": True,
+                                             "email": " rh@a.fr "})
+        assert r.get_json()["ok"]
+        _, l = self.ligne(tableau, "A")
+        assert l["Statut"] == MAIL and l["Email"] == "rh@a.fr" and l["Relance prévue"] is not None
+
+    def test_envoyee_sans_adresse(self, client, tableau):
+        ajouter(tableau, **{"Entreprise": "A", "Statut": "Brouillon (adresse à trouver)"})
+        n, _ = self.ligne(tableau, "A")
+        assert client.post("/api/statut", json={"ligne": n, "entreprise": "A", "statut": MAIL, "postule": True,
+                                                "email": ""}).get_json()["ok"]
+        assert self.ligne(tableau, "A")[1]["Statut"] == MAIL
+
+    def test_adresse_invalide_refusee(self, client, tableau):
+        ajouter(tableau, **{"Entreprise": "A", "Statut": "Brouillon (adresse à trouver)"})
+        n, _ = self.ligne(tableau, "A")
+        r = client.post("/api/statut", json={"ligne": n, "entreprise": "A", "statut": MAIL, "postule": True,
+                                             "email": "pas une adresse"})
+        assert r.status_code == 400 and "invalide" in r.get_json()["message"]
+        assert self.ligne(tableau, "A")[1]["Statut"] == "Brouillon (adresse à trouver)"   # rien de changé
 
     def test_statut_formulaire_sans_relance(self, client, tableau):
         ajouter(tableau, **{"Entreprise": "B", "Statut": FORMULAIRE})

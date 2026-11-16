@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% block titre %}Écartées{% endblock %}
 {% macro carte(l, abandonnee=False) %}
-<div class="carte" data-cle="{{ l['_cle'] }}" data-entreprise="{{ l['Entreprise'] }}">
+<div class="carte" data-cle="{{ l['_cle'] }}" data-entreprise="{{ l['Entreprise'] }}" data-activite="{{ l['Activité'] }}"
+     data-ville="{{ l['_ville'] }}" data-derniere="{{ l['_derniere'] }}" data-premiere="{{ l['_premiere'] }}"
+     data-passages="{{ l['Passages'] or 1 }}">
   <h2>{{ l['Entreprise'] }} <span class="doux" style="font-weight:400">— {{ l['Adresse'] or l['Recherche'] or '' }}</span></h2>
   <p>🚫 <b>Raison :</b> {{ l['_raison'] }}</p>
   <p class="doux">Écartée {{ l['Passages'] or 1 }} fois{% if l['Première fois'] %}, depuis le {{ l['Première fois'] }}{% endif %}{% if l['Dernière fois'] and l['Dernière fois'] != l['Première fois'] %}, dernière fois le {{ l['Dernière fois'] }}{% endif %}{% if l['Recherche'] %} · recherche autour de {{ l['Recherche'] }}{% endif %}{% if l['SIRET'] %} · SIRET {{ l['SIRET'] }}{% endif %}</p>
@@ -22,9 +24,25 @@
 <p class="doux">Entreprises trouvées par La Bonne Alternance mais écartées par le filtre d'activité (candidatures spontanées
 limitées à l'informatique, réglage « Activités acceptées » dans Paramètres). Regarde ce qu'elles font, puis
 <b>candidate quand même</b> (la candidature sera écrite à la prochaine recherche) ou <b>abandonne</b>.</p>
+{% if g.a_examiner|length > 1 %}
+<div class="tri">
+  <label for="tri">Trier par</label>
+  <select id="tri">
+    <option value="entreprise:asc">Entreprise (A → Z)</option>
+    <option value="entreprise:desc">Entreprise (Z → A)</option>
+    <option value="activite:asc">Activité (A → Z)</option>
+    <option value="ville:asc">Ville (A → Z)</option>
+    <option value="derniere:desc">Écartées récemment d'abord</option>
+    <option value="premiere:asc">Écartées depuis le plus longtemps</option>
+    <option value="passages:desc" data-nombre>Le plus souvent écartées</option>
+  </select>
+</div>
+{% endif %}
+<div id="cartes">
 {% for l in g.a_examiner %}{{ carte(l) }}{% else %}
 <div class="carte">Aucune entreprise écartée à examiner. 👍</div>
 {% endfor %}
+</div>
 {% if g.demandees %}
 <details class="carte pli-section" id="pli-demandees">
   <summary><h2 style="display:inline">Candidature demandée ({{ g.demandees|length }})</h2></summary>
@@ -40,7 +58,9 @@ limitées à l'informatique, réglage « Activités acceptées » dans Paramètr
 {% endif %}
 {% endblock %}
 {% block script %}
+<script src="{{ url_for('static', filename='tri.js') }}"></script>
 <script>
+activerTri("tri", "cartes", "tri-ecartees");
 async function decider(bouton, action) {
   const carte = bouton.closest(".carte");
   if (action === "candidater" && !confirm("Ajouter " + carte.dataset.entreprise + " à la feuille « À contacter » ? Sa candidature sera écrite à la prochaine recherche.")) return;

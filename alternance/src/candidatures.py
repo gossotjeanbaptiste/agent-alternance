@@ -8,7 +8,7 @@ from mails import domaine, est_generique, texte_vers_html
 from modele import llm_json
 from sites import explorer_site, trouver_site
 from sources import depuis_a_contacter, depuis_lba, depuis_linkedin
-from tableau import FORMULAIRE, LBA, deja_contactee, retenir
+from tableau import FORMULAIRE, LBA, deja_contactee, norm, retenir
 
 def rediger_candidature(o):
     mail = o.get("email") or ""
@@ -30,7 +30,9 @@ def nouvelles_candidatures(suivi, ol):
     noms, domaines, sirets = suivi.deja_vus()
     choix, sans_mail = [], []
     recherches, maxi = 0, CFG["la_bonne_alternance"].get("recherches_site_max", 30)
-    ignorees = 0
+    # Entreprises distinctes écartées car déjà connues : les recherches La Bonne Alternance gare par gare
+    # se chevauchent (rayon), la même entreprise revient des dizaines de fois ; on ne la compte qu'une fois.
+    ignorees = set()
     # 1) ta liste perso d'abord, 2) alertes LinkedIn, 3) La Bonne Alternance (gare par gare).
     # Comptent comme candidatures valables : adresse mail réelle, ta liste perso,
     # ou candidature spontanée possible sur La Bonne Alternance. Le reste sert de réserve.
@@ -39,7 +41,7 @@ def nouvelles_candidatures(suivi, ol):
             break
         for o in source():
             if deja_contactee(o, noms, domaines, sirets):
-                ignorees += 1
+                ignorees.add(norm(o["entreprise"]))
                 continue
             if not o.get("email") and recherches < maxi:
                 # pas d'adresse : on cherche le site de l'entreprise (s'il n'est pas connu),
@@ -51,7 +53,7 @@ def nouvelles_candidatures(suivi, ol):
                     trouve = explorer_site(o["site"])
                     o["site"], o["email"], o["formulaire"] = trouve["site"], trouve["email"], trouve["formulaire"]
                 if o["email"] and deja_contactee(o, noms, domaines, sirets):  # même domaine déjà contacté
-                    ignorees += 1
+                    ignorees.add(norm(o["entreprise"]))
                     continue
             # on retient l'entreprise pour ne pas la reprendre deux fois aujourd'hui
             retenir(noms, o)
@@ -66,7 +68,8 @@ def nouvelles_candidatures(suivi, ol):
                 break
     choix += sans_mail[: max(0, n - len(choix))]
     if ignorees:
-        say(f"   {ignorees} entreprise(s) ignorée(s) car déjà présentes dans le tableau")
+        say(f"   {len(ignorees)} entreprise(s) ignorée(s) car déjà présentes dans le tableau "
+            "ou déjà retenues aujourd'hui")
     if not choix:
         say("   Aucune nouvelle entreprise trouvée (remplis la feuille « À contacter » ou ajoute un jeton La Bonne Alternance).")
         return

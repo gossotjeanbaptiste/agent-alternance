@@ -45,9 +45,30 @@ def chemin_tableau():
     return P(c) if c else donnees.chemin("suivi_alternance.xlsx")
 
 
+_PJ_SIGNALEES = set()
+
+
 def pieces_jointes():
-    """Pièces jointes des candidatures (CV, calendrier…) : chemins de la config."""
-    return list(CFG.get("pieces_jointes") or [])
+    """Pièces jointes des candidatures (CV, calendrier…) : chemins de la config qui existent vraiment.
+    Un chemin qui ne marche plus (config venue d'un autre PC…) est cherché par son nom dans le dossier
+    pieces_jointes/ ; s'il reste introuvable, on le signale (une fois par lancement) au lieu de l'ignorer
+    en silence, sinon le brouillon part sans CV sans que personne ne s'en aperçoive."""
+    dossier = donnees.emplacements.dossier("pieces_jointes")
+    ok = []
+    for p in CFG.get("pieces_jointes") or []:
+        chemin = P(p)
+        if not chemin.is_file() and (dossier / chemin.name).is_file():
+            chemin = dossier / chemin.name
+        if chemin.is_file():
+            ok.append(str(chemin))
+        elif p not in _PJ_SIGNALEES:
+            _PJ_SIGNALEES.add(p)
+            say(f"   ⚠️ pièce jointe introuvable, le brouillon partira sans : {p} "
+                f"(corrige le chemin dans Paramètres → Fichiers ; tes fichiers sont dans {dossier})")
+    if not ok and "_aucune" not in _PJ_SIGNALEES:
+        _PJ_SIGNALEES.add("_aucune")
+        say("   ⚠️ aucune pièce jointe utilisable : les candidatures partiront sans CV")
+    return ok
 
 
 def say(msg):

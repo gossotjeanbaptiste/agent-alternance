@@ -48,6 +48,7 @@ a { color: var(--accent); }
 .pli .masquer, .pli[open] .voir { display: none; }
 .pli[open] .masquer { display: inline; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.tri { display: flex; gap: 8px; align-items: center; margin: 0 0 12px; color: var(--doux); }
 .etat { display: flex; gap: 10px; align-items: center; padding: 6px 0; }
 .point { width: 10px; height: 10px; border-radius: 50%; background: var(--erreur); }
 .point.vert { background: var(--ok); }
