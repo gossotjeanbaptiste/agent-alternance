@@ -153,13 +153,13 @@ class TestExplorerSite:
 
     def test_site_injoignable(self, faux_web):
         assert sites.explorer_site("https://injoignable.fr") == {"site": "https://injoignable.fr", "email": "",
-                                                                 "formulaire": ""}
+                                                                 "formulaire": "", "ecarte": ""}
 
     def test_site_vide(self):
-        assert sites.explorer_site("") == {"site": "", "email": "", "formulaire": ""}
+        assert sites.explorer_site("") == {"site": "", "email": "", "formulaire": "", "ecarte": ""}
 
     def test_redirection_suivie(self, faux_web):
-        faux_web["https://exemple.fr"] = ("contact@exemple.com", "https://www.exemple.com/")
+        faux_web["https://exemple.fr"] = ("contact@exemple.com, tél. 04 72 00 00 00", "https://www.exemple.com/")
         r = sites.explorer_site("https://exemple.fr")
         assert r["site"] == "https://www.exemple.com/" and r["email"] == "contact@exemple.com"
 
@@ -187,7 +187,8 @@ class TestExplorerSite:
 class TestDevinerSite:
     def test_domaine_evident(self, faux_web):
         faux_web["https://bergerlevrault.fr"] = ("Autre chose", "https://bergerlevrault.fr")
-        faux_web["https://berger-levrault.com"] = ("<h1>Berger-Levrault</h1> éditeur", "https://www.berger-levrault.com/")
+        faux_web["https://berger-levrault.com"] = ("<h1>Berger-Levrault</h1> éditeur, RCS Toulouse",
+                                                   "https://www.berger-levrault.com/")
         assert sites.deviner_site("Berger Levrault") == "https://www.berger-levrault.com"
 
     def test_redirection_vers_un_autre_site_refusee(self, faux_web):

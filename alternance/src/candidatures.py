@@ -50,8 +50,10 @@ def nouvelles_candidatures(suivi, ol):
                 if not o.get("site"):
                     o["site"] = trouver_site(o["entreprise"], o.get("lieu"))
                 if o.get("site"):
-                    trouve = explorer_site(o["site"])
+                    trouve = explorer_site(o["site"], lieu=o.get("lieu") or "")
                     o["site"], o["email"], o["formulaire"] = trouve["site"], trouve["email"], trouve["formulaire"]
+                    if trouve.get("ecarte"):   # site d'une entreprise hors de France : rien n'en est gardé
+                        say(f"   🌍 {o['entreprise']} : site écarté ({trouve['ecarte']})")
                 if o["email"] and deja_contactee(o, noms, domaines, sirets):  # même domaine déjà contacté
                     ignorees.add(norm(o["entreprise"]))
                     continue

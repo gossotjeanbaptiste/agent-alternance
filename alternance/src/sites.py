@@ -8,6 +8,8 @@
    dans ses liens (et quelques adresses classiques). On y cherche :
    - une adresse affichée (y compris masquée : « [at] », protection Cloudflare) ;
    - un formulaire de contact (champ de message).
+3. Seuls les sites d'entreprises en France sont gardés (réglage « sites.verifier_france », voir pays.py) :
+   pas de site luxembourgeois, belge, américain… même si le nom correspond.
 """
 import html as html_lib
 import re
@@ -16,6 +18,7 @@ import unicodedata
 import urllib.parse
 import urllib.request
 
+import pays
 import reglages
 from mails import DOMAINES_PERSO, domaine
 
@@ -128,9 +131,38 @@ def deviner_site(nom, lieu=""):
                 cp, ville = _repere_lieu(lieu)
                 if not ((cp and cp in texte) or (len(ville) >= 3 and ville in texte)):
                     continue
+            if not site_en_france(final, lieu, [page])[0]:   # même nom, mais entreprise d'un autre pays
+                continue
             u = urllib.parse.urlparse(final)
             return f"{u.scheme}://{u.netloc}"
     return ""
+
+
+def verifier_france():
+    return bool(reglages.valeur("sites.verifier_france"))
+
+
+def site_en_france(url, lieu="", pages=()):
+    """(en France ?, raison) : extension, sinon preuves dans les pages déjà lues, puis dans les pages
+    « mentions légales / contact » du site si besoin. Toujours vrai si la vérification est désactivée."""
+    if not verifier_france():
+        return True, "vérification désactivée"
+    ok, raison = pays.verdict(url, list(pages), lieu)
+    if ok or pays.pays_de_l_extension(url):     # extension française ou étrangère : réponse sûre
+        return ok, raison
+    textes = list(pages)
+    for chemin in ("/mentions-legales", "/mentions-legales/", "/contact", "/contact/"):
+        try:
+            page, final = _lire(urllib.parse.urljoin(url, chemin), 300_000)
+        except Exception:
+            continue
+        if _racine(final) != _racine(url):
+            continue
+        textes.append(page)
+        ok, raison = pays.verdict(url, textes, lieu)
+        if ok:
+            return ok, raison
+    return ok, raison
 
 
 RECHERCHE = {"bloquee": False, "derniere": 0.0}
@@ -160,9 +192,20 @@ def trouver_site(nom, lieu=""):
         lien = html_lib.unescape(lien)
         m = re.search(r"uddg=([^&]+)", lien)
         lien = urllib.parse.unquote(m.group(1)) if m else lien
-        if lien.startswith("http") and ressemble(nom, lien):
-            u = urllib.parse.urlparse(lien)
-            return f"{u.scheme}://{u.netloc}"
+        if not (lien.startswith("http") and ressemble(nom, lien)):
+            continue
+        u = urllib.parse.urlparse(lien)
+        racine = f"{u.scheme}://{u.netloc}"
+        if verifier_france() and pays.pays_de_l_extension(racine) != "France":
+            if pays.pays_de_l_extension(racine):    # .lu, .be, .us… : écarté sans le lire
+                continue
+            try:                                     # .com, .net… : preuve française cherchée dans le site
+                page, final = _lire(racine, 300_000)
+            except Exception:
+                continue
+            if not site_en_france(final, lieu, [page])[0]:
+                continue
+        return racine
     return ""
 
 
@@ -214,9 +257,10 @@ def _liens_contact(html, base):
     return sorted(vus, key=lambda u: next((i for i, m in enumerate(MOTS_CONTACT) if m in u.lower()), 99))
 
 
-def explorer_site(site, pages_max=None):
-    """{"site", "email", "formulaire"} : la meilleure adresse trouvée et la page du formulaire de contact."""
-    res = {"site": site, "email": "", "formulaire": ""}
+def explorer_site(site, pages_max=None, lieu=""):
+    """{"site", "email", "formulaire", "ecarte"} : la meilleure adresse trouvée et la page du formulaire de contact.
+    Site d'une entreprise hors de France : rien n'est gardé, "ecarte" donne la raison."""
+    res = {"site": site, "email": "", "formulaire": "", "ecarte": ""}
     if not site:
         return res
     site = site if site.startswith("http") else "https://" + site
@@ -225,7 +269,10 @@ def explorer_site(site, pages_max=None):
     except Exception:
         return res
     res["site"] = site_final
+    if verifier_france() and pays.pays_de_l_extension(site_final) not in ("", "France"):
+        return {**res, "site": "", "ecarte": pays.verdict(site_final, [], lieu)[1] + f" : {site_final}"}
     dom = _racine(site_final)
+    lues = [accueil]
     a_voir = _liens_contact(accueil, site_final)
     a_voir += [urllib.parse.urljoin(site_final, p) for p in PAGES_CLASSIQUES]
     trouvees = _adresses(accueil, dom)
@@ -240,11 +287,15 @@ def explorer_site(site, pages_max=None):
             page, _ = _lire(url)
         except Exception:
             continue
+        lues.append(page)
         trouvees += _adresses(page, dom)
         if not res["formulaire"] and _a_un_formulaire(page):
             res["formulaire"] = url.split("?")[0]
     if not res["formulaire"] and _a_un_formulaire(accueil):
         res["formulaire"] = site_final
+    en_france, raison = site_en_france(site_final, lieu, lues)
+    if not en_france:   # entreprise d'un autre pays : ni son adresse ni son formulaire
+        return {"site": "", "email": "", "formulaire": "", "ecarte": f"{raison} : {site_final}"}
     if trouvees:
         # on préfère recrutement@ / rh@ / jobs@ / contact@, puis l'adresse du domaine de l'entreprise
         trouvees.sort(key=lambda m: (next((i for i, g in enumerate(("recrutement", "rh", "jobs", "carriere",

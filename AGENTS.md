@@ -60,6 +60,7 @@ dans le dépôt et où en est le projet.
 | `alternance/src/messagerie.py` | choisit `outlook.py` (COM) ou `imap.py` selon `messagerie.type` — même interface |
 | `alternance/src/suivi.py` | mise à jour du suivi, réponses, non-remises, relances |
 | `alternance/src/candidatures.py`, `sources.py`, `sites.py` | choix des entreprises (liste perso, alertes LinkedIn, API La Bonne Alternance), site et contact de l'entreprise |
+| `alternance/src/pays.py` | sites d'entreprises en France seulement (extension, sinon code postal / ville / téléphone / SIRET dans les pages) ; réglage `sites.verifier_france` |
 | `alternance/src/reponses.py`, `refus.py` | lettres et réponses des candidatures par formulaire ; liste des entreprises écartées (raison, site, décision) |
 | `web/src/ecartees.py` | page « Écartées » : raison, site / recherche Google, « Candidater quand même » (ajout à la feuille « À contacter »), « Abandonner » (ne revient plus), « Remettre » |
 | `alternance/src/tableau.py` | tableau Excel (openpyxl, Excel non nécessaire), statuts et couleurs |
