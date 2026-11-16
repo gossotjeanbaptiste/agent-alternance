@@ -6,7 +6,7 @@ import chemins  # noqa: F401  (rend les modules d'alternance importables)
 import commun
 import routines
 from commun import CFG, P
-from tableau import A_POSTULER, Suivi, as_date
+from tableau import PAGE_A_POSTULER, Suivi, as_date
 
 REPONDU = {"Réponse positive", "Entretien", "Accepté", "Refus", "Réponse à lire"}
 EN_ATTENTE = {"Candidaté (mail)", "Relancé", "Relance en brouillon", "Relance programmée",
@@ -48,7 +48,7 @@ def statistiques(lignes):
         "taux": round(100 * len(reponses) / len(envoyees)) if envoyees else 0,
         "entretiens": st.get("Entretien", 0) + st.get("Accepté", 0),
         "en_cours": sum(st.get(k, 0) for k in EN_ATTENTE),
-        "a_postuler": sum(st.get(k, 0) for k in A_POSTULER),
+        "a_postuler": sum(st.get(k, 0) for k in PAGE_A_POSTULER),   # même chose que la page « À postuler »
         "par_statut": sorted(st.items(), key=lambda x: -x[1]),
         "semaines": semaines,
         "maxi": max([w["n"] for w in semaines] + [1]),

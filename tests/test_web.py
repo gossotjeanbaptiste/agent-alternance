@@ -431,6 +431,17 @@ class TestDonnees:
         assert [l["Statut"] for l in s["relances"]] == ["Relancé", MAIL]       # triées par date
         assert len(s["semaines"]) == 10 and s["maxi"] >= 1
 
+    def test_a_postuler_compte_comme_la_page(self, client, tableau):
+        """Le chiffre du tableau de bord = le nombre de cartes de la page « À postuler »."""
+        for nom, statut in (("Lba", LBA), ("Form", FORMULAIRE), ("Mail", "Brouillon"),
+                            ("Sans", "Brouillon (adresse à trouver)"), ("Fini", MAIL), ("Non", "Refus")):
+            ajouter(tableau, **{"Entreprise": nom, "Statut": statut, "Email": "rh@mail.fr" if nom == "Mail" else ""})
+        assert suivi_donnees.statistiques(suivi_donnees.lire())["a_postuler"] == 4
+        h = client.get("/").get_data(as_text=True)
+        assert '<a href="/postuler">4</a>' in h and "mails à envoyer, adresses à trouver" in h
+        page = client.get("/postuler").get_data(as_text=True)
+        assert page.count('class="carte" id="c') == 4
+
     def test_statistiques_tableau_vide(self):
         s = suivi_donnees.statistiques([])
         assert s["envoyees"] == 0 and s["taux"] == 0 and s["maxi"] == 1

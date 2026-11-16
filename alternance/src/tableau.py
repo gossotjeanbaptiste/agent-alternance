@@ -24,6 +24,9 @@ LBA = "À postuler (La Bonne Alternance)"
 FORMULAIRE = "À postuler (formulaire du site)"
 A_POSTULER = (LBA, FORMULAIRE)
 ADRESSE_A_TROUVER = "Brouillon (adresse à trouver)"   # brouillon de mail sans destinataire
+# tout ce que la page « À postuler » affiche (et que compte le tableau de bord), dans l'ordre de la page :
+# formulaires, puis mails à envoyer, puis adresses à trouver
+PAGE_A_POSTULER = (LBA, FORMULAIRE, "Brouillon", ADRESSE_A_TROUVER)
 # candidature envoyée : par mail (suivie et relancée automatiquement) ou par un autre canal
 MAIL = "Candidaté (mail)"
 C_LBA = "Candidaté (La Bonne Alternance)"
