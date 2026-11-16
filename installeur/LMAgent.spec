@@ -14,7 +14,7 @@ MODULES = [
     # alternance/ (scripts appelés par lmagent)
     "alternance", "postuler", "maj_tableau",
     # web/src et web/app.py
-    "api", "assistant", "auth", "chemins", "ecartees", "lettres", "pages", "parametres", "planification", "reglages_web",
+    "api", "assistant", "auth", "chemins", "ecartees", "lettres", "pages", "parametres", "planification", "redaction", "reglages_web",
     "relations", "routines", "securite", "suivi_donnees", "tour_web", "icone_tache", "app",
     # src/ (modules de la racine du projet)
     "agent", "tour", "emplacements", "version", "mise_a_jour", "boucle",

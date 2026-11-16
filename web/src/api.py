@@ -93,6 +93,19 @@ def statut():
     return jsonify(ok=ok, message=message)
 
 
+@api.post("/ecrire")
+def ecrire():
+    """« Écrire ce qui manque » : lettre et réponses d'une candidature par formulaire, rédigées par le modèle."""
+    import redaction
+    d = request.get_json(force=True, silent=True) or {}
+    try:
+        ligne = int(d.get("ligne"))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, message="Ligne invalide."), 400
+    ok, message = redaction.ecrire_ce_qui_manque(ligne, str(d.get("entreprise") or ""))
+    return jsonify(ok=ok, message=message), (200 if ok else 400)
+
+
 @api.post("/ecartee")
 def ecartee():
     """Décision sur une entreprise écartée : candidater (quand même), abandonner, remettre."""
