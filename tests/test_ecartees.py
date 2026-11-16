@@ -46,6 +46,36 @@ def test_candidater_ajoute_a_la_feuille_a_contacter(tableau):
     assert g["a_examiner"] == [] and g["demandees"][0]["Décision"].startswith("Candidature demandée le ")
 
 
+def test_candidature_faite_retiree_des_demandees(tableau):
+    """Quand la lettre est écrite (l'entreprise arrive dans le suivi), elle quitte « Candidature demandée »."""
+    noter(("Boutique", "12345678900011", ""), ("Garage", "22222222200022", ""))
+    assert ecartees.candidater("12345678900011")[0] and ecartees.candidater("22222222200022")[0]
+    assert len(ecartees.lire()["demandees"]) == 2
+    s = Suivi(commun.chemin_tableau())          # la recherche a écrit la candidature de Boutique
+    s.add(**{"Entreprise": "Boutique", "Statut": "Brouillon", "Lieu": "12 rue X 69003 Lyon",
+             "Notes": "SIRET 12345678900011"})
+    s.wb.save(s.path)
+    g = ecartees.lire()
+    assert [l["Entreprise"] for l in g["demandees"]] == ["Garage"]
+    assert all(l["Entreprise"] != "Boutique" for grp in g.values() for l in grp)       # plus du tout affichée
+    assert refus.lire()["12345678900011"]["Décision"].startswith("Candidature faite le ")
+
+
+def test_candidature_faite_fichier_ouvert_dans_excel(tableau, monkeypatch):
+    noter(("Boutique", "12345678900011", ""))
+    assert ecartees.candidater("12345678900011")[0]
+    s = Suivi(commun.chemin_tableau())
+    s.add(**{"Entreprise": "Boutique", "Statut": "Brouillon", "Notes": "SIRET 12345678900011"})
+    s.wb.save(s.path)
+
+    def refuse(tout):
+        raise PermissionError("ouvert")
+    monkeypatch.setattr(refus, "ecrire", refuse)
+    assert ecartees.noter_candidatures_faites() == 0                 # pas d'erreur : ce sera fait plus tard
+    monkeypatch.undo()
+    assert ecartees.noter_candidatures_faites() == 1
+
+
 def test_candidater_deux_fois_refuse(tableau):
     noter(("Boutique", "1", ""))
     assert ecartees.candidater("1")[0]

@@ -51,12 +51,13 @@ def ouvrir_console():
 
 
 def sortie_utf8():
-    """Sortie en UTF-8 (emojis du journal) : sinon un fichier reçu de l'interface ou de la boucle est écrit en
-    cp1252 et le premier emoji fait planter le script (l'exe compilé ignore PYTHONIOENCODING)."""
+    """Sortie en UTF-8 (emojis du journal) et écrite ligne par ligne : sinon un fichier reçu de l'interface ou
+    de la boucle est écrit en cp1252 (le premier emoji fait planter le script : l'exe compilé ignore
+    PYTHONIOENCODING) et par paquets de 8 Ko (l'interface n'affiche plus le journal en temps réel)."""
     for flux in (sys.stdout, sys.stderr):
         if flux is not None and hasattr(flux, "reconfigure"):
             try:
-                flux.reconfigure(encoding="utf-8", errors="replace")
+                flux.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
             except (ValueError, OSError):
                 pass
 

@@ -17,11 +17,38 @@ def _site(adresse):
     return adresse
 
 
+def noter_candidatures_faites():
+    """Les candidatures demandées dont la lettre a été écrite (entreprise arrivée dans le tableau de suivi)
+    passent à « Candidature faite le … » : elles quittent la page. Renvoie le nombre de lignes mises à jour."""
+    tout = refus.lire()
+    demandees = {k: l for k, l in tout.items() if (l.get("Décision") or "").startswith(refus.DEMANDEE)}
+    if not demandees:
+        return 0
+    try:
+        noms, domaines, sirets = Suivi(commun.chemin_tableau()).deja_vus()
+    except Exception:
+        return 0
+    faites = [k for k, l in demandees.items()
+              if deja_contactee({"entreprise": l["Entreprise"], "lieu": l["Adresse"], "siret": l.get("SIRET") or ""},
+                                noms, domaines, sirets)]
+    for k in faites:
+        tout[k]["Décision"] = f"{refus.FAITE} le {date.today():%d/%m/%Y}"
+    if faites:
+        try:
+            refus.ecrire(tout)
+        except PermissionError:   # fichier ouvert dans Excel : ce sera fait au prochain affichage
+            return 0
+    return len(faites)
+
+
 def lire():
     """{"a_examiner": [...], "demandees": [...], "abandonnees": [...]} : lignes du fichier, avec _cle, _raison,
-    _site et _recherche (recherche Google sur le nom et la ville)."""
+    _site et _recherche (recherche Google sur le nom et la ville). Les candidatures faites n'apparaissent plus."""
+    noter_candidatures_faites()
     groupes = {"a_examiner": [], "demandees": [], "abandonnees": []}
     for l in refus.lire().values():
+        if (l.get("Décision") or "").startswith(refus.FAITE):
+            continue
         site, recherche = lettres.site_ou_recherche({"Entreprise": l["Entreprise"], "Lieu": l["Adresse"]})
         l = {**l, "_cle": refus.cle(l), "_raison": refus.raison(l), "_site": _site(l.get("Site")) or site,
              "_recherche": recherche}

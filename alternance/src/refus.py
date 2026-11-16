@@ -16,6 +16,7 @@ COLS = ["Entreprise", "SIRET", "Code NAF", "Activité", "Adresse", "Site", "Rech
         "Première fois", "Dernière fois", "Passages", "Décision"]
 ABANDONNEE = "Abandonnée"
 DEMANDEE = "Candidature demandée"
+FAITE = "Candidature faite"     # la candidature demandée a été écrite (entreprise présente dans le suivi)
 
 
 def cle(l):
