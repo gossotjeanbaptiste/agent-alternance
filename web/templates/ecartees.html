@@ -24,7 +24,7 @@
 <p class="doux">Entreprises trouvées par La Bonne Alternance mais écartées par le filtre d'activité (candidatures spontanées
 limitées à l'informatique, réglage « Activités acceptées » dans Paramètres). Regarde ce qu'elles font, puis
 <b>candidate quand même</b> (la candidature sera écrite à la prochaine recherche) ou <b>abandonne</b>.</p>
-{% if g.a_examiner|length > 1 %}
+{% if (g.a_examiner|length) + (g.abandonnees|length) > 1 %}
 <div class="tri">
   <label for="tri">Trier par</label>
   <select id="tri">
@@ -53,7 +53,9 @@ limitées à l'informatique, réglage « Activités acceptées » dans Paramètr
 {% if g.abandonnees %}
 <details class="pli-section" id="pli-abandonnees">
   <summary><h2 style="display:inline">Abandonnées ({{ g.abandonnees|length }})</h2></summary>
+  <div id="cartes-abandonnees">
   {% for l in g.abandonnees %}{{ carte(l, True) }}{% endfor %}
+  </div>
 </details>
 {% endif %}
 {% endblock %}
@@ -61,6 +63,7 @@ limitées à l'informatique, réglage « Activités acceptées » dans Paramètr
 <script src="{{ url_for('static', filename='tri.js') }}"></script>
 <script>
 activerTri("tri", "cartes", "tri-ecartees");
+activerTri("tri", "cartes-abandonnees", "tri-ecartees");   // même menu pour les abandonnées
 async function decider(bouton, action) {
   const carte = bouton.closest(".carte");
   if (action === "candidater" && !confirm("Ajouter " + carte.dataset.entreprise + " à la feuille « À contacter » ? Sa candidature sera écrite à la prochaine recherche.")) return;

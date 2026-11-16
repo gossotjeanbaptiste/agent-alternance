@@ -89,6 +89,17 @@ def test_page_ecartees(client):
     assert f'data-derniere="{jour}" data-premiere="{jour}"' in h and 'data-passages="1"' in h
 
 
+def test_page_ecartees_abandonnees_triees_aussi(client):
+    """Une seule entreprise à examiner mais des abandonnées : le menu s'affiche et trie aussi les abandonnées."""
+    refus.noter([{"Entreprise": n, "SIRET": s, "Code NAF": "47.41Z", "Activité": "Commerce", "Adresse": "Lyon",
+                  "Recherche": "Lyon"} for n, s in (("A", "1"), ("B", "2"), ("C", "3"))])
+    refus.decider("2", refus.ABANDONNEE)
+    refus.decider("3", refus.ABANDONNEE)
+    h = client.get("/ecartees").get_data(as_text=True)
+    assert '<select id="tri">' in h and '<div id="cartes-abandonnees">' in h
+    assert 'activerTri("tri", "cartes-abandonnees", "tri-ecartees")' in h
+
+
 @pytest.mark.parametrize("jour, iso", [("13/11/2026", "2026-11-13"), ("1/2/2026", "2026-02-01"), ("", ""),
                                        ("pas une date", ""), (None, "")])
 def test_iso(jour, iso):

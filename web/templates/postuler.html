@@ -96,8 +96,7 @@ async function fait(ligne, statut, postule) {
 }
 async function envoyeeSansAdresse(ligne) {
   const carte = document.getElementById("c" + ligne);
-  const adresse = prompt("À quelle adresse as-tu envoyé la candidature de " + carte.dataset.entreprise + " ?
-"
+  const adresse = prompt("À quelle adresse as-tu envoyé la candidature de " + carte.dataset.entreprise + " ?\n"
     + "(elle sert au suivi des réponses et à la relance ; laisse vide si tu ne la connais pas)", "");
   if (adresse === null) return;
   const r = await poster("/api/statut", { ligne, entreprise: carte.dataset.entreprise, statut: "Candidaté (mail)",
