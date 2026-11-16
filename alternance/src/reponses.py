@@ -27,6 +27,15 @@ def questions_attendues(statut, poste=None):
     return statut == LBA
 
 
+def manque(statut, lien, lettre_connue, deja):
+    """[« la lettre », « les réponses »] : ce qu'il reste à écrire pour une candidature par formulaire
+    (bouton « Écrire ce qui manque » et routine « Réponses La Bonne Alternance »)."""
+    a_faire = [] if lettre_connue else ["la lettre"]
+    if questions_attendues(statut) and not a_des_reponses(deja.get(lien)):
+        a_faire.append("les réponses")
+    return a_faire
+
+
 def rediger_reponses(o):
     """{clé: texte} des réponses pour l'entreprise o (entreprise, poste, lieu, infos)."""
     from modele import llm_json

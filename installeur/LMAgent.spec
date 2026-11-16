@@ -12,7 +12,7 @@ MODULES = [
     "candidatures", "commun", "donnees", "imap", "jours", "mails", "messagerie", "modele", "outlook",
     "pays", "refus", "reglages", "reponses", "sites", "sources", "suivi", "tableau",
     # alternance/ (scripts appelés par lmagent)
-    "alternance", "postuler", "maj_tableau",
+    "alternance", "postuler", "maj_tableau", "reponses_lba",
     # web/src et web/app.py
     "api", "assistant", "auth", "chemins", "ecartees", "lettres", "pages", "parametres", "planification", "redaction", "reglages_web",
     "relations", "routines", "securite", "suivi_donnees", "tour_web", "icone_tache", "app",

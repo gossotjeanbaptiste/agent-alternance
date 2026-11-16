@@ -129,8 +129,28 @@ class TestModele:
 
     def test_llm_json_invalide(self, reponse):
         reponse.texte = "pas de json ici"
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="illisible"):
             modele.llm_json("q")
+        assert len(reponse.envoyes) == 2                                   # redemandé une fois avant d'abandonner
+        assert "n'était pas du JSON valide" in reponse.envoyes[1]["messages"][-1]["content"]
+
+    def test_llm_json_redemande_puis_reussit(self, reponse, monkeypatch):
+        reponses = iter(["{ cassé", '{"motivations": "M"}'])
+        monkeypatch.setattr(agent, "post_chat", lambda corps: reponse.envoyes.append(corps) or {"content": next(reponses)})
+        assert modele.llm_json("q") == {"motivations": "M"} and len(reponse.envoyes) == 2
+
+    @pytest.mark.parametrize("texte, attendu", [
+        # erreur réelle d'une routine : virgule avant l'accolade fermante (« Expecting property name… line 5 »)
+        ('{\n "motivations": "M",\n "missions": "Mi",\n "experiences": "E",\n}', {"motivations": "M", "missions": "Mi",
+                                                                                "experiences": "E"}),
+        ('["a", "b",]', ["a", "b"]),
+        ('{"lettre": "Madame,\nBonjour"}', {"lettre": "Madame,\nBonjour"}),                 # retour à la ligne brut
+        ('{“objet”: “Candidature”}', {"objet": "Candidature"}),                            # guillemets typographiques
+        ("{'objet': 'Candidature', 'corps': 'Texte'}", {"objet": "Candidature", "corps": "Texte"}),
+        ('{"citation": "il a dit \\"oui\\"", }', {"citation": 'il a dit "oui"'}),
+    ])
+    def test_lire_json_tolerant(self, texte, attendu):
+        assert modele.lire_json(texte) == attendu
 
 
 class TestMessagerie:
