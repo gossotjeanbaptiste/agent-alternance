@@ -7,10 +7,13 @@
     <button class="principal" onclick="lancer('relances')">🔁 Relances</button>
     <button class="principal" onclick="lancer('recherche')">🔎 Recherche</button>
     <button onclick="lancer('tout')">Les deux</button>
+    <button onclick="lancer('reponses')" title="Écrit les réponses aux questions (et la lettre si elle manque) de toutes les candidatures à postuler sur La Bonne Alternance">✍️ Réponses La Bonne Alternance</button>
     <label style="align-self:center"><input type="checkbox" id="essai"> mode essai (rien n'est écrit)</label>
     <label style="align-self:center">passages <input type="number" id="fois" value="1" min="1" max="50" style="width:4em"></label>
   </div>
-  <p class="doux">Avec plusieurs passages, la routine se relance d'elle-même dès que la précédente est terminée.
+  <p class="doux">« Réponses La Bonne Alternance » écrit, pour chaque candidature à postuler sur La Bonne Alternance,
+    les réponses aux questions du formulaire et la lettre qui manquent ; rien n'est envoyé.
+    Avec plusieurs passages, la routine se relance d'elle-même dès que la précédente est terminée.
     La routine utilise la tour si elle est disponible, sinon ce PC. Le tableau ne peut pas être modifié depuis l'interface pendant qu'elle tourne.</p>
 </div>
 <div class="carte">
@@ -21,7 +24,8 @@
   <summary><h2 style="display:inline">Tous les jours automatiquement</h2></summary>
   <p class="doux">Le Planificateur de tâches Windows lance la routine chaque jour à l'heure choisie
     (PC allumé, session ouverte). Laisse l'heure vide puis « Enregistrer » pour arrêter.</p>
-  {% for nom, libelle in (("relances", "Relances"), ("recherche", "Recherche"), ("tout", "Les deux")) %}
+  {% for nom, libelle in (("relances", "Relances"), ("recherche", "Recherche"), ("tout", "Les deux"),
+                           ("reponses", "Réponses LBA")) %}
   <div class="actions" style="align-items:center">
     <span style="width:7em">{{ libelle }}</span>
     <input type="time" id="heure-{{ nom }}">
@@ -42,7 +46,7 @@
 let suivi = null;
 async function chargerPlanification() {
   const t = await (await fetch("/api/planification")).json();
-  for (const nom of ["relances", "recherche", "tout"]) {
+  for (const nom of ["relances", "recherche", "tout", "reponses"]) {
     const e = document.getElementById("etat-" + nom);
     e.textContent = t[nom] ? `planifiée — prochaine : ${t[nom].prochaine}` : "non planifiée";
   }

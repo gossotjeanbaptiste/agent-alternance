@@ -11,12 +11,9 @@ VERROU = threading.Lock()   # une seule rédaction à la fois (le modèle ne ser
 
 
 def manque(statut, lien, lettre_connue, deja):
-    """[« la lettre », « les réponses »] : ce qu'il reste à écrire pour cette candidature."""
+    """[« la lettre », « les réponses »] : ce qu'il reste à écrire pour cette candidature (règle dans reponses.py)."""
     import reponses
-    a_faire = [] if lettre_connue else ["la lettre"]
-    if reponses.questions_attendues(statut) and not reponses.a_des_reponses(deja.get(lien)):
-        a_faire.append("les réponses")
-    return a_faire
+    return reponses.manque(statut, lien, lettre_connue, deja)
 
 
 def ecrire_ce_qui_manque(n_ligne, entreprise):

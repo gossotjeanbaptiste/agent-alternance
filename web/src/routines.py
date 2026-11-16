@@ -7,7 +7,8 @@ from pathlib import Path
 
 from chemins import ALT, LOGS, ROOT
 
-SCRIPTS = {"relances": ALT / "relances.py", "recherche": ALT / "recherche.py", "tout": ALT / "alternance.py"}  # noms connus
+SCRIPTS = {"relances": ALT / "relances.py", "recherche": ALT / "recherche.py", "tout": ALT / "alternance.py",
+           "reponses": ALT / "reponses_lba.py"}  # noms connus
 ROUTINE = {"proc": None, "nom": None, "fichier": None, "debut": None}
 
 
