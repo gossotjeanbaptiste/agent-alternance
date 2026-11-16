@@ -8,7 +8,7 @@ from mails import domaine, est_generique, texte_vers_html
 from modele import llm_json
 from sites import explorer_site, trouver_site
 from sources import depuis_a_contacter, depuis_lba, depuis_linkedin
-from tableau import FORMULAIRE, LBA, deja_contactee, norm
+from tableau import FORMULAIRE, LBA, deja_contactee, retenir
 
 def rediger_candidature(o):
     mail = o.get("email") or ""
@@ -54,7 +54,7 @@ def nouvelles_candidatures(suivi, ol):
                     ignorees += 1
                     continue
             # on retient l'entreprise pour ne pas la reprendre deux fois aujourd'hui
-            noms.add(norm(o["entreprise"]))
+            retenir(noms, o)
             if o.get("siret"):
                 sirets.add(o["siret"])
             if o.get("email"):
@@ -107,7 +107,9 @@ def nouvelles_candidatures(suivi, ol):
             reponses.enregistrer_lettre(o["lien"], corps.split("\n\n", 1)[1])
         else:
             ol.brouillon(o.get("email"), objet, texte_vers_html(corps), pieces=commun.pieces_jointes())
-        if statut == LBA:  # le formulaire La Bonne Alternance pose aussi trois questions : réponses prêtes
+        # le formulaire d'une OFFRE La Bonne Alternance pose aussi trois questions : réponses prêtes
+        # (candidature spontanée : la lettre seulement)
+        if reponses.questions_attendues(statut, o.get("poste")):
             try:
                 reponses.enregistrer(o["lien"], reponses.rediger_reponses(o))
             except Exception as e:

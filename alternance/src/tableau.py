@@ -106,12 +106,13 @@ class Suivi:
         self.ws.append([vals.get(c, "") for c in sorted(self.h, key=self.h.get)])
 
     def deja_vus(self):
-        """Tout ce qui identifie une entreprise déjà présente : nom, domaine mail, SIRET."""
-        noms, domaines, sirets = set(), set(), set()
+        """Tout ce qui identifie une entreprise déjà présente : {nom: villes}, domaines mail, SIRET.
+        La ville permet d'avoir plusieurs établissements du même nom (adresses différentes)."""
+        noms, domaines, sirets = {}, set(), set()
         for r in self.rows():
             n = norm(self.get(r, "Entreprise"))
             if n:
-                noms.add(n)
+                noms.setdefault(n, set()).add(cle_lieu(self.get(r, "Lieu")))
             d = domaine(str(self.get(r, "Email") or "").strip())
             if d and d not in DOMAINES_PERSO:
                 domaines.add(d)
@@ -166,18 +167,51 @@ class Suivi:
             say(f"⚠️ Tableau ouvert ailleurs : sauvegardé dans {alt.name} (à fusionner)")
 
 
+def cle_lieu(lieu):
+    """Ville d'une adresse, comparable : « 12 rue X 69003 Lyon Cedex » -> « lyon », « Lyon (69) » -> « lyon ».
+    "" si l'adresse est inconnue."""
+    s = str(lieu or "")
+    cp = list(re.finditer(r"\b\d{5}\b", s))
+    if cp:
+        avant, apres = s[:cp[-1].start()], s[cp[-1].end():]
+        if re.search(r"[A-Za-zÀ-ÿ]", apres):      # « … 69003 Lyon » : la ville suit le code postal
+            s = apres
+        else:                                       # « … Lyon 69003 » : dernier mot avant le code postal
+            mots = avant.replace(",", " ").split()
+            s = mots[-1] if mots else ""
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode().lower()
+    s = re.sub(r"\bcedex\b", "", s)
+    return re.sub(r"[^a-z]", "", s)
+
+
 def deja_contactee(o, noms, domaines, sirets):
     """Vrai si l'entreprise est déjà dans le tableau, même écrite un peu différemment
-    (ex. « Xefi Lyon Est » vs « XEFI », « Lidl Villeurbanne » vs « LIDL »)."""
+    (ex. « Xefi Lyon Est » vs « XEFI », « Lidl Villeurbanne » vs « LIDL »).
+    noms : {nom normalisé: villes (cle_lieu)} (un simple ensemble de noms est aussi accepté).
+    Même nom mais ville différente = autre établissement, pas un doublon ; si l'une des deux villes est
+    inconnue, on considère que c'est la même entreprise (prudence)."""
+    if not isinstance(noms, dict):
+        noms = {k: {""} for k in noms}
     n = norm(o["entreprise"])
-    if not n or n in noms:
+    if not n:
         return True
-    if any(len(k) >= 4 and (k in n or n in k) for k in noms if len(n) >= 4):
+    if o.get("siret") and o["siret"] in sirets:
         return True
     d = domaine(o.get("email") or "")
     if d and d in domaines:
         return True
-    return bool(o.get("siret") and o["siret"] in sirets)
+    lieu = cle_lieu(o.get("lieu"))
+
+    def meme_lieu(villes):
+        return not lieu or "" in villes or lieu in villes
+    if n in noms and meme_lieu(noms[n]):
+        return True
+    return any(len(k) >= 4 and (k in n or n in k) and meme_lieu(v) for k, v in noms.items() if len(n) >= 4)
+
+
+def retenir(noms, o):
+    """Ajoute l'entreprise o à {nom: villes} (pour ne pas la reprendre deux fois)."""
+    noms.setdefault(norm(o["entreprise"]), set()).add(cle_lieu(o.get("lieu")))
 
 
 def norm(s):

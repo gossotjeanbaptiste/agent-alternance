@@ -146,6 +146,20 @@ class TestPostuler:
         assert r == {"lettre": "seulement la lettre", "motivations": "Nouveau E"}
         assert reponses.lire()["https://lba/e"]["motivations"] == "Nouveau E"
 
+    def test_reponses_seulement_pour_une_offre_lba(self, tableau, monkeypatch):
+        """postuler.py --reponses : rien n'est demandé au modèle pour une candidature spontanée."""
+        from tableau import FORMULAIRE, LBA
+        demandes = []
+        monkeypatch.setattr(postuler, "preparer_modele", lambda: None)
+        monkeypatch.setattr(reponses, "rediger_reponses", lambda o: demandes.append(o["entreprise"]) or {"motivations": "M"})
+        tableau.add(**{"Entreprise": "Offre", "Statut": LBA, "Poste": "Développeur web", "Lien": "https://lba/o"})
+        tableau.add(**{"Entreprise": "Spontanée", "Statut": LBA, "Poste": "Candidature spontanée", "Lien": "https://lba/s"})
+        tableau.add(**{"Entreprise": "Site", "Statut": FORMULAIRE, "Poste": "Développeur web", "Lien": "https://site/c"})
+        retenues = [r for r in tableau.rows() if postuler.questions(tableau, r)]
+        assert [tableau.get(r, "Entreprise") for r in retenues] == ["Offre"]
+        postuler.ecrire_reponses_manquantes(tableau, retenues)
+        assert demandes == ["Offre"]
+
     def test_ecrire_reponses_manquantes(self, tableau, monkeypatch, capsys):
         monkeypatch.setattr(postuler, "preparer_modele", lambda: None)
         monkeypatch.setattr(reponses, "rediger_reponses", lambda o: {"motivations": "M"})

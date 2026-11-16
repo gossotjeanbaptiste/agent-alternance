@@ -26,6 +26,17 @@ class TestReponses:
         reponses.FICHIER.write_text("{cassé", encoding="utf-8")
         assert reponses.lire() == {}
 
+    @pytest.mark.parametrize("statut, poste, attendu", [
+        (LBA, "Développeur web", True),
+        (LBA, "Candidature spontanée", False),
+        (LBA, " candidature SPONTANÉE ", False),
+        (LBA, "", False), (LBA, None, False),
+        ("À postuler (formulaire du site)", "Développeur web", False),
+        ("Brouillon", "Développeur web", False),
+    ])
+    def test_questions_attendues(self, statut, poste, attendu):
+        assert reponses.questions_attendues(statut, poste) is attendu
+
     def test_a_des_reponses(self):
         assert reponses.a_des_reponses({"motivations": "x"})
         assert not reponses.a_des_reponses({"lettre": "seulement la lettre"})
@@ -126,7 +137,15 @@ class TestOrientation:
         assert ol.deposes == []                                  # pas de brouillon de mail
         r = reponses.lire()["https://labonnealternance.example/Lba Ok"]
         assert r["lettre"].startswith("Madame, Monsieur,") and "Lien pour postuler" not in r["lettre"]
-        assert r["motivations"] == "M"
+        assert "motivations" not in r                            # candidature spontanée : la lettre seulement
+
+    def test_offre_lba_lettre_et_reponses(self, scenario, tableau, messagerie):
+        o = lba("Offre Ok")
+        o["poste"] = "Développeur web en alternance"
+        scenario.lba = [o]
+        candidatures.nouvelles_candidatures(tableau, messagerie())
+        r = reponses.lire()["https://labonnealternance.example/Offre Ok"]
+        assert r["lettre"] and r["motivations"] == "M"
 
     def test_sans_bouton_mais_formulaire_du_site(self, scenario, tableau, messagerie):
         scenario.lba = [lba("Sans Bouton", postulable=False)]

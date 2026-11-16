@@ -2,6 +2,7 @@
 import json
 import math
 import random
+import re
 import unicodedata
 import urllib.parse
 import urllib.request
@@ -23,6 +24,8 @@ def depuis_a_contacter(suivi):
             out.append({"entreprise": v("Entreprise"), "poste": v("Poste") or "", "lieu": v("Lieu") or "",
                         "contact": v("Contact") or "", "email": (v("Email") or "").strip(),
                         "site": (v("Site") or "").strip(),
+                        # SIRET noté dans les infos (ajout depuis la page « Écartées ») : distingue les établissements
+                        "siret": next(iter(re.findall(r"SIRET (\d{14})", str(v("Infos") or ""))), ""),
                         "lien": v("Lien") or "", "infos": v("Infos") or "", "source": "Liste perso",
                         "_ligne": (suivi.ac, r[0].row, h.get("Traité"))})
     return out

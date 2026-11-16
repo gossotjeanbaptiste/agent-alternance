@@ -125,6 +125,11 @@ def reponses_de(s, row, deja):
     return deja[lien]
 
 
+def questions(s, row):
+    """Vrai si le formulaire de cette ligne pose les trois questions (offre La Bonne Alternance, pas spontanée)."""
+    return reponses.questions_attendues(s.get(row, "Statut"), s.get(row, "Poste"))
+
+
 def ecrire_reponses_manquantes(s, a_faire):
     deja = reponses.lire()
     manquent = [r for r in a_faire if not reponses.a_des_reponses(deja.get((s.get(r, "Lien") or "").strip()))]
@@ -146,7 +151,7 @@ def main():
         print("Aucune candidature « À postuler » dans le tableau. 👍")
         return
     if "--reponses" in sys.argv:
-        ecrire_reponses_manquantes(s, [r for r in a_faire if s.get(r, "Statut") == LBA])
+        ecrire_reponses_manquantes(s, [r for r in a_faire if questions(s, r)])
         return
     deja = reponses.lire()
     sig = signature()
@@ -183,7 +188,7 @@ def main():
             print("   ⚠️ Pas de lien dans le tableau pour cette entreprise.")
         print("   📋 Lettre copiée : colle-la dans le champ message (Ctrl+V).")
         try:
-            rep = reponses.en_liste(reponses_de(s, row, deja)) if s.get(row, "Statut") == LBA else []
+            rep = reponses.en_liste(reponses_de(s, row, deja)) if questions(s, row) else []
         except Exception as e:
             rep = []
             print(f"   ⚠️ Réponses du formulaire non écrites ({e}).")

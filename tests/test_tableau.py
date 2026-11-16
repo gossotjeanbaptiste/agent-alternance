@@ -56,6 +56,46 @@ class TestDejaContactee:
         assert tableau.deja_contactee(o, self.noms, self.domaines, self.sirets) is attendu
 
 
+class TestMemeNomAutreAdresse:
+    """Plusieurs établissements du même nom : doublon seulement si même ville (ou ville inconnue)."""
+    noms = {"xefi": {"lyon"}, "lidl": {"villeurbanne", "bron"}, "capgemini": {""}}
+
+    @pytest.mark.parametrize("o, attendu", [
+        ({"entreprise": "XEFI", "lieu": "12 rue X 69003 Lyon"}, True),            # même ville
+        ({"entreprise": "XEFI", "lieu": "5 avenue Y 38000 Grenoble"}, False),        # autre établissement
+        ({"entreprise": "Xefi Grenoble", "lieu": "38000 Grenoble"}, False),             # nom proche, autre ville
+        ({"entreprise": "Xefi Lyon Est", "lieu": "69800 Saint-Priest"}, False),
+        ({"entreprise": "XEFI"}, True),                                           # ville inconnue : prudence
+        ({"entreprise": "Lidl", "lieu": "Bron"}, True),
+        ({"entreprise": "Lidl", "lieu": "Vénissieux"}, False),
+        ({"entreprise": "Capgemini", "lieu": "Grenoble"}, True),                     # ville inconnue dans le tableau
+        ({"entreprise": "XEFI", "lieu": "Grenoble", "siret": "12345678900011"}, True),   # même SIRET
+    ])
+    def test_cas(self, o, attendu):
+        assert tableau.deja_contactee(o, self.noms, set(), {"12345678900011"}) is attendu
+
+    @pytest.mark.parametrize("lieu, cle", [
+        ("12 rue X 69003 Lyon", "lyon"), ("12 RUE X 69003 LYON CEDEX 03", "lyon"), ("Lyon (69)", "lyon"),
+        ("Saint-Étienne", "saintetienne"), ("rue X, Grenoble 38000", "grenoble"), ("", ""), (None, ""), ("69003", ""),
+    ])
+    def test_cle_lieu(self, lieu, cle):
+        assert tableau.cle_lieu(lieu) == cle
+
+    def test_tableau_avec_deux_etablissements(self, tableau):
+        suivi = tableau          # (ici « tableau » est la fixture : le tableau de test)
+        suivi.add(**{"Entreprise": "Xefi", "Lieu": "69003 Lyon"})
+        suivi.add(**{"Entreprise": "XEFI", "Lieu": "38000 Grenoble"})
+        noms, _, _ = suivi.deja_vus()
+        assert noms == {"xefi": {"lyon", "grenoble"}}
+        import tableau as module
+        assert not module.deja_contactee({"entreprise": "Xefi", "lieu": "67000 Strasbourg"}, noms, set(), set())
+
+    def test_retenir(self):
+        noms = {}
+        tableau.retenir(noms, {"entreprise": "Xefi", "lieu": "38000 Grenoble"})
+        assert noms == {"xefi": {"grenoble"}}
+
+
 class TestStatuts:
     def test_constantes_coherentes(self):
         for s in (tableau.LBA, tableau.FORMULAIRE, tableau.MAIL, *tableau.HORS_MAIL):
@@ -190,7 +230,7 @@ class TestSuivi:
         tableau.add(**{"Entreprise": "Perso", "Email": "jean@gmail.com",
                        "Lien": "https://labonnealternance/recruteurs_lba/98765432100022/x"})
         noms, domaines, sirets = tableau.deja_vus()
-        assert noms == {"exemple", "perso"}
+        assert noms == {"exemple": {""}, "perso": {""}}               # villes inconnues (pas de Lieu)
         assert domaines == {"exemple.fr"}            # gmail.com : messagerie grand public, ignorée
         assert sirets == {"12345678900011", "98765432100022"}
 

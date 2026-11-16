@@ -164,6 +164,20 @@ class TestSansConsole:
         assert sys.stdout is sortie
 
 
+def test_emojis_dans_un_fichier_recu_en_sortie(tmp_path):
+    """Exe compilé (PYTHONIOENCODING ignoré) dont la sortie est un fichier reçu de l'interface ou de la boucle :
+    avant, l'encodage Windows (cp1252) faisait planter le script au premier emoji (UnicodeEncodeError)."""
+    import os
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONIOENCODING", "PYTHONUTF8")}
+    journal = tmp_path / "journal.txt"
+    script = "import lmagent; lmagent.preparer_sortie(['--routine', 'recherche']); print('🧠 Modèle utilisé')"
+    with open(journal, "w", encoding="utf-8") as sortie:
+        r = subprocess.run([sys.executable, "-X", "utf8=0", "-c", script], cwd=os.path.dirname(lmagent.__file__),
+                           stdout=sortie, stderr=subprocess.STDOUT, env=env)
+    assert r.returncode == 0, journal.read_text(encoding="utf-8", errors="replace")
+    assert journal.read_text(encoding="utf-8") == "🧠 Modèle utilisé\n"
+
+
 def lmagent_env():
     import os
     return os.environ

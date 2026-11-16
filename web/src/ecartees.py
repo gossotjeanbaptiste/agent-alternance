@@ -7,7 +7,7 @@ import commun
 import lettres
 import refus
 import routines
-from tableau import COLS_A_CONTACTER, Suivi, norm
+from tableau import COLS_A_CONTACTER, Suivi, cle_lieu, deja_contactee, norm
 
 
 def _site(adresse):
@@ -53,9 +53,11 @@ def candidater(identifiant):
     if l is None:
         return False, "Entreprise introuvable dans la liste (elle a changé) : recharge la page."
     s = Suivi(commun.chemin_tableau())
-    nom = norm(l["Entreprise"])
-    if any(norm(s.get(r, "Entreprise")) == nom for r in s.rows()):
-        return False, f"{l['Entreprise']} est déjà dans le tableau de suivi."
+    nom, ville = norm(l["Entreprise"]), cle_lieu(l["Adresse"])
+    # même nom mais autre ville = autre établissement : accepté (SIRET ou même nom + même ville = doublon)
+    o = {"entreprise": l["Entreprise"], "lieu": l["Adresse"], "siret": l.get("SIRET") or ""}
+    if deja_contactee(o, *s.deja_vus()):
+        return False, f"{l['Entreprise']} ({l['Adresse'] or 'adresse inconnue'}) est déjà dans le tableau de suivi."
     if s.ac is None:
         s.ac = s.wb.create_sheet("À contacter")
     entetes = {c.value: i for i, c in enumerate(s.ac[1]) if c.value}
@@ -64,9 +66,11 @@ def candidater(identifiant):
             entetes[col] = len(entetes)
             s.ac.cell(1, entetes[col] + 1, col)
     for r in s.ac.iter_rows(min_row=2):
-        i = entetes["Entreprise"]
-        if i < len(r) and norm(r[i].value) == nom and not r[entetes["Traité"]].value:
-            return False, f"{l['Entreprise']} est déjà dans la feuille « À contacter »."
+        val = lambda col: r[entetes[col]].value if entetes[col] < len(r) else None  # noqa: E731
+        if norm(val("Entreprise")) == nom and not val("Traité"):
+            autre = cle_lieu(val("Lieu"))
+            if not ville or not autre or autre == ville:
+                return False, f"{l['Entreprise']} ({l['Adresse'] or 'adresse inconnue'}) est déjà dans la feuille « À contacter »."
     valeurs = {"Entreprise": l["Entreprise"], "Poste": "Candidature spontanée", "Lieu": l["Adresse"],
                "Infos": _infos(l), "Site": _site(l.get("Site"))}
     ligne = s.ac.max_row + 1

@@ -17,6 +17,17 @@ FICHIER = donnees.chemin("reponses_lba.json")
 QUESTIONS = [(cle, reglages.valeur(f"redaction.questions.{cle}.titre"),
               reglages.valeur(f"redaction.questions.{cle}.consigne")) for cle in reglages.QUESTIONS]
 
+SPONTANEE = "Candidature spontanée"   # poste noté quand La Bonne Alternance n'a pas d'offre pour l'entreprise
+
+
+def questions_attendues(statut, poste):
+    """Vrai si le formulaire pose les trois questions : La Bonne Alternance ET une vraie offre de poste.
+    Pour une candidature spontanée (pas d'offre sur la page de l'entreprise), seule la lettre est écrite."""
+    from tableau import LBA
+    poste = str(poste or "").strip()
+    return statut == LBA and bool(poste) and poste.lower() != SPONTANEE.lower()
+
+
 def rediger_reponses(o):
     """{clé: texte} des réponses pour l'entreprise o (entreprise, poste, lieu, infos)."""
     from modele import llm_json
