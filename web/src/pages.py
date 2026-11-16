@@ -4,7 +4,7 @@ from datetime import date
 from flask import Blueprint, abort, redirect, render_template, request
 
 import lettres
-from tableau import A_POSTULER, ADRESSE_A_TROUVER
+from tableau import ADRESSE_A_TROUVER, PAGE_A_POSTULER
 import relations
 import routines
 import suivi_donnees
@@ -65,7 +65,7 @@ def page_parametres():
 def postuler():
     # formulaires d'abord, puis les candidatures par mail (brouillons à envoyer), puis les adresses à trouver
     ordre = {"Brouillon": 1, ADRESSE_A_TROUVER: 2}
-    a_faire = [l for l in suivi_donnees.lire() if l.get("Statut") in A_POSTULER or l.get("Statut") in ordre]
+    a_faire = [l for l in suivi_donnees.lire() if l.get("Statut") in PAGE_A_POSTULER]
     a_faire.sort(key=lambda l: ordre.get(l.get("Statut"), 0))
     erreur = lettres.ajouter_lettres(a_faire)
     from messagerie import nom_messagerie
