@@ -93,6 +93,14 @@ def statut():
     return jsonify(ok=ok, message=message)
 
 
+@api.post("/suivi/ajouter")
+def ajouter_au_suivi():
+    """Formulaire « Ajouter une candidature » de la page Suivi."""
+    d = request.get_json(force=True, silent=True) or {}
+    ok, message, doublon = suivi_donnees.ajouter(d)
+    return jsonify(ok=ok, message=message, doublon=doublon), (200 if ok else 400)
+
+
 @api.post("/ecrire")
 def ecrire():
     """« Écrire ce qui manque » : lettre et réponses d'une candidature par formulaire, rédigées par le modèle."""

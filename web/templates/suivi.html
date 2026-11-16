@@ -2,10 +2,37 @@
 {% block titre %}Suivi{% endblock %}
 {% block contenu %}
 <h1>Suivi des candidatures <span class="doux" id="compte"></span></h1>
+<details class="carte pli-section" id="pli-ajouter">
+  <summary><h2 style="display:inline">➕ Ajouter une candidature</h2></summary>
+  <p class="doux">Une candidature faite en dehors de l'appli (site carrière, salon, LinkedIn…). Avec le statut « Candidaté (mail) »
+    et une adresse, elle est suivie et relancée comme les autres.</p>
+  <div class="deux">
+    <div>
+      <label class="champ">Entreprise * <input type="text" id="a-Entreprise" required></label>
+      <label class="champ">Poste <input type="text" id="a-Poste" placeholder="Développeur web en alternance"></label>
+      <label class="champ">Lieu <input type="text" id="a-Lieu" placeholder="69003 Lyon"></label>
+      <label class="champ">Statut
+        <select id="a-Statut">{% for st in statuts %}<option {{ 'selected' if st == 'Candidaté (autre canal)' }}>{{ st }}</option>{% endfor %}</select>
+      </label>
+      <label class="champ">Date d'envoi <input type="date" id="a-Date-envoi"></label>
+    </div>
+    <div>
+      <label class="champ">Contact <input type="text" id="a-Contact" placeholder="Prénom Nom"></label>
+      <label class="champ">Adresse mail <input type="text" id="a-Email" placeholder="rh@entreprise.fr"></label>
+      <label class="champ">Téléphone <input type="text" id="a-Téléphone"></label>
+      <label class="champ">Lien (offre, formulaire…) <input type="text" id="a-Lien" placeholder="https://…"></label>
+      <label class="champ">Source <input type="text" id="a-Source" list="sources" placeholder="Ajout manuel"></label>
+      <datalist id="sources"><option>Ajout manuel</option><option>LinkedIn</option><option>Site de l'entreprise</option>
+        <option>Salon / forum</option><option>Indeed</option><option>Welcome to the Jungle</option></datalist>
+    </div>
+  </div>
+  <label class="champ">Notes <textarea id="a-Notes" class="zone" rows="2"></textarea></label>
+  <div class="actions"><button class="principal" onclick="ajouter()">➕ Ajouter au suivi</button></div>
+</details>
 <div class="filtres">
   <input type="search" id="recherche" placeholder="Rechercher (entreprise, poste, contact…)" size="36">
   <select id="f-statut"><option value="">Tous les statuts</option>{% for st in statuts %}<option>{{ st }}</option>{% endfor %}</select>
-  <select id="f-source"><option value="">Toutes les sources</option><option>La Bonne Alternance</option><option>LinkedIn</option><option>Liste perso</option><option>Ancien tableau</option></select>
+  <select id="f-source"><option value="">Toutes les sources</option><option>La Bonne Alternance</option><option>LinkedIn</option><option>Liste perso</option><option>Ajout manuel</option><option>Ancien tableau</option></select>
 </div>
 <div class="carte" style="padding:0; overflow:auto">
 <table id="tableau">
@@ -37,6 +64,19 @@ async function changer(sel, ligne, entreprise) {
   const ok = await changerStatut(ligne, entreprise, sel.value);
   if (ok) { sel.style.background = "#" + (couleurs[sel.value] || "EDEDED"); sel.closest("tr").dataset.statut = sel.value; }
   else { location.reload(); }
+}
+document.getElementById("a-Date-envoi").value = new Date().toISOString().slice(0, 10);
+async function ajouter(forcer) {
+  const champs = ["Entreprise", "Poste", "Lieu", "Statut", "Contact", "Email", "Téléphone", "Lien", "Source", "Notes"];
+  const d = { "Date envoi": document.getElementById("a-Date-envoi").value, forcer: !!forcer };
+  for (const c of champs) d[c] = document.getElementById("a-" + c).value;
+  const r = await poster("/api/suivi/ajouter", d);
+  if (!r.ok && r.doublon) {
+    if (confirm(r.message + "\nL'ajouter quand même ?")) return ajouter(true);
+    return;
+  }
+  annoncer(r.message || (r.ok ? "Ajoutée." : "Erreur"), !r.ok);
+  if (r.ok) location.reload();
 }
 function filtrer() {
   const q = document.getElementById("recherche").value.toLowerCase();

@@ -56,6 +56,55 @@ def statistiques(lignes):
     }
 
 
+CHAMPS_AJOUT = ("Entreprise", "Poste", "Lieu", "Contact", "Email", "Téléphone", "Lien", "Source", "Notes")
+
+
+def ajouter(d):
+    """Ajoute une candidature saisie dans la page Suivi. d : champs du formulaire + "Statut", "Date envoi"
+    (AAAA-MM-JJ, facultative) et "forcer" (ajouter même si l'entreprise semble déjà dans le tableau).
+    Renvoie (ok, message, doublon)."""
+    import re
+    from mails import est_adresse
+    from tableau import STATUTS, deja_contactee
+    vals = {c: str(d.get(c) or "").strip() for c in CHAMPS_AJOUT}
+    if not vals["Entreprise"]:
+        return False, "Indique au moins le nom de l'entreprise.", False
+    statut = str(d.get("Statut") or "").strip()
+    if statut not in STATUTS:
+        return False, "Statut inconnu.", False
+    if vals["Email"] and not est_adresse(vals["Email"]):
+        return False, f"Adresse mail invalide : {vals['Email']}", False
+    envoi = None
+    if d.get("Date envoi"):
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(d["Date envoi"])):
+            return False, "Date d'envoi invalide.", False
+        envoi = date.fromisoformat(str(d["Date envoi"]))
+    if routines.en_cours():
+        return False, "Une routine est en cours : attends qu'elle se termine pour modifier le tableau.", False
+    s = Suivi(commun.chemin_tableau())
+    o = {"entreprise": vals["Entreprise"], "lieu": vals["Lieu"], "email": vals["Email"]}
+    if not d.get("forcer") and deja_contactee(o, *s.deja_vus()):
+        return False, (f"{vals['Entreprise']} semble déjà dans le tableau (même nom dans la même ville, ou même "
+                       "adresse mail)."), True
+    aujourd_hui = date.today()
+    lignes = {**vals, "Date ajout": aujourd_hui, "Statut": statut, "Nb relances": 0,
+              "Source": vals["Source"] or "Ajout manuel"}
+    if statut.startswith("Candidaté") or statut in ("Relancé", "Relance programmée"):
+        envoi = envoi or aujourd_hui
+    if envoi:
+        lignes.update({"Date envoi": envoi, "Dernière action": envoi})
+        if statut == "Candidaté (mail)":           # suivie et relancée comme une candidature envoyée par le script
+            from jours import date_relance
+            lignes["Relance prévue"] = date_relance(envoi)
+    s.add(**lignes)
+    s.mise_en_forme()
+    try:
+        s.wb.save(s.path)
+    except PermissionError:
+        return False, "Le tableau est ouvert dans Excel : ferme-le puis réessaie.", False
+    return True, f"{vals['Entreprise']} ajoutée au suivi ({statut}).", False
+
+
 def modifier(n_ligne, entreprise, champs):
     """Modifie une ligne (après avoir vérifié que c'est bien la bonne entreprise). Renvoie (ok, message)."""
     if routines.en_cours():
