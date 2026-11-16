@@ -178,6 +178,29 @@ def test_emojis_dans_un_fichier_recu_en_sortie(tmp_path):
     assert journal.read_text(encoding="utf-8") == "🧠 Modèle utilisé\n"
 
 
+def test_journal_visible_en_temps_reel(tmp_path):
+    """Comme une routine lancée par l'interface : chaque ligne doit arriver dans le fichier tout de suite, pas à la
+    fin du script (l'interface relit ce fichier pour afficher le journal en direct)."""
+    import os
+    import time
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONIOENCODING", "PYTHONUTF8", "PYTHONUNBUFFERED")}
+    journal = tmp_path / "journal.txt"
+    script = ("import time, lmagent; lmagent.preparer_sortie(['--routine', 'recherche']); "
+              "print('🔎 première ligne'); time.sleep(30)")
+    with open(journal, "w", encoding="utf-8") as sortie:
+        p = subprocess.Popen([sys.executable, "-c", script], cwd=os.path.dirname(lmagent.__file__),
+                             stdout=sortie, stderr=subprocess.STDOUT, env=env)
+        try:
+            limite = time.time() + 15
+            while time.time() < limite and "première ligne" not in journal.read_text(encoding="utf-8", errors="replace"):
+                time.sleep(0.2)
+            assert "🔎 première ligne" in journal.read_text(encoding="utf-8"), "ligne retenue en mémoire tampon"
+            assert p.poll() is None                         # le script tourne encore : c'est bien du temps réel
+        finally:
+            p.kill()
+            p.wait()
+
+
 def lmagent_env():
     import os
     return os.environ
