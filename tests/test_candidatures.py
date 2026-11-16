@@ -28,9 +28,8 @@ class TestReponses:
 
     @pytest.mark.parametrize("statut, poste, attendu", [
         (LBA, "Développeur web", True),
-        (LBA, "Candidature spontanée", False),
-        (LBA, " candidature SPONTANÉE ", False),
-        (LBA, "", False), (LBA, None, False),
+        (LBA, "Candidature spontanée", True),          # le site La Bonne Alternance les demande aussi
+        (LBA, "", True), (LBA, None, True),
         ("À postuler (formulaire du site)", "Développeur web", False),
         ("Brouillon", "Développeur web", False),
     ])
@@ -137,7 +136,7 @@ class TestOrientation:
         assert ol.deposes == []                                  # pas de brouillon de mail
         r = reponses.lire()["https://labonnealternance.example/Lba Ok"]
         assert r["lettre"].startswith("Madame, Monsieur,") and "Lien pour postuler" not in r["lettre"]
-        assert "motivations" not in r                            # candidature spontanée : la lettre seulement
+        assert r["motivations"] == "M"                           # candidature spontanée : réponses aussi
 
     def test_offre_lba_lettre_et_reponses(self, scenario, tableau, messagerie):
         o = lba("Offre Ok")

@@ -106,6 +106,7 @@ def ajouter_lettres(lignes):
         l["_ville"], l["_villenom"] = cle_lieu(l.get("Lieu")), ville(l.get("Lieu"))
         l["_source"] = str(l.get("Source") or "").split(" (")[0].strip()
         l["_a_trouver"] = l.get("Statut") == ADRESSE_A_TROUVER
+        l["_manque"] = []   # ce que le bouton « Écrire ce qui manque » rédigerait (candidatures par formulaire)
         if l["_a_trouver"]:   # brouillon sans destinataire : retrouvé par le nom de l'entreprise
             l["_lba"] = l["_mail"] = l["_questions"] = False
             l["_formulaire"], l["_reponses"] = "", []
@@ -120,7 +121,7 @@ def ajouter_lettres(lignes):
         l["_lba"] = l.get("Statut") == "À postuler (La Bonne Alternance)"
         m = re.search(r"Formulaire : (\S+)", str(l.get("Notes") or ""))
         l["_formulaire"] = m.group(1) if m and l["_lba"] else ""  # 2e solution : le formulaire du site
-        # réponses aux trois questions : seulement pour une OFFRE La Bonne Alternance (spontanée : la lettre seule)
+        # réponses aux trois questions : formulaire La Bonne Alternance (offre ou candidature spontanée)
         l["_questions"] = reponses.questions_attendues(l.get("Statut"), l.get("Poste"))
         l["_reponses"] = reponses.en_liste(deja.get((l.get("Lien") or "").strip()) or {}) if l["_questions"] else []
         l["_site"], l["_recherche"] = site_ou_recherche(l)
@@ -129,6 +130,9 @@ def ajouter_lettres(lignes):
             continue
         lettre = lettres.get((l.get("Lien") or "").strip())
         l["_lettre"] = (lettre + "\n\n" + sig) if lettre and sig else lettre
+        if (l.get("Lien") or "").strip():
+            from redaction import manque
+            l["_manque"] = manque(l.get("Statut"), (l.get("Lien") or "").strip(), bool(lettre), deja)
     for l in lignes:
         l["_ferme"] = bool(CACHE["note"])
     return CACHE["note"]

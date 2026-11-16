@@ -127,14 +127,14 @@ class TestPostuler:
         reponses.enregistrer_lettre("https://lba/1", "Lettre")
         assert "pas encore écrites" in client.get("/postuler").get_data(as_text=True)
 
-    def test_candidature_spontanee_lettre_seulement(self, client, tableau):
-        """Pas d'offre sur la page de l'entreprise : ni réponses affichées (même anciennes), ni rappel de les écrire."""
+    def test_candidature_spontanee_avec_reponses(self, client, tableau):
+        """Candidature spontanée La Bonne Alternance : les réponses aux questions s'affichent aussi."""
         ajouter(tableau, **{"Entreprise": "Spontanée Co", "Statut": LBA, "Lien": "https://lba/2",
                             "Poste": "Candidature spontanée"})
         reponses.enregistrer("https://lba/2", {"lettre": "Lettre spontanée", "motivations": "Ancienne réponse"})
         h = client.get("/postuler").get_data(as_text=True)
         assert "Lettre spontanée" in h
-        assert "Ancienne réponse" not in h and "pas encore écrites" not in h and "Copier la réponse" not in h
+        assert "Ancienne réponse" in h and "Copier la réponse" in h and "pas encore écrites" not in h
 
     def test_adresse_a_trouver_affichee(self, client, tableau, monkeypatch):
         import postuler

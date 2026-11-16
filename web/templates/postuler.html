@@ -62,7 +62,7 @@ Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de 
   {% elif l['_mail'] %}
   <p class="doux">Brouillon introuvable dans {{ messagerie }} (déjà envoyé ou supprimé ?) : le prochain suivi mettra la ligne à jour.</p>
   {% else %}
-  <p class="doux">Pas encore de lettre pour cette entreprise : lance <code>python alternance\postuler.py</code>, le modèle écrira la lettre.</p>
+  <p class="doux">Pas encore de lettre pour cette entreprise : clique « ✍️ Écrire ce qui manque », le modèle l'écrira.</p>
   {% endif %}
   {% for titre, texte in l['_reponses'] %}
   <details class="pli">
@@ -71,7 +71,7 @@ Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de 
     <button onclick="copier(document.getElementById('r{{ l['_ligne'] }}_{{ loop.index }}').textContent, 'Réponse copiée')">📋 Copier la réponse</button>
   </details>
   {% else %}
-  {% if l['_lettre'] and l['_questions'] %}<p class="doux">Réponses au formulaire pas encore écrites : lance <code>python alternance\postuler.py --reponses</code>.</p>{% endif %}
+  {% if l['_questions'] %}<p class="doux">Réponses aux questions du formulaire pas encore écrites : clique « ✍️ Écrire ce qui manque ».</p>{% endif %}
   {% endfor %}
   <div class="actions">
     {% if l['_a_trouver'] %}
@@ -89,6 +89,7 @@ Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de 
     {% else %}
     {% if l['Lien'] and l['Lien'].startswith('http') %}<a href="{{ l['Lien'] }}" target="_blank" rel="noopener"><button>🌐 Ouvrir la page</button></a>{% endif %}
     {% if l['_formulaire'] %}<a href="{{ l['_formulaire'] }}" target="_blank" rel="noopener"><button>📝 Formulaire du site</button></a>{% endif %}
+    {% if l['_manque'] %}<button onclick="ecrireManque(this, {{ l['_ligne'] }})" title="Le modèle rédige ce qui manque (la tour, sinon ce PC), puis il est déchargé">✍️ Écrire ce qui manque ({{ l['_manque']|join(' et ') }})</button>{% endif %}
     {% if l['_lettre'] %}<button onclick="copier(document.getElementById('l{{ l['_ligne'] }}').textContent)">📋 Copier la lettre</button>{% endif %}
     <button class="principal" onclick="fait({{ l['_ligne'] }}, '{{ 'Candidaté (La Bonne Alternance)' if l['_lba'] else 'Candidaté (formulaire du site)' }}', true)">✅ Envoyée</button>
     <button onclick="fait({{ l['_ligne'] }}, 'Abandonné', false)">Abandonner</button>
@@ -122,6 +123,16 @@ async function envoyeeSansAdresse(ligne) {
                                          postule: true, email: adresse.trim() });
   annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
   if (r.ok) retirer(carte);
+}
+async function ecrireManque(bouton, ligne) {
+  const carte = document.getElementById("c" + ligne), texte = bouton.textContent;
+  document.querySelectorAll("button[onclick^='ecrireManque']").forEach(b => b.disabled = true);
+  bouton.textContent = "✍️ Rédaction en cours… (environ une minute)";
+  const r = await poster("/api/ecrire", { ligne, entreprise: carte.dataset.entreprise });
+  annoncer(r.message || (r.ok ? "C'est écrit." : "Erreur"), !r.ok);
+  if (r.ok) { location.reload(); return; }
+  bouton.textContent = texte;
+  document.querySelectorAll("button[onclick^='ecrireManque']").forEach(b => b.disabled = false);
 }
 async function abandonnerMail(ligne) {
   const carte = document.getElementById("c" + ligne);

@@ -115,8 +115,7 @@ def nouvelles_candidatures(suivi, ol):
             # à remplacer par la vraie avant d'envoyer) pour savoir à qui le brouillon est destiné
             a = o.get("email") or destinataire_a_trouver(o["entreprise"])
             ol.brouillon(a, objet, texte_vers_html(corps), pieces=commun.pieces_jointes())
-        # le formulaire d'une OFFRE La Bonne Alternance pose aussi trois questions : réponses prêtes
-        # (candidature spontanée : la lettre seulement)
+        # le formulaire La Bonne Alternance (offre ou candidature spontanée) pose aussi trois questions : réponses prêtes
         if reponses.questions_attendues(statut, o.get("poste")):
             try:
                 reponses.enregistrer(o["lien"], reponses.rediger_reponses(o))

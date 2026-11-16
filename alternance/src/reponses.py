@@ -20,12 +20,11 @@ QUESTIONS = [(cle, reglages.valeur(f"redaction.questions.{cle}.titre"),
 SPONTANEE = "Candidature spontanée"   # poste noté quand La Bonne Alternance n'a pas d'offre pour l'entreprise
 
 
-def questions_attendues(statut, poste):
-    """Vrai si le formulaire pose les trois questions : La Bonne Alternance ET une vraie offre de poste.
-    Pour une candidature spontanée (pas d'offre sur la page de l'entreprise), seule la lettre est écrite."""
+def questions_attendues(statut, poste=None):
+    """Vrai si le formulaire pose les trois questions : toute candidature par le formulaire La Bonne Alternance,
+    offre ou candidature spontanée (le site les demande dans les deux cas). Formulaire du site : la lettre seule."""
     from tableau import LBA
-    poste = str(poste or "").strip()
-    return statut == LBA and bool(poste) and poste.lower() != SPONTANEE.lower()
+    return statut == LBA
 
 
 def rediger_reponses(o):
