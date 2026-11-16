@@ -167,7 +167,9 @@ class TestOrientation:
         ol = messagerie()
         candidatures.nouvelles_candidatures(tableau, ol)
         assert lignes(tableau)["Inconnue"]["Statut"] == "Brouillon (adresse à trouver)"
-        assert ol.deposes[0]["a"] is None or ol.deposes[0]["a"] == ""
+        # le nom de l'entreprise dans le champ « À » (adresse de remplacement, jamais distribuable)
+        assert ol.deposes[0]["a"] == '"Inconnue (adresse à trouver)" <a-trouver@inconnue.invalid>'
+        assert lignes(tableau)["Inconnue"]["Email"] in (None, "")          # pas notée comme vraie adresse
 
     def test_doublons_ignores(self, scenario, tableau, messagerie):
         tableau.add(**{"Entreprise": "Déjà Là", "Statut": "Refus"})

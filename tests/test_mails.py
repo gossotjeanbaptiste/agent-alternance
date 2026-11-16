@@ -54,6 +54,38 @@ def test_domaines_perso_et_generiques_viennent_des_reglages():
     assert "gmail.com" in mails.DOMAINES_PERSO
 
 
+class TestAdresseATrouver:
+    """Brouillon sans adresse trouvée : le nom de l'entreprise dans le champ « À »."""
+
+    @pytest.mark.parametrize("entreprise, adresse", [
+        ("Xefi Lyon", "a-trouver@xefi-lyon.invalid"),
+        ("L'Atelier & Cie", "a-trouver@l-atelier-cie.invalid"),
+        ("Société Générale", "a-trouver@societe-generale.invalid"),
+        ("", "a-trouver@entreprise.invalid"),
+        ("x" * 80, "a-trouver@" + "x" * 50 + ".invalid"),
+    ])
+    def test_adresse(self, entreprise, adresse):
+        assert mails.adresse_a_trouver(entreprise) == adresse
+        assert mails.est_a_trouver(adresse) and mails.est_a_trouver(adresse.upper())
+
+    def test_jamais_une_vraie_adresse(self):
+        assert not mails.est_a_trouver("rh@xefi.fr") and not mails.est_a_trouver("")
+
+    def test_destinataire(self):
+        assert mails.destinataire_a_trouver('Bo"ite <X>') == '"Boite X (adresse à trouver)" <a-trouver@bo-ite-x.invalid>'
+
+    def test_accepte_par_un_mail_imap(self):
+        """Gmail : l'en-tête « To » s'écrit et se relit (le nom avec accents est encodé correctement)."""
+        from email import message_from_bytes, policy
+        from email.message import EmailMessage
+        from email.utils import getaddresses
+        m = EmailMessage()
+        m["To"] = mails.destinataire_a_trouver("Café Dév")
+        m.set_content("x")
+        relu = message_from_bytes(m.as_bytes(), policy=policy.default)
+        assert getaddresses([str(relu["To"])]) == [("Café Dév (adresse à trouver)", "a-trouver@cafe-dev.invalid")]
+
+
 class TestTexteVersHtml:
     def test_paragraphes(self):
         h = mails.texte_vers_html("Bonjour,\n\nPremier paragraphe.\n\nCordialement,")

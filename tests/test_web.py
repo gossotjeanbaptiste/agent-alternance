@@ -156,6 +156,19 @@ class TestPostuler:
         assert "envoyeeSansAdresse(" in h and 'data-type="3"' in h
         assert "aucun brouillon sans destinataire ne parle de Introuvable" in h
 
+    def test_adresse_a_trouver_lettre_par_l_adresse_de_remplacement(self, client, tableau, monkeypatch):
+        """Nouveau brouillon adressé à « Entreprise (adresse à trouver) » : lettre retrouvée par cette adresse,
+        Abandonner met le brouillon à la corbeille."""
+        ajouter(tableau, **{"Entreprise": "Sans Adresse", "Statut": "Brouillon (adresse à trouver)"})
+        monkeypatch.setattr(lettres, "_outlook_ferme", lambda: False)
+        monkeypatch.setattr(lettres, "lettres_et_signature",
+                            lambda: ({"a-trouver@sans-adresse.invalid": "Lettre par l'adresse de remplacement"}, ""))
+        lettres.CACHE["note"] = None
+        h = client.get("/postuler").get_data(as_text=True)
+        assert "Lettre par l&#39;adresse de remplacement" in h or "Lettre par l'adresse de remplacement" in h
+        assert 'data-email="a-trouver@sans-adresse.invalid"' in h
+        assert "Abandonner (brouillon à la corbeille)" in h and "Sans Adresse (adresse à trouver)" in h
+
     def test_lettre_sans_destinataire(self):
         brouillons = [("Candidature alternance", "Bonjour, je souhaite rejoindre XEFI SAS à Lyon"),
                       ("Candidature chez Autre", "...")]
