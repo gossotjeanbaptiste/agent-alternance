@@ -4,7 +4,7 @@ from datetime import date
 import commun
 import reponses
 from commun import CFG, PROFIL, interdits, say
-from mails import domaine, est_generique, texte_vers_html
+from mails import destinataire_a_trouver, domaine, est_generique, texte_vers_html
 from modele import llm_json
 from sites import explorer_site, trouver_site
 from sources import depuis_a_contacter, depuis_lba, depuis_linkedin
@@ -109,7 +109,10 @@ def nouvelles_candidatures(suivi, ol):
             # à part et affichée sur la page « À postuler » (et dans postuler.py)
             reponses.enregistrer_lettre(o["lien"], corps.split("\n\n", 1)[1])
         else:
-            ol.brouillon(o.get("email"), objet, texte_vers_html(corps), pieces=commun.pieces_jointes())
+            # pas d'adresse trouvée : le nom de l'entreprise dans le champ « À » (adresse de remplacement en .invalid,
+            # à remplacer par la vraie avant d'envoyer) pour savoir à qui le brouillon est destiné
+            a = o.get("email") or destinataire_a_trouver(o["entreprise"])
+            ol.brouillon(a, objet, texte_vers_html(corps), pieces=commun.pieces_jointes())
         # le formulaire d'une OFFRE La Bonne Alternance pose aussi trois questions : réponses prêtes
         # (candidature spontanée : la lettre seulement)
         if reponses.questions_attendues(statut, o.get("poste")):

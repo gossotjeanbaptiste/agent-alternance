@@ -4,7 +4,7 @@
 <h1>À postuler <span class="doux" id="compte">({{ lignes|length }})</span></h1>
 <p class="doux">Formulaires (La Bonne Alternance ou site de l'entreprise) : ouvre la page, copie la lettre et les réponses aux questions, colle-les (Ctrl+V) et envoie, puis clique « Envoyée ».
 Par mail : le brouillon t'attend dans {{ messagerie }}, relis-le et envoie-le ; l'envoi est repéré tout seul au prochain suivi, ou clique « Envoyée » si tu l'as déjà envoyé.
-Adresse à trouver : le brouillon est dans {{ messagerie }} sans destinataire ; trouve l'adresse (site, recherche), ajoute-la au brouillon et envoie-le, puis clique « Envoyée ».</p>
+Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de l'entreprise ; trouve l'adresse (site, recherche), mets-la à la place dans le champ « À », envoie, puis clique « Envoyée ».</p>
 {% if erreur %}<div class="carte erreur">{{ erreur }}</div>{% endif %}
 {% if lignes|length > 1 %}
 <div class="filtres">
@@ -34,13 +34,13 @@ Adresse à trouver : le brouillon est dans {{ messagerie }} sans destinataire ; 
 {% endif %}
 <div id="cartes">
 {% for l in lignes %}
-<div class="carte" id="c{{ l['_ligne'] }}" data-entreprise="{{ l['Entreprise'] }}" data-email="{{ l['Email'] or '' }}"
+<div class="carte" id="c{{ l['_ligne'] }}" data-entreprise="{{ l['Entreprise'] }}" data-email="{{ l['Email'] or l['_a_trouver_adresse'] or '' }}"
      data-type="{{ 3 if l['_a_trouver'] else (2 if l['_mail'] else (0 if l['_lba'] else 1)) }}" data-date="{{ l['Date ajout'].isoformat() if l['Date ajout'] else '' }}"
      data-ville="{{ l['_ville'] }}" data-villenom="{{ l['_villenom'] }}" data-source="{{ l['_source'] }}"
      data-texte="{{ l['Entreprise'] }} {{ l['Poste'] or '' }} {{ l['Lieu'] or '' }} {{ l['Email'] or '' }} {{ l['Source'] or '' }} {{ l['Contact'] or '' }}">
   <h2>{{ l['Entreprise'] }} <span class="doux" style="font-weight:400">— {{ l['Poste'] or '' }} · {{ l['Lieu'] or '' }}</span></h2>
   {% if l['_a_trouver'] %}
-  <p class="doux">📭 <b>Adresse à trouver</b> — brouillon sans destinataire dans {{ messagerie }}</p>
+  <p class="doux">📭 <b>Adresse à trouver</b> — brouillon dans {{ messagerie }}, adressé à « {{ l['Entreprise'] }} (adresse à trouver) » : remplace-le par la vraie adresse avant d'envoyer</p>
   {% elif l['_mail'] %}
   <p class="doux">📧 <b>Par mail</b> à {{ l['Email'] }} — brouillon dans {{ messagerie }}</p>
   {% elif l['_lba'] %}
@@ -80,7 +80,7 @@ Adresse à trouver : le brouillon est dans {{ messagerie }} sans destinataire ; 
     <a href="{{ l['_recherche'] }}" target="_blank" rel="noopener"><button>🔎 Rechercher sur Google</button></a>
     {% if l['_lettre'] %}<button onclick="copier(document.getElementById('l{{ l['_ligne'] }}').textContent)">📋 Copier la lettre</button>{% endif %}
     <button class="principal" onclick="envoyeeSansAdresse({{ l['_ligne'] }})" title="J'ai trouvé l'adresse et envoyé le mail : statut « Candidaté (mail) », adresse notée pour le suivi des réponses et la relance">✅ Envoyée</button>
-    <button onclick="fait({{ l['_ligne'] }}, 'Abandonné', false)" title="Le brouillon sans destinataire reste dans la messagerie : supprime-le à la main">Abandonner</button>
+    <button onclick="abandonnerMail({{ l['_ligne'] }})">Abandonner (brouillon à la corbeille)</button>
     {% elif l['_mail'] %}
     <button class="principal" onclick="fait({{ l['_ligne'] }}, 'Candidaté (mail)', true)" title="J'ai envoyé ce mail : statut « Candidaté (mail) », date d'envoi aujourd'hui, relance prévue. Le script n'envoie rien lui-même.">✅ Envoyée</button>
     {% if l['_site'] %}<a href="{{ l['_site'] }}" target="_blank" rel="noopener"><button>🌐 Site de l'entreprise</button></a>{% endif %}

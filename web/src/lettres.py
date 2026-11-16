@@ -98,6 +98,7 @@ def ajouter_lettres(lignes):
         return f"Lecture des lettres et brouillons impossible : {e}"
     import reponses
     deja = reponses.lire()
+    from mails import adresse_a_trouver
     from postuler import SANS_DESTINATAIRE
     from tableau import ADRESSE_A_TROUVER
     for l in lignes:
@@ -110,7 +111,10 @@ def ajouter_lettres(lignes):
             l["_formulaire"], l["_reponses"] = "", []
             l["_site"], l["_recherche"] = site_ou_recherche(l)
             l["_contact"] = recherche_contact(l)
-            l["_lettre"] = lettre_sans_destinataire(l.get("Entreprise"), lettres.get(SANS_DESTINATAIRE) or [])
+            # brouillon adressé à « Entreprise (adresse à trouver) » <a-trouver@….invalid> ; avant : sans destinataire
+            l["_a_trouver_adresse"] = adresse_a_trouver(l.get("Entreprise"))
+            l["_lettre"] = (lettres.get(l["_a_trouver_adresse"])
+                            or lettre_sans_destinataire(l.get("Entreprise"), lettres.get(SANS_DESTINATAIRE) or []))
             continue
         l["_mail"] = l.get("Statut") == "Brouillon"
         l["_lba"] = l.get("Statut") == "À postuler (La Bonne Alternance)"
