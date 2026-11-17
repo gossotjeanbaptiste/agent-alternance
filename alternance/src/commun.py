@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent.parent   # dossier alternance/
-sys.path.insert(0, str(HERE.parent / "src"))    # modules de la racine du projet (src/agent.py…)
+sys.path.insert(0, str(HERE.parent / "src"))    # modules de la racine du projet (src/agent/…)
 import agent  # noqa: E402,F401  (connexion LM Studio, journal)
 import donnees  # noqa: E402  (données personnelles : alternance/donnees/ ou %APPDATA%\LMAgent\donnees)
 

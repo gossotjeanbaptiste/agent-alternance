@@ -170,6 +170,8 @@ def interface():
 def main(args=None):
     args = list(sys.argv[1:] if args is None else args)
     preparer_sortie(args)
+    import sans_fenetre
+    sans_fenetre.activer()   # sans console : pas de terminal qui clignote à chaque commande lancée
     if "--routine" in args:
         return routine(args)
     if "--postuler" in args:

@@ -1,4 +1,4 @@
-"""Messages de diagnostic du démarrage de LM Studio sur la tour (src/tour.py, branche main).
+"""Messages de diagnostic du démarrage de LM Studio sur la tour (src/tour/, branche main).
 Aucune connexion à la tour : SSH (ps_distant) et l'état du serveur sont simulés."""
 import subprocess
 import types

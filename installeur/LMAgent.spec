@@ -17,12 +17,17 @@ MODULES = [
     "api", "assistant", "auth", "chemins", "ecartees", "lettres", "pages", "parametres", "planification", "redaction", "reglages_web",
     "relations", "routines", "securite", "suivi_donnees", "tour_web", "icone_tache", "app",
     # src/ (modules de la racine du projet)
-    "agent", "tour", "emplacements", "version", "mise_a_jour", "boucle",
+    "agent", "tour", "emplacements", "version", "mise_a_jour", "boucle", "sans_fenetre",
     # dépendances chargées dynamiquement
     "win32com", "win32com.client", "pythoncom", "pywintypes", "win32timezone",
     # icône de la zone de notification
     "pystray", "pystray._win32", "PIL.Image", "PIL.PngImagePlugin",
 ]
+# modules découpés en dossiers (src/agent/, alternance/src/tableau/…) : chacun de leurs modules, trouvé tout seul
+for dossier in ("src", "alternance/src"):
+    for init in sorted((RACINE / dossier).glob("*/__init__.py")):
+        MODULES += [f"{init.parent.name}.{f.stem}" for f in sorted(init.parent.glob("*.py"))
+                    if f.stem not in ("__init__", "__main__")]
 
 a = Analysis(
     [str(RACINE / "lmagent.py")],

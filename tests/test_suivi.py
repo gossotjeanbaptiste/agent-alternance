@@ -1,4 +1,4 @@
-"""Mise à jour du suivi et relances (alternance/src/suivi.py). Messagerie et modèle simulés."""
+"""Mise à jour du suivi et relances (alternance/src/suivi/). Messagerie et modèle simulés."""
 from datetime import date, datetime, timedelta
 
 import pytest
@@ -320,7 +320,7 @@ class TestRelances:
 
         def panne(*a, **k):
             raise RuntimeError("modèle en panne")
-        monkeypatch.setattr(suivi, "llm", panne)
+        monkeypatch.setattr(suivi.relance, "llm", panne)
         ol = messagerie()
         suivi.mettre_a_jour(tableau, ol)
         assert ol.deposes == [] and ligne(tableau)["Statut"] == MAIL

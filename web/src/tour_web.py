@@ -15,7 +15,7 @@ ETAT = {"action": None, "messages": []}
 
 
 def disponible():
-    """La partie Tour s'affiche si tour.py est présent ET qu'un deuxième PC est utilisé (réglage utiliser_tour)."""
+    """La partie Tour s'affiche si le paquet src/tour est présent ET qu'un deuxième PC est utilisé (réglage utiliser_tour)."""
     import agent
     return tour is not None and agent.utiliser_tour()
 

@@ -1,7 +1,7 @@
 # Réglage de la tour : réveil à distance, veille et arrêt
 
 But : les scripts du ThinkPad **réveillent la tour** (Wake-on-LAN), utilisent son modèle,
-puis la laissent allumée (remise en veille possible avec `veille_apres`). `tour.py` permet aussi de l'éteindre à distance.
+puis la laissent allumée (remise en veille possible avec `veille_apres`). `python src\tour` permet aussi de l'éteindre à distance.
 
 Tout se fait **sur la tour**, une seule fois. Compte 15 minutes.
 
@@ -94,15 +94,15 @@ Il faut seulement que ta session soit ouverte (tour en veille ou verrouillée : 
 ## 3. Tester depuis le ThinkPad
 
 ```bash
-python tour.py etat
+python src\tour etat
 ```
 Les deux lignes doivent être ✅. Puis :
 ```bash
-python tour.py veille
+python src\tour veille
 ```
 La tour doit s'endormir. Attends 30 secondes, puis :
 ```bash
-python tour.py reveiller
+python src\tour reveiller
 ```
 Elle doit se rallumer et LM Studio répondre (« Tour réveillée et LM Studio prêt en X s »).
 
@@ -128,18 +128,18 @@ Si un jeu l'occupe (moins de 7000 Mo libres, ou plus de 40 % d'utilisation), il 
 ni chargement du modèle. Le travail se fait sur le ThinkPad, plus lentement, mais ton jeu n'est pas dérangé.
 Réglages dans `config.json`, rubrique `tour` : `verifier_gpu`, `vram_libre_min_mo`, `gpu_utilisation_max`.
 
-## Commandes `tour.py`
+## Commandes de la tour (`python src\tour`)
 
 | Commande | Effet |
 |---|---|
-| `python tour.py etat` | allumée ? LM Studio ? SSH ? |
-| `python tour.py reveiller` | rallume ce qui est éteint (tour, Tailscale, serveur LM Studio) |
-| `python tour.py serveur` | démarre le serveur LM Studio de la tour |
-| `python tour.py tailscale` | relance Tailscale sur le ThinkPad et sur la tour |
-| `python tour.py veille` | mise en veille |
-| `python tour.py eteindre` | arrêt dans 60 s (`--maintenant` pour tout de suite) |
-| `python tour.py redemarrer` | redémarrage dans 60 s |
-| `python tour.py annuler` | annule un arrêt / redémarrage en cours |
+| `python src\tour etat` | allumée ? LM Studio ? SSH ? |
+| `python src\tour reveiller` | rallume ce qui est éteint (tour, Tailscale, serveur LM Studio) |
+| `python src\tour serveur` | démarre le serveur LM Studio de la tour |
+| `python src\tour tailscale` | relance Tailscale sur le ThinkPad et sur la tour |
+| `python src\tour veille` | mise en veille |
+| `python src\tour eteindre` | arrêt dans 60 s (`--maintenant` pour tout de suite) |
+| `python src\tour redemarrer` | redémarrage dans 60 s |
+| `python src\tour annuler` | annule un arrêt / redémarrage en cours |
 
 Ajoute `--oui` pour sauter la confirmation.
 

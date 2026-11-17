@@ -1,4 +1,4 @@
-"""Tableau de suivi Excel, statuts, doublons (alternance/src/tableau.py)."""
+"""Tableau de suivi Excel, statuts, doublons (alternance/src/tableau/)."""
 from datetime import date, datetime
 
 import openpyxl

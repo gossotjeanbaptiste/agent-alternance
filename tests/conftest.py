@@ -130,8 +130,9 @@ def faux_modele(monkeypatch):
     import candidatures
     import modele
     import sources
-    import suivi
-    for mod in (modele, candidatures, sources, suivi):
+    import suivi.classement
+    import suivi.relance
+    for mod in (modele, candidatures, sources, suivi.classement, suivi.relance):
         if hasattr(mod, "llm_json"):
             monkeypatch.setattr(mod, "llm_json", f.llm_json)
         if hasattr(mod, "llm"):

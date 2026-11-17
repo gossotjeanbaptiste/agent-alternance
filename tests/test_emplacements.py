@@ -1,5 +1,5 @@
 """Emplacements des fichiers personnels (emplacements.py), chemin du tableau (commun.py)
-et option « utiliser une tour » (agent.py, tour_web.py). Aucune connexion à la tour n'est testée."""
+et option « utiliser une tour » (agent/, tour_web.py). Aucune connexion à la tour n'est testée."""
 import importlib
 import sys
 from pathlib import Path
@@ -153,8 +153,8 @@ class TestUtiliserTour:
 
     def test_sans_tour_seul_ce_pc_est_essaye(self, monkeypatch):
         """ensure_server n'essaie ni de réveiller ni de joindre la tour quand elle n'est pas utilisée."""
-        if not (Path(emplacements.SOURCE) / "src" / "tour.py").exists():
-            pytest.skip("branche sans tour.py : ensure_server n'utilise que ce PC")
+        if not (Path(emplacements.SOURCE) / "src" / "tour").is_dir():
+            pytest.skip("branche sans tour : ensure_server n'utilise que ce PC")
         monkeypatch.setitem(agent.CONFIG, "utiliser_tour", False)
         monkeypatch.setitem(agent.CONFIG, "serveurs", [{"nom": "tour", "url": "http://t:1236/v1", "reveil": True},
                                                        {"nom": "ce PC", "url": "local"}])
@@ -174,17 +174,17 @@ class TestUtiliserTour:
     def test_page_tour_affichee_avec_tour(self, monkeypatch, client):
         import tour_web
         if tour_web.tour is None:
-            pytest.skip("branche sans tour.py")
+            pytest.skip("branche sans tour")
         monkeypatch.setitem(agent.CONFIG, "utiliser_tour", True)
         assert 'href="/tour"' in client.get("/").get_data(as_text=True)
 
     def test_tour_py_sans_config(self, monkeypatch, tmp_path):
-        """tour.py se charge même sans config.json (installation neuve)."""
-        chemin = Path(emplacements.SOURCE) / "src" / "tour.py"
+        """Les réglages de la tour se chargent même sans config.json (installation neuve)."""
+        chemin = Path(emplacements.SOURCE) / "src" / "tour" / "config.py"
         if not chemin.exists():
-            pytest.skip("branche sans tour.py")
+            pytest.skip("branche sans tour")
         monkeypatch.setattr(emplacements, "config_agent", lambda: tmp_path / "absent.json")
-        spec = importlib.util.spec_from_file_location("tour_test", chemin)
+        spec = importlib.util.spec_from_file_location("tour_config_test", chemin)
         m = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(m)
         assert m.T["port_serveur"] == 1235
