@@ -7,6 +7,8 @@ import chemins  # noqa: F401
 
 try:
     import tour
+    if getattr(tour, "__file__", None) is None:   # dossier src/tour sans __init__.py (cache laissé par git) :
+        tour = None                                # pas le paquet de la tour, seulement un dossier vide
 except Exception:
     tour = None
 

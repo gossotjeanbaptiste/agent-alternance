@@ -153,7 +153,7 @@ class TestUtiliserTour:
 
     def test_sans_tour_seul_ce_pc_est_essaye(self, monkeypatch):
         """ensure_server n'essaie ni de réveiller ni de joindre la tour quand elle n'est pas utilisée."""
-        if not (Path(emplacements.SOURCE) / "src" / "tour").is_dir():
+        if not (Path(emplacements.SOURCE) / "src" / "tour" / "__init__.py").exists():
             pytest.skip("branche sans tour : ensure_server n'utilise que ce PC")
         monkeypatch.setitem(agent.CONFIG, "utiliser_tour", False)
         monkeypatch.setitem(agent.CONFIG, "serveurs", [{"nom": "tour", "url": "http://t:1236/v1", "reveil": True},

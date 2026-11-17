@@ -17,6 +17,7 @@ nav a.actif, nav a:hover { background: var(--accent-fond); color: var(--accent);
 nav .quitter { margin-left: auto; color: var(--erreur); border-color: var(--erreur); background: transparent; }
 nav .quitter:hover { background: var(--erreur); color: var(--carte); }
 main { max-width: 1200px; margin: 0 auto; padding: 20px; }
+main.large { max-width: none; }   /* pages à grand tableau (Suivi) : toute la largeur de la fenêtre */
 h1 { font-size: 22px; font-weight: 600; margin: 4px 0 16px; }
 h2 { font-size: 17px; font-weight: 600; margin: 0 0 12px; }
 .grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }

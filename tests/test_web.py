@@ -91,6 +91,11 @@ class TestPages:
         ajouter(tableau, **{"Entreprise": "Visible SA", "Statut": "Refus"})
         assert "Visible SA" in client.get("/suivi").get_data(as_text=True)
 
+    def test_suivi_sur_toute_la_largeur(self, client):
+        """Le grand tableau du Suivi prend toute la fenêtre ; les autres pages gardent leur largeur de lecture."""
+        assert '<main class="large">' in client.get("/suivi").get_data(as_text=True)
+        assert '<main class="">' in client.get("/").get_data(as_text=True)
+
     def test_journal_fichier_choisi_et_securite(self, client, tmp_path):
         logs = tmp_path / "logs"
         logs.mkdir()
@@ -419,7 +424,7 @@ class TestReglagesWeb:
         assert "Tour" not in titres                         # config sans serveur distant : pas de tour
         self.agent.write_text(json.dumps({"utiliser_tour": True}), encoding="utf-8")
         titres = [t for t, _ in reglages_web.sections()]
-        assert ("Tour" in titres) == (ROOT / "src" / "tour").is_dir()
+        assert ("Tour" in titres) == (ROOT / "src" / "tour" / "__init__.py").exists()
 
     def test_case_utiliser_tour_deduite_des_serveurs(self):
         self.agent.write_text(json.dumps({"serveurs": [{"nom": "tour", "url": "http://t:1236/v1"}]}), encoding="utf-8")
