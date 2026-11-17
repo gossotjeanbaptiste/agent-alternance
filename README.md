@@ -335,7 +335,7 @@ lm_agent/
                                config.json, linkedin/, pieces_jointes/, logs/, workspace/, corbeille/, taches/
 ```
 
-| Module (`alternance/src/`) | Rôle |
+| Module (`alternance/src/` ; un nom finissant par `/` est un dossier de petits modules) | Rôle |
 |---|---|
 | `commun.py` | réglages partagés (config, profil, contre-prompt, mode essai) |
 | `reglages.py` | liste de tous les réglages modifiables (valeurs par défaut, aides) ; lue par le code et la page Paramètres |
@@ -343,14 +343,14 @@ lm_agent/
 | `jours.py` | jours ouvrables, fériés, heure d'envoi des relances |
 | `modele.py` | appels au modèle IA |
 | `mails.py` | outils sur les adresses et le texte |
-| `tableau.py` | tableau de suivi Excel (colonnes, statuts, doublons) |
+| `tableau/` | tableau de suivi Excel (colonnes, statuts, doublons) |
 | `messagerie.py` | choix de la messagerie (réglage `messagerie.type`) |
 | `outlook.py` | Outlook classique : lecture, brouillons, boîte d'envoi |
-| `imap.py` | Gmail / IMAP : lecture, brouillons déposés sur le serveur |
-| `suivi.py` | mise à jour du suivi et relances |
+| `imap/` | Gmail / IMAP : lecture, brouillons déposés sur le serveur |
+| `suivi/` | mise à jour du suivi et relances |
 | `sources.py` | liste « À contacter », alertes LinkedIn, La Bonne Alternance |
 | `candidatures.py` | choix et rédaction des nouvelles candidatures |
-| `sites.py` | site des entreprises : le trouver, y chercher une adresse ou un formulaire de contact |
+| `sites/` | site des entreprises : le trouver, y chercher une adresse ou un formulaire de contact |
 | `reponses.py` | candidatures par formulaire : lettre et réponses aux questions |
 | `refus.py` | liste des entreprises écartées par le filtre d'activité |
 

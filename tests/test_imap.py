@@ -1,4 +1,4 @@
-"""Messagerie Gmail / IMAP (alternance/src/imap.py), avec un faux serveur IMAP en mémoire."""
+"""Messagerie Gmail / IMAP (alternance/src/imap/), avec un faux serveur IMAP en mémoire."""
 import email
 import imaplib
 from datetime import datetime, timedelta

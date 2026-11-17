@@ -1,4 +1,4 @@
-"""Sites d'entreprises en France seulement (alternance/src/pays.py et son usage dans sites.py).
+"""Sites d'entreprises en France seulement (alternance/src/pays.py et son usage dans sites/).
 Pages simulées : aucun accès réseau."""
 import io
 
@@ -49,7 +49,7 @@ def test_telephone_belge_ou_suisse_pas_compte():
     assert pays.preuves_francaises("021 123 45 67", "") == []         # Suisse
 
 
-# --- dans sites.py ---------------------------------------------------------------------------------
+# --- dans sites/ -----------------------------------------------------------------------------------
 @pytest.fixture
 def faux_web(monkeypatch):
     pages = {}

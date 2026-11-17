@@ -1,4 +1,4 @@
-"""Outils de fichiers de l'agent (agent.py), mise à jour interactive du tableau (maj_tableau.py)
+"""Outils de fichiers de l'agent (src/agent/), mise à jour interactive du tableau (maj_tableau.py)
 et générateur de logo (outils/generer_logo.py). Rien sur la tour ni sur le serveur LM Studio.
 Tout se passe dans des dossiers temporaires."""
 import importlib.util

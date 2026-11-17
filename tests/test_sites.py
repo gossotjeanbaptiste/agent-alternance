@@ -1,4 +1,4 @@
-"""Sites des entreprises : trouver le site, une adresse ou un formulaire de contact (alternance/src/sites.py).
+"""Sites des entreprises : trouver le site, une adresse ou un formulaire de contact (alternance/src/sites/).
 Le réseau est simulé : _lire (pages des sites) et urlopen (recherche web) sont remplacés."""
 import io
 

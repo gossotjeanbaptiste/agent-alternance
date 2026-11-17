@@ -12,9 +12,9 @@ Organisation du code (modules internes dans alternance/src/) :
     jours.py         jours ouvrables, fériés, heures d'envoi
     modele.py        appels au modèle IA
     mails.py         outils sur les adresses / le texte
-    tableau.py       tableau de suivi Excel
-    messagerie.py    choix de la messagerie : outlook.py (Outlook classique) ou imap.py (Gmail…)
-    suivi.py         mise à jour du suivi + relances
+    tableau/         tableau de suivi Excel
+    messagerie.py    choix de la messagerie : outlook.py (Outlook classique) ou imap/ (Gmail…)
+    suivi/           mise à jour du suivi + relances
     sources.py       sources d'entreprises (liste perso, LinkedIn, La Bonne Alternance)
     candidatures.py  nouvelles candidatures
 """
