@@ -24,7 +24,7 @@
   {% if connecte %}<span class="utilisateur" title="Compte connecté">👤 {{ connecte }}</span><button class="deconnexion" onclick="deconnecter()" title="Se déconnecter ({{ connecte }})">Se déconnecter</button>{% endif %}
   <button class="quitter" onclick="quitter()" title="Arrêter l'interface">⏻ Quitter</button>
 </nav>
-<main>{% block contenu %}{% endblock %}</main>
+<main class="{% block largeur %}{% endblock %}">{% block contenu %}{% endblock %}</main>
 <div id="message" class="message"></div>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 {% block script %}{% endblock %}
