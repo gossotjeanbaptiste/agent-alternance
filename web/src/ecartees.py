@@ -113,7 +113,7 @@ def candidater(identifiant):
         s.ac.cell(ligne, entetes[col] + 1, v)
     s.mise_en_forme()
     try:
-        s.wb.save(s.path)
+        s.enregistrer_sur()
     except PermissionError:
         return False, "Le tableau est ouvert dans Excel : ferme-le puis réessaie."
     ok, message = refus.decider(identifiant, f"{refus.DEMANDEE} le {date.today():%d/%m/%Y}")

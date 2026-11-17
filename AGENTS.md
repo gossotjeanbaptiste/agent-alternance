@@ -75,7 +75,8 @@ dans le dépôt et où en est le projet.
 - **Statuts** : « Brouillon », « Brouillon (adresse à trouver) », « À postuler (La Bonne Alternance) »,
   « À postuler (formulaire du site) », puis « Candidaté (mail) » (suivi et relances automatiques),
   « Candidaté (La Bonne Alternance / formulaire du site / LinkedIn / autre canal) », « Relance en brouillon »,
-  « Relance programmée », « Relancé », réponses… Liste dans `tableau.py` ; Excel la lit dans une feuille cachée
+  « Relance programmée », « Relancé », réponses (« Entretien », « Réponse positive », « Refus »,
+  « Candidature transmise » : suivie sans relance, « Réponse à lire »)… Liste dans `tableau.py` ; Excel la lit dans une feuille cachée
   « Statuts » (limite de 255 caractères d'une liste écrite en dur).
 - **Candidature** : adresse mail trouvée → brouillon de mail ; sinon formulaire La Bonne Alternance **seulement si**
   l'API donne un `recipient_id` (bouton « Postuler ») ; sinon formulaire de contact du site ; sinon « adresse à trouver ».
