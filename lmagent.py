@@ -1,7 +1,7 @@
 """Point d'entrée unique de LMAgent (c'est lui qui devient LMAgent.exe dans la version installée).
 
     lmagent.py                                  interface web (http://127.0.0.1:8765)
-    lmagent.py --routine relances|recherche|tout|reponses [--essai] [--fois N]
+    lmagent.py --routine relances|recherche|tout|mails|reponses [--essai] [--fois N]
     lmagent.py --postuler [--reponses]          assistant de candidature par formulaire
     lmagent.py --maj-tableau [--voir]           mise à jour interactive du tableau
     lmagent.py --agent [--task "…" | --tache nom]   agent en chat / tâche automatique
@@ -17,7 +17,7 @@ for p in (ICI / "alternance" / "src", ICI / "alternance", ICI / "web" / "src", I
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
-ROUTINES = ("relances", "recherche", "tout", "reponses")   # reponses : questions La Bonne Alternance
+ROUTINES = ("relances", "recherche", "tout", "mails", "reponses")   # mails : mails reçus seulement
 INTERACTIFS = ("--postuler", "--maj-tableau", "--agent")   # posent des questions au clavier
 
 

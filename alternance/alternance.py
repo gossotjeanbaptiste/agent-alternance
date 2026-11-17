@@ -4,6 +4,7 @@ Routine quotidienne de recherche d'alternance.
     python alternance\alternance.py              -> suivi + relances, puis nouvelles candidatures
     python alternance\alternance.py --relances   -> seulement suivi + relances   (= relances.py)
     python alternance\alternance.py --recherche  -> seulement nouvelles candidatures (= recherche.py)
+    python lmagent.py --routine mails             -> seulement les mails reçus (réponses, non-remises, envois)
     ajouter --essai pour tout simuler sans rien écrire
 
 Organisation du code (modules internes dans alternance/src/) :
@@ -35,7 +36,8 @@ from tableau import Suivi  # noqa: E402
 
 
 def main(mode=None):
-    """mode : "tout" (défaut), "relances" (suivi + relances) ou "recherche" (nouvelles candidatures)."""
+    """mode : "tout" (défaut), "relances" (suivi + relances), "recherche" (nouvelles candidatures)
+    ou "mails" (lecture des mails reçus et mise à jour du tableau, sans relance ni recherche)."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--suivi", "--relances", action="store_true", dest="relances",
                     help="seulement suivi des réponses + relances")
@@ -64,8 +66,8 @@ def main(mode=None):
     commun.GARDE.start()
     ol = ouvrir()
     try:
-        if mode in ("tout", "relances"):
-            mettre_a_jour(suivi, ol)
+        if mode in ("tout", "relances", "mails"):
+            mettre_a_jour(suivi, ol, relancer=mode != "mails")
             suivi.save()
         else:
             ol.recus(CFG["alertes_linkedin"]["jours"])  # lecture des alertes LinkedIn

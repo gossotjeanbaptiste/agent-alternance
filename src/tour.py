@@ -18,7 +18,9 @@ Réglages : rubrique "tour" de config.json.
 - Veille / arrêt / démarrage de LM Studio passent par SSH via Tailscale (de partout), ou par le
   réseau local ("ssh_lan") si Tailscale est coupé sur la tour.
 """
+import html
 import json
+import re
 import socket
 import subprocess
 import sys
@@ -130,26 +132,85 @@ def ouvrir_lmstudio_tour(log=_print):
     Passe par une tâche planifiée : un programme lancé directement par SSH serait tué à la
     déconnexion. La tâche est créée automatiquement la première fois."""
     lms = T["lms_tour"].replace("'", "''")
+    # tâche recréée à chaque fois (-Force) : le chemin de lms et le port restent ceux des réglages actuels
     script = f"""
-$t = Get-ScheduledTask -TaskName '{TACHE_LMSTUDIO}' -ErrorAction SilentlyContinue
-if (-not $t) {{
-  $a = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-WindowStyle Hidden -NoProfile -Command & '{lms}' server start --port {T['port_serveur']}"
-  $p = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
-  $s = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 5)
-  Register-ScheduledTask -TaskName '{TACHE_LMSTUDIO}' -Action $a -Principal $p -Settings $s -Description 'lm_agent : ouvre LM Studio et son serveur' -Force | Out-Null
-}}
+$ProgressPreference = 'SilentlyContinue'
+$a = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-WindowStyle Hidden -NoProfile -Command & '{lms}' server start --port {T['port_serveur']}"
+$p = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
+$s = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 5)
+Register-ScheduledTask -TaskName '{TACHE_LMSTUDIO}' -Action $a -Principal $p -Settings $s -Description 'lm_agent : ouvre LM Studio et son serveur' -Force | Out-Null
 Start-ScheduledTask -TaskName '{TACHE_LMSTUDIO}'
+'TACHE_LANCEE'
 """
     log("   ▶️ Ouverture de LM Studio sur la tour...")
     r = ps_distant(script)
+    if r is None or "TACHE_LANCEE" not in (r.stdout or ""):
+        log(f"   ❌ Impossible de lancer LM Studio sur la tour : {erreur_powershell(r)}")
+        return False
     for _ in range(30):
         if lmstudio_ok():
             log("   ✅ LM Studio ouvert sur la tour, serveur prêt")
             return True
         time.sleep(3)
-    log(f"   ❌ LM Studio ne répond pas sur la tour ({(r.stderr.strip()[:200] if r else 'pas de réponse SSH')})."
-        " Ta session Windows est-elle ouverte sur la tour ?")
+    log(f"   ❌ LM Studio ne répond pas sur la tour : {diagnostic_lmstudio()}")
     return False
+
+
+def erreur_powershell(r):
+    """Message lisible d'un script PowerShell lancé par SSH : les erreurs, sans le bruit « #< CLIXML » (progression)."""
+    if r is None:
+        return "pas de réponse SSH (tour éteinte, en veille ou injoignable)"
+    err = r.stderr or ""
+    if "CLIXML" in err:
+        lignes = re.findall(r'<S S="Error">(.*?)</S>', err, flags=re.S)
+        err = " ".join(html.unescape(l).replace("_x000D__x000A_", " ") for l in lignes)
+    err = " ".join(err.split())
+    return err[:300] or f"le script s'est arrêté sans message (code {r.returncode})"
+
+
+def diagnostic_lmstudio():
+    """Pourquoi LM Studio ne répond pas sur la tour (vérifications en lecture seule) : phrase pour le journal."""
+    lms = T["lms_tour"].replace("'", "''")
+    r = ps_distant(f"""
+$ProgressPreference = 'SilentlyContinue'
+'SESSION=' + [string](Get-CimInstance Win32_ComputerSystem).UserName
+'LMS=' + [string](Test-Path -LiteralPath '{lms}')
+'BIONIC=' + [string][bool](Get-Process Bionic -ErrorAction SilentlyContinue)
+'TACHE=' + [string](Get-ScheduledTaskInfo -TaskName '{TACHE_LMSTUDIO}' -ErrorAction SilentlyContinue).LastTaskResult
+$installee = (Test-Path "$env:LOCALAPPDATA\\Programs\\LM Studio\\LM Studio.exe") -or [bool](Get-ChildItem `
+  HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall, HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall `
+  -ErrorAction SilentlyContinue | Get-ItemProperty | ? {{ $_.DisplayName -match 'LM Studio' }})
+'APPLI=' + [string]$installee
+'EN_ATTENTE=' + [string](Get-ChildItem "$env:LOCALAPPDATA\\lm-studio-updater\\pending" -Filter *.exe -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+""", timeout=30)
+    return lire_diagnostic(r.stdout if r else None)
+
+
+def lire_diagnostic(sortie):
+    """Phrase de diagnostic d'après la sortie de diagnostic_lmstudio (testable sans la tour)."""
+    if sortie is None:
+        return "la tour ne répond plus en SSH (éteinte ou en veille ?)."
+    v = dict(l.split("=", 1) for l in sortie.splitlines() if "=" in l)
+    if not v.get("SESSION", "").strip():
+        return ("aucune session Windows n'est ouverte sur la tour : ouvre ta session (elle peut rester verrouillée), "
+                "puis réessaie.")
+    if v.get("APPLI", "").strip() == "False":       # lms est là, mais plus l'appli (mise à jour interrompue)
+        attente = v.get("EN_ATTENTE", "").strip()
+        return ("l'appli LM Studio n'est plus installée sur la tour (mise à jour interrompue ?) : "
+                + (f"lance l'installeur resté sur la tour ({attente}), puis réessaie." if attente
+                   else "réinstalle LM Studio sur la tour, puis réessaie."))
+    if v.get("LMS", "").strip() == "False":
+        return (f"lms.exe introuvable sur la tour ({T['lms_tour']}) : corrige « Chemin de lms.exe sur la tour » "
+                "dans Paramètres → Tour.")
+    if v.get("BIONIC", "").strip() == "True":
+        return (f"LM Studio est ouvert mais son serveur ne répond pas sur le port {T['port_serveur']} : "
+                "démarre le serveur dans LM Studio (onglet Developer) ou vérifie le port dans Paramètres → Tour.")
+    code = v.get("TACHE", "").strip()
+    if code and code not in ("0", "267009"):        # 267009 = la tâche tourne encore
+        return (f"la tâche qui lance LM Studio a échoué (code {code}) : ouvre LM Studio une fois à la main sur la "
+                "tour (une fenêtre de mise à jour ou de connexion le bloque peut-être).")
+    return ("LM Studio ne s'est pas lancé : ouvre-le une fois à la main sur la tour (une fenêtre de mise à jour ou "
+            "de première ouverture le bloque peut-être), puis réessaie.")
 
 
 def fermer_lmstudio_si_ouvert(log=_print):
@@ -313,8 +374,8 @@ def demarrer_serveur(log=_print):
             log("   ✅ Serveur LM Studio de la tour démarré")
             return True
         time.sleep(3)
-    detail = (r.stderr or r.stdout).strip()[:200] if r else "délai dépassé"
-    log(f"   ❌ Impossible de démarrer le serveur LM Studio de la tour ({detail})")
+    detail = erreur_powershell(r) if r else "délai dépassé"
+    log(f"   ❌ Impossible de démarrer le serveur LM Studio de la tour ({detail}) : {diagnostic_lmstudio()}")
     return False
 
 

@@ -80,6 +80,22 @@ def test_dans_la_page_et_planifiable(client, monkeypatch):
     assert planification.planifier("reponses", "08:00")[0]
 
 
+def test_routine_mails_recus(client, monkeypatch):
+    """« Mails reçus » : bouton, planification, et lancement par lmagent (mode « mails » d'alternance.py)."""
+    import sys
+    import types
+    vu = {}
+    faux = types.ModuleType("alternance")
+    faux.main = lambda mode: vu.update(mode=mode)
+    monkeypatch.setitem(sys.modules, "alternance", faux)
+    monkeypatch.setattr(sys, "argv", list(sys.argv))
+    assert lmagent.routine(["--routine", "mails"]) == 0 and vu == {"mode": "mails"}
+    h = client.get("/routines").get_data(as_text=True)
+    assert "lancer('mails')" in h and "📩 Mails reçus" in h and 'id="heure-mails"' in h
+    monkeypatch.setattr(planification, "_schtasks", lambda *a: type("R", (), {"returncode": 0, "stdout": "", "stderr": ""})())
+    assert planification.planifier("mails", "09:00")[0]
+
+
 def test_bouton_lance_la_routine(client, monkeypatch):
     import routines
     lances = []

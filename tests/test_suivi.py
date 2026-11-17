@@ -125,7 +125,8 @@ class TestReponses:
                                          "Relance prévue": AUJ + timedelta(days=5), **v})
 
     @pytest.mark.parametrize("typ, statut", [("entretien", "Entretien"), ("positive", "Réponse positive"),
-                                             ("refus", "Refus"), ("autre", "Réponse à lire")])
+                                             ("refus", "Refus"), ("transmise", "Candidature transmise"),
+                                             ("autre", "Réponse à lire")])
     def test_reponse_classee(self, tableau, messagerie, faux_modele, typ, statut):
         self.base(tableau)
         faux_modele.reponses_json = [{"type": typ, "resume": "Résumé"}]
@@ -181,6 +182,30 @@ class TestReponses:
         l = ligne(tableau)
         assert l["Statut"] == "Réponse à lire" and "classement impossible" in l["Dernière réponse"]
 
+    def test_classement_impossible_retente_au_passage_suivant(self, tableau, messagerie, faux_modele):
+        self.base(tableau)
+        r = recu("jean@exemple.fr", jours=1)
+        faux_modele.reponses_json = [RuntimeError("modèle en panne"), {"type": "transmise", "resume": "Transmis aux RH"}]
+        suivi.mettre_a_jour(tableau, messagerie(recus=[r]))
+        suivi.mettre_a_jour(tableau, messagerie(recus=[r]))
+        l = ligne(tableau)
+        assert l["Statut"] == "Candidature transmise" and "[transmise] Transmis aux RH" in l["Dernière réponse"]
+
+    def test_transmise_reste_suivie_sans_relance(self, tableau, messagerie, faux_modele):
+        # relance prévue dépassée : une candidature transmise ne doit pas être relancée
+        self.base(tableau, **{"Relance prévue": AUJ - timedelta(days=1)})
+        transfert = recu("jean@exemple.fr", jours=2)
+        faux_modele.reponses_json = [{"type": "transmise", "resume": "Transmis aux RH"}]
+        suivi.mettre_a_jour(tableau, messagerie(recus=[transfert]))
+        assert ligne(tableau)["Statut"] == "Candidature transmise"
+        # plus tard, les RH (même domaine) répondent : seule la nouvelle réponse est classée
+        rh = recu("rh@exemple.fr", jours=1)
+        faux_modele.reponses_json = [{"type": "entretien", "resume": "Entretien proposé"}]
+        faux_modele.consignes.clear()
+        suivi.mettre_a_jour(tableau, messagerie(recus=[transfert, rh]))
+        l = ligne(tableau)
+        assert l["Statut"] == "Entretien" and len(faux_modele.consignes) == 1
+
     def test_avis_de_non_remise(self, tableau, messagerie, faux_modele):
         self.base(tableau)
         ndr = recu("", sujet="Non remis : Candidature", corps="Adresse jean@exemple.fr introuvable",
@@ -218,6 +243,23 @@ class TestRelances:
         p = faux_modele.consignes[0]
         assert "RELANCE n°1" in p and "60 à 110 mots" in p and "Ma candidature." in p
         assert p.index("INTERDIT") > p.index("RELANCE")
+
+    def test_routine_mails_recus_sans_relance(self, tableau, messagerie, faux_modele, capsys):
+        """Routine « Mails reçus » : réponses et envois traités, mais aucun brouillon de relance écrit."""
+        self.due(tableau, "Relance Due", "rh@due.fr")
+        ajouter(tableau, Entreprise="Repond", Email="rh@repond.fr", Statut=MAIL,
+                **{"Date envoi": AUJ - timedelta(days=5), "Dernière action": AUJ - timedelta(days=5),
+                   "Relance prévue": AUJ + timedelta(days=5)})
+        ajouter(tableau, Entreprise="Envoye", Email="rh@envoye.fr", Statut="Brouillon")
+        faux_modele.reponses_json = [{"type": "entretien", "resume": "Entretien proposé"}]
+        ol = messagerie(recus=[recu("rh@repond.fr", jours=1)], envois={"rh@envoye.fr": [envoi(2)]},
+                        brouillons=["rh@due.fr"])
+        suivi.mettre_a_jour(tableau, ol, relancer=False)
+        assert ol.deposes == []                                             # aucune relance écrite
+        assert ligne(tableau, "Repond")["Statut"] == "Entretien"           # réponse classée
+        assert ligne(tableau, "Envoye")["Statut"] == MAIL                  # envoi repéré
+        assert ligne(tableau, "Relance Due")["Statut"] == MAIL             # relance laissée pour plus tard
+        assert "1 relance(s) due(s) : elles seront écrites par la routine « Relances »" in capsys.readouterr().out
 
     def test_relance_sans_mail_d_origine(self, tableau, messagerie, faux_modele, cfg, tmp_path):
         cv = tmp_path / "cv.pdf"

@@ -67,7 +67,11 @@ def enregistrer(lien, reponses):
         return
     tout = lire()
     tout.setdefault(lien, {}).update(reponses)
-    FICHIER.write_text(json.dumps(tout, ensure_ascii=False, indent=1), encoding="utf-8")
+    # écrit à côté puis remplace d'un seul coup : un arrêt en pleine écriture ne laisse pas un fichier coupé
+    provisoire = FICHIER.with_name(FICHIER.name + ".enregistrement")
+    provisoire.write_text(json.dumps(tout, ensure_ascii=False, indent=1), encoding="utf-8")
+    import os
+    os.replace(provisoire, FICHIER)
 
 
 def enregistrer_lettre(lien, lettre):

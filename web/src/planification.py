@@ -9,7 +9,7 @@ import re
 import subprocess
 
 PREFIXE = "LMAgent_"
-ROUTINES = ("relances", "recherche", "tout", "reponses")
+ROUTINES = ("relances", "recherche", "tout", "mails", "reponses")
 SANS_FENETRE = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 

@@ -184,6 +184,13 @@ def quitter():
     return jsonify(ok=True, routine=continue_routine)
 
 
+@api.post("/annuler_routine")
+def annuler_routine():
+    """Bouton « Annuler » de la page Routines."""
+    ok, message = routines.annuler()
+    return jsonify(ok=ok, message=message), (200 if ok else 409)
+
+
 @api.post("/routine/<nom>")
 def lancer_routine(nom):
     if nom not in routines.SCRIPTS:

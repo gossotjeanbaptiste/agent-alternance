@@ -10,21 +10,25 @@ from mails import DOMAINES_PERSO, domaine, est_adresse, est_generique, texte_ver
 from modele import llm, llm_json
 from messagerie import nom_messagerie, texte_mail, type_messagerie
 import reglages
-from tableau import MAIL, as_date
+from tableau import MAIL, TRANSMISE, as_date
 
 def classer_reponse(entreprise, sujet, corps):
     try:
         r = llm_json(
             f"Un étudiant a candidaté pour une alternance chez « {entreprise} ». Voici une réponse reçue.\n"
             f"Sujet : {sujet}\n---\n{corps[:3000]}\n---\n"
-            'Classe-la : {"type": "entretien" | "positive" | "refus" | "automatique" | "autre", '
-            '"resume": "une phrase"}. "automatique" = accusé de réception automatique sans décision.')
+            'Classe-la : {"type": "entretien" | "positive" | "refus" | "transmise" | "automatique" | "autre", '
+            '"resume": "une phrase"}. "automatique" = accusé de réception automatique sans décision. '
+            '"transmise" = la personne dit avoir transmis / transféré / fait suivre la candidature à un autre '
+            'service, aux RH ou à un collègue, sans décision pour l\'instant.')
         return r.get("type", "autre"), r.get("resume", "")
     except Exception as e:
         return "autre", f"(classement impossible : {e})"
 
 
-def mettre_a_jour(suivi, ol):
+def mettre_a_jour(suivi, ol, relancer=True):
+    """Lit la messagerie (envois, réponses, non-remises) et met le tableau à jour ; relancer=False : sans écrire
+    les brouillons de relance dus (routine « Mails reçus »)."""
     say(f"📬 Lecture de {nom_messagerie()}...")
     # on ne remonte pas plus loin que la plus ancienne candidature encore en cours
     actives = [as_date(suivi.get(r, "Date envoi")) or as_date(suivi.get(r, "Date ajout"))
@@ -42,7 +46,8 @@ def mettre_a_jour(suivi, ol):
            or re.search(r"non remis|undeliverable|delivery has failed|échec de la remise|"
                         r"n'a pas pu être remis|could not be delivered", m["sujet"], re.I)]
     aujourd_hui = date.today()
-    STATUTS_ACTIFS = {"Brouillon", MAIL, "Relance en brouillon", "Relance programmée", "Relancé"}
+    # « Candidature transmise » reste suivie (la réponse des RH sera classée) mais n'est plus relancée
+    STATUTS_ACTIFS = {"Brouillon", MAIL, "Relance en brouillon", "Relance programmée", "Relancé", TRANSMISE}
     a_relancer = []
     nb_domaines = Counter(domaine(str(suivi.get(r, "Email") or "").strip()) for r in suivi.rows())
 
@@ -52,7 +57,9 @@ def mettre_a_jour(suivi, ol):
         statut = suivi.get(row, "Statut") or ""
         if statut.startswith("Brouillon") and mail:  # adresse ajoutée à la main depuis
             statut = "Brouillon"
-        if not est_adresse(mail) or statut not in STATUTS_ACTIFS:
+        # réponse qui n'a pas pu être classée (modèle injoignable) : on retente à ce passage
+        a_reclasser = statut == "Réponse à lire" and "classement impossible" in str(suivi.get(row, "Dernière réponse") or "")
+        if not est_adresse(mail) or (statut not in STATUTS_ACTIFS and not a_reclasser):
             continue  # « linkedin », « labonnealternance »... : pas une adresse, pas de suivi mail
         mes_envois = sorted(envois.get(mail, []), key=lambda x: x[0])
         derniere = as_date(suivi.get(row, "Dernière action"))
@@ -119,14 +126,17 @@ def mettre_a_jour(suivi, ol):
         dom_ok = dom and dom not in DOMAINES_PERSO and dom not in CFG.get("domaines_ignores", []) and nb_domaines[dom] == 1
         reps = [m for m in recus if m["date"].date() >= depuis and est_adresse(m["de"]) and
                 (m["de"] == mail or (dom_ok and domaine(m["de"]) == dom))]
-        traitees = str(suivi.get(row, "Dernière réponse") or "")
-        reps = [m for m in reps if f"{m['date']:%Y-%m-%d %H:%M}" not in traitees]
+        traitees = "" if a_reclasser else str(suivi.get(row, "Dernière réponse") or "")
+        # seulement les mails plus récents que la dernière réponse traitée (« Dernière réponse » commence
+        # par sa date) : sinon, après une 2e réponse, la 1re serait reclassée à chaque passage
+        derniere_traitee = traitees[:16] if re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}", traitees) else ""
+        reps = [m for m in reps if f"{m['date']:%Y-%m-%d %H:%M}" > derniere_traitee]
         for m in sorted(reps, key=lambda x: x["date"]):
             typ, resume = classer_reponse(ent, m["sujet"], m["corps"])
             suivi.set(row, "Dernière réponse", f"{m['date']:%Y-%m-%d %H:%M} [{typ}] {resume}")
             if typ != "automatique":
                 suivi.set(row, "Statut", {"entretien": "Entretien", "positive": "Réponse positive",
-                                          "refus": "Refus"}.get(typ, "Réponse à lire"))
+                                          "refus": "Refus", "transmise": TRANSMISE}.get(typ, "Réponse à lire"))
                 suivi.set(row, "Relance prévue", None)
                 statut = "Réponse"
             say(f"   📩 {ent} : réponse [{typ}] {resume}")
@@ -148,6 +158,10 @@ def mettre_a_jour(suivi, ol):
             suivi.set(row, "Statut", "Sans réponse")
             say(f"   💤 {ent} : sans réponse après {nb} relance(s)")
 
+    if not relancer:
+        if a_relancer:
+            say(f"   {len(a_relancer)} relance(s) due(s) : elles seront écrites par la routine « Relances »")
+        return
     a_relancer.sort(key=lambda x: as_date(suivi.get(x[0], "Relance prévue")) or date.min)
     maxi = CFG.get("relances_max_par_jour", 5)
     if len(a_relancer) > maxi:

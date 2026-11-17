@@ -8,7 +8,7 @@ import routines
 from commun import CFG, P
 from tableau import PAGE_A_POSTULER, Suivi, as_date
 
-REPONDU = {"Réponse positive", "Entretien", "Accepté", "Refus", "Réponse à lire"}
+REPONDU = {"Réponse positive", "Entretien", "Accepté", "Refus", "Réponse à lire", "Candidature transmise"}
 EN_ATTENTE = {"Candidaté (mail)", "Relancé", "Relance en brouillon", "Relance programmée",
               "Candidaté (La Bonne Alternance)", "Candidaté (formulaire du site)", "Candidaté (LinkedIn)",
               "Candidaté (autre canal)"}
@@ -99,7 +99,7 @@ def ajouter(d):
     s.add(**lignes)
     s.mise_en_forme()
     try:
-        s.wb.save(s.path)
+        s.enregistrer_sur()
     except PermissionError:
         return False, "Le tableau est ouvert dans Excel : ferme-le puis réessaie.", False
     return True, f"{vals['Entreprise']} ajoutée au suivi ({statut}).", False
@@ -117,7 +117,7 @@ def modifier(n_ligne, entreprise, champs):
         s.set(row, k, v)
     s.mise_en_forme()
     try:
-        s.wb.save(s.path)
+        s.enregistrer_sur()
     except PermissionError:
         return False, "Le tableau est ouvert dans Excel : ferme-le puis réessaie."
     return True, "Enregistré."

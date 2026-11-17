@@ -305,6 +305,10 @@ la page **Paramètres**. Modèle : `interdits.example.md`.
   l'API donne un destinataire `recipient_id` ; sinon ce n'est qu'une fiche), ou formulaire du site (statut « À postuler (formulaire du site) »).
   Le site et le formulaire trouvés sont notés dans la colonne Notes.
 - Le tableau suit les envois, réponses, adresses invalides et relances ; `maj_tableau.py` comble le reste.
+- Réponses reçues par mail, classées par le modèle : « Entretien », « Réponse positive », « Refus »,
+  « Candidature transmise » (« j'ai fait suivre aux RH / au service » : plus de relance, mais la réponse suivante
+  est classée), « Réponse à lire » (le reste) ; un accusé de réception automatique ne change rien.
+  Une réponse qui n'a pas pu être classée (modèle injoignable) est retentée au lancement suivant.
 - Statuts d'une candidature envoyée, selon le canal : « Candidaté (mail) » (suivie et relancée automatiquement),
   « Candidaté (La Bonne Alternance) », « Candidaté (formulaire du site) », « Candidaté (LinkedIn) », « Candidaté (autre canal) ».
   Les anciens « Envoyé » et « Candidaté (hors mail) » sont convertis automatiquement (d'après les notes).
