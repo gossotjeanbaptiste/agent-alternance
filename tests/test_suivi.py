@@ -261,6 +261,26 @@ class TestRelances:
         assert ligne(tableau, "Relance Due")["Statut"] == MAIL             # relance laissée pour plus tard
         assert "1 relance(s) due(s) : elles seront écrites par la routine « Relances »" in capsys.readouterr().out
 
+    def test_bilan_rien_de_nouveau(self, tableau, messagerie, faux_modele, capsys):
+        """Accusé de réception déjà classé au passage précédent : rien ne change, et la routine le dit."""
+        ajouter(tableau, Entreprise="Auto", Email="contact@auto.fr", Statut=MAIL,
+                **{"Date envoi": AUJ - timedelta(days=1), "Dernière action": AUJ - timedelta(days=1),
+                   "Relance prévue": AUJ + timedelta(days=5),
+                   "Dernière réponse": f"{(AUJ - timedelta(days=1)):%Y-%m-%d} 09:00 [automatique] Accusé de réception"})
+        suivi.mettre_a_jour(tableau, messagerie(), relancer=False)
+        assert "📊 Bilan : rien de nouveau dans la messagerie" in capsys.readouterr().out
+
+    def test_bilan_des_changements(self, tableau, messagerie, faux_modele, capsys):
+        ajouter(tableau, Entreprise="Repond", Email="rh@repond.fr", Statut=MAIL,
+                **{"Date envoi": AUJ - timedelta(days=5), "Dernière action": AUJ - timedelta(days=5),
+                   "Relance prévue": AUJ + timedelta(days=5)})
+        ajouter(tableau, Entreprise="Envoye", Email="rh@envoye.fr", Statut="Brouillon")
+        faux_modele.reponses_json = [{"type": "refus", "resume": "Pas de poste"}]
+        suivi.mettre_a_jour(tableau, messagerie(recus=[recu("rh@repond.fr", jours=1)],
+                                                envois={"rh@envoye.fr": [envoi(2)]}), relancer=False)
+        bilan = next(l for l in capsys.readouterr().out.splitlines() if "📊 Bilan" in l)
+        assert "1 envoi(s) repéré(s)" in bilan and "1 réponse(s) classée(s)" in bilan
+
     def test_relance_sans_mail_d_origine(self, tableau, messagerie, faux_modele, cfg, tmp_path):
         cv = tmp_path / "cv.pdf"
         cv.write_bytes(b"%PDF")

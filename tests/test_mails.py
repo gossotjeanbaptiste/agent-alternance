@@ -58,7 +58,7 @@ class TestAdresseATrouver:
     """Brouillon sans adresse trouvée : le nom de l'entreprise dans le champ « À »."""
 
     @pytest.mark.parametrize("entreprise, adresse", [
-        ("Xefi Lyon", "a-trouver@xefi-lyon.invalid"),
+        ("Pixelo Lyon", "a-trouver@pixelo-lyon.invalid"),
         ("L'Atelier & Cie", "a-trouver@l-atelier-cie.invalid"),
         ("Société Générale", "a-trouver@societe-generale.invalid"),
         ("", "a-trouver@entreprise.invalid"),
@@ -69,7 +69,7 @@ class TestAdresseATrouver:
         assert mails.est_a_trouver(adresse) and mails.est_a_trouver(adresse.upper())
 
     def test_jamais_une_vraie_adresse(self):
-        assert not mails.est_a_trouver("rh@xefi.fr") and not mails.est_a_trouver("")
+        assert not mails.est_a_trouver("rh@pixelo.fr") and not mails.est_a_trouver("")
 
     def test_destinataire(self):
         assert mails.destinataire_a_trouver('Bo"ite <X>') == '"Boite X (adresse à trouver)" <a-trouver@bo-ite-x.invalid>'

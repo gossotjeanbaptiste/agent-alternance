@@ -37,7 +37,7 @@ def _ascii(s):
 
 
 def extension(url):
-    """« https://www.xefi.fr/contact » -> « fr »."""
+    """« https://www.pixelo.fr/contact » -> « fr »."""
     hote = urllib.parse.urlparse(url if "//" in url else "https://" + url).hostname or ""
     return hote.rsplit(".", 1)[-1].lower() if "." in hote else ""
 

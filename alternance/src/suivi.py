@@ -10,7 +10,8 @@ from mails import DOMAINES_PERSO, domaine, est_adresse, est_generique, texte_ver
 from modele import llm, llm_json
 from messagerie import nom_messagerie, texte_mail, type_messagerie
 import reglages
-from tableau import MAIL, TRANSMISE, as_date
+from rapprochement import correspond, mots_distinctifs, preuves_dans_le_mail
+from tableau import HORS_MAIL, MAIL, TRANSMISE, as_date, norm
 
 def classer_reponse(entreprise, sujet, corps):
     try:
@@ -26,6 +27,33 @@ def classer_reponse(entreprise, sujet, corps):
         return "autre", f"(classement impossible : {e})"
 
 
+def reconnus_par_le_contenu(suivi, recus, ndr, statuts_actifs):
+    """Mails reçus d'une adresse inconnue (perso, outil…) reconnus par leur contenu, la signature surtout :
+    domaine, téléphone, ou nom + code postal / ville d'UNE SEULE candidature suivie. {id(mail): (ligne, preuves)}.
+    Les mails venant du domaine d'une entreprise du tableau sont laissés aux règles d'adresse."""
+    from tableau import HORS_MAIL
+    lignes = []
+    for r in suivi.rows():
+        statut = suivi.get(r, "Statut") or ""
+        if (statut in statuts_actifs or statut in HORS_MAIL) and not statut.startswith("Brouillon"):
+            site = re.search(r"Site : (\S+)", str(suivi.get(r, "Notes") or ""))
+            lignes.append((r[0].row, suivi.get(r, "Entreprise"), str(suivi.get(r, "Email") or "").strip().lower(),
+                           suivi.get(r, "Lieu"), suivi.get(r, "Téléphone"), site.group(1) if site else ""))
+    # domaines de TOUTES les entreprises du tableau (une entreprise déjà refusée qui écrit ne compte pas pour une autre)
+    domaines_tableau = {domaine(str(suivi.get(r, "Email") or "").strip().lower()) for r in suivi.rows()} \
+        - set(DOMAINES_PERSO) - {""}
+    res = {}
+    for m in recus:
+        if m in ndr or not est_adresse(m["de"]) or domaine(m["de"]) in domaines_tableau:
+            continue
+        corps = f"{m['sujet']}\n{m['corps']}"
+        trouves = [(n, p) for n, ent, mail, lieu, tel, site in lignes
+                   if (p := preuves_dans_le_mail(corps, ent, mail, lieu, tel, site))]
+        if len(trouves) == 1:                    # plusieurs candidatures possibles : dans le doute, aucune
+            res[id(m)] = trouves[0]
+    return res
+
+
 def mettre_a_jour(suivi, ol, relancer=True):
     """Lit la messagerie (envois, réponses, non-remises) et met le tableau à jour ; relancer=False : sans écrire
     les brouillons de relance dus (routine « Mails reçus »)."""
@@ -33,7 +61,7 @@ def mettre_a_jour(suivi, ol, relancer=True):
     # on ne remonte pas plus loin que la plus ancienne candidature encore en cours
     actives = [as_date(suivi.get(r, "Date envoi")) or as_date(suivi.get(r, "Date ajout"))
                for r in suivi.rows()
-               if (suivi.get(r, "Statut") or "").startswith(("Brouillon", "Candidaté (mail)", "Relance"))]
+               if (suivi.get(r, "Statut") or "").startswith(("Brouillon", "Candidaté", "Relance"))]
     actives = [d for d in actives if d]
     jours = min(120, max(15, (date.today() - min(actives)).days + 3)) if actives else 15
     envois = ol.envois(jours)
@@ -49,7 +77,11 @@ def mettre_a_jour(suivi, ol, relancer=True):
     # « Candidature transmise » reste suivie (la réponse des RH sera classée) mais n'est plus relancée
     STATUTS_ACTIFS = {"Brouillon", MAIL, "Relance en brouillon", "Relance programmée", "Relancé", TRANSMISE}
     a_relancer = []
+    bilan = Counter()   # ce que ce passage a changé, résumé à la fin
     nb_domaines = Counter(domaine(str(suivi.get(r, "Email") or "").strip()) for r in suivi.rows())
+    # mots du nom propres à une seule entreprise du tableau (réponse depuis une adresse personnelle)
+    distinctifs = mots_distinctifs([suivi.get(r, "Entreprise") for r in suivi.rows()])
+    par_contenu = reconnus_par_le_contenu(suivi, recus, ndr, STATUTS_ACTIFS)
 
     for row in suivi.rows():
         ent = suivi.get(row, "Entreprise")
@@ -59,8 +91,14 @@ def mettre_a_jour(suivi, ol, relancer=True):
             statut = "Brouillon"
         # réponse qui n'a pas pu être classée (modèle injoignable) : on retente à ce passage
         a_reclasser = statut == "Réponse à lire" and "classement impossible" in str(suivi.get(row, "Dernière réponse") or "")
-        if not est_adresse(mail) or (statut not in STATUTS_ACTIFS and not a_reclasser):
-            continue  # « linkedin », « labonnealternance »... : pas une adresse, pas de suivi mail
+        # candidature faite autrement (formulaire, La Bonne Alternance, LinkedIn…) : réponses suivies, sans relance
+        hors_mail = statut in HORS_MAIL
+        if not (statut in STATUTS_ACTIFS or hors_mail or a_reclasser):
+            continue
+        if not est_adresse(mail):
+            if not hors_mail:
+                continue  # « linkedin », « labonnealternance »... : pas une adresse, pas de suivi mail
+            mail = ""
         mes_envois = sorted(envois.get(mail, []), key=lambda x: x[0])
         derniere = as_date(suivi.get(row, "Dernière action"))
 
@@ -74,6 +112,7 @@ def mettre_a_jour(suivi, ol, relancer=True):
                 suivi.set(row, "Relance prévue", date_relance(premier.date()))
                 statut, derniere = MAIL, premier.date()
                 say(f"   ✉️  {ent} : envoyé le {premier:%d/%m}")
+                bilan["envoi(s) repéré(s)"] += 1
             elif statut in ("Relance en brouillon", "Relance programmée") and derniere \
                     and dernier.date() > derniere:
                 nb = int(suivi.get(row, "Nb relances") or 0)
@@ -83,6 +122,7 @@ def mettre_a_jour(suivi, ol, relancer=True):
                           date_relance(dernier.date()) if nb < CFG["relances_max"] else None)
                 statut, derniere = "Relancé", dernier.date()
                 say(f"   🔁 {ent} : relance envoyée le {dernier:%d/%m}")
+                bilan["relance(s) envoyée(s) repérée(s)"] += 1
 
         # --- relance planifiée par toi (nouvel Outlook : reste dans Brouillons) ou dans la Boîte d'envoi
         if statut == "Relance en brouillon" and mail in programmes:
@@ -113,10 +153,13 @@ def mettre_a_jour(suivi, ol, relancer=True):
         depuis = as_date(suivi.get(row, "Date envoi")) or aujourd_hui
 
         # --- adresse invalide
-        if any(mail in (m["corps"] + m["sujet"]).lower() for m in ndr if m["date"].date() >= depuis):
+        # (candidature faite autrement qu'en mail : un avis de non-remise vers son adresse ne la concerne pas)
+        if mail and not hors_mail and any(mail in (m["corps"] + m["sujet"]).lower()
+                                          for m in ndr if m["date"].date() >= depuis):
             suivi.set(row, "Statut", "Adresse invalide")
             suivi.set(row, "Notes", f"Avis de non-remise reçu. {suivi.get(row, 'Notes') or ''}".strip())
             say(f"   ❌ {ent} : adresse {mail} invalide")
+            bilan["adresse(s) invalide(s)"] += 1
             continue
 
         # --- réponse reçue (même adresse, ou même domaine si ce n'est pas un domaine perso)
@@ -124,8 +167,15 @@ def mettre_a_jour(suivi, ol, relancer=True):
         # même domaine accepté seulement s'il est propre à cette entreprise dans le tableau
         # (ex. un domaine d'université présent sur 2 lignes -> adresse exacte uniquement)
         dom_ok = dom and dom not in DOMAINES_PERSO and dom not in CFG.get("domaines_ignores", []) and nb_domaines[dom] == 1
-        reps = [m for m in recus if m["date"].date() >= depuis and est_adresse(m["de"]) and
-                (m["de"] == mail or (dom_ok and domaine(m["de"]) == dom))]
+        # même adresse, même domaine, outil à son nom (…@entreprise.on.crisp.email) ou mot distinctif du nom
+        # dans l'adresse (prenom.entreprise@gmail.com) : voir rapprochement.py
+        reps = [m for m in recus if m["date"].date() >= depuis and est_adresse(m["de"]) and m not in ndr and
+                (correspond(m["de"], mail, dom_ok, distinctifs.get(norm(ent), set()))
+                 or par_contenu.get(id(m), (None,))[0] == row[0].row)]
+        for m in reps:
+            if par_contenu.get(id(m), (None,))[0] == row[0].row and not correspond(
+                    m["de"], mail, dom_ok, distinctifs.get(norm(ent), set())):
+                say(f"   🔎 {ent} : mail de {m['de']} reconnu grâce à son contenu ({', '.join(par_contenu[id(m)][1])})")
         traitees = "" if a_reclasser else str(suivi.get(row, "Dernière réponse") or "")
         # seulement les mails plus récents que la dernière réponse traitée (« Dernière réponse » commence
         # par sa date) : sinon, après une 2e réponse, la 1re serait reclassée à chaque passage
@@ -140,6 +190,7 @@ def mettre_a_jour(suivi, ol, relancer=True):
                 suivi.set(row, "Relance prévue", None)
                 statut = "Réponse"
             say(f"   📩 {ent} : réponse [{typ}] {resume}")
+            bilan["accusé(s) de réception automatique(s)" if typ == "automatique" else "réponse(s) classée(s)"] += 1
         if statut == "Réponse":
             continue
 
@@ -157,7 +208,11 @@ def mettre_a_jour(suivi, ol, relancer=True):
                 and date_relance(derniere) <= aujourd_hui:
             suivi.set(row, "Statut", "Sans réponse")
             say(f"   💤 {ent} : sans réponse après {nb} relance(s)")
+            bilan["passée(s) en « Sans réponse »"] += 1
 
+    say("📊 Bilan : " + (", ".join(f"{n} {quoi}" for quoi, n in bilan.items()) if bilan else
+                         "rien de nouveau dans la messagerie depuis le dernier passage (les réponses déjà classées et "
+                         "les accusés de réception automatiques ne changent pas le tableau)."))
     if not relancer:
         if a_relancer:
             say(f"   {len(a_relancer)} relance(s) due(s) : elles seront écrites par la routine « Relances »")

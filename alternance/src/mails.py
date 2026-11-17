@@ -31,7 +31,7 @@ A_TROUVER = ".invalid"
 
 
 def adresse_a_trouver(entreprise):
-    """Adresse de remplacement propre à l'entreprise : « Xefi Lyon » -> a-trouver@xefi-lyon.invalid."""
+    """Adresse de remplacement propre à l'entreprise : « Pixelo Lyon » -> a-trouver@pixelo-lyon.invalid."""
     import unicodedata
     s = unicodedata.normalize("NFKD", str(entreprise or "")).encode("ascii", "ignore").decode().lower()
     s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")[:50].strip("-")
@@ -39,7 +39,7 @@ def adresse_a_trouver(entreprise):
 
 
 def destinataire_a_trouver(entreprise):
-    """Champ « À » d'un brouillon sans adresse : « Xefi (adresse à trouver) » <a-trouver@xefi.invalid>."""
+    """Champ « À » d'un brouillon sans adresse : « Pixelo (adresse à trouver) » <a-trouver@pixelo.invalid>."""
     nom = re.sub(r'["<>\\]', "", str(entreprise or "")).strip() or "Entreprise"
     return f'"{nom} (adresse à trouver)" <{adresse_a_trouver(entreprise)}>'
 

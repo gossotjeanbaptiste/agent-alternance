@@ -121,22 +121,22 @@ def filtrer(cartes, recherche, filtres):
 
 
 CARTES_F = [
-    {"entreprise": "Xefi", "texte": "Xefi Technicien 69003 Lyon rh@xefi.fr", "type": "2", "villenom": "Lyon", "source": "LinkedIn"},
+    {"entreprise": "Pixelo", "texte": "Pixelo Technicien 69003 Lyon rh@pixelo.fr", "type": "2", "villenom": "Lyon", "source": "LinkedIn"},
     {"entreprise": "Écureuil", "texte": "Écureuil Développeur Bron", "type": "0", "villenom": "Bron", "source": "La Bonne Alternance"},
     {"entreprise": "Martin", "texte": "Martin Développeur web Lyon", "type": "1", "villenom": "Lyon", "source": "La Bonne Alternance"},
 ]
 
 
 @pytest.mark.parametrize("recherche, filtres, attendu", [
-    ("", [], ["Xefi", "Écureuil", "Martin"]),
+    ("", [], ["Pixelo", "Écureuil", "Martin"]),
     ("ecureuil", [], ["Écureuil"]),                                     # sans accent, sans majuscule
     ("developpeur lyon", [], ["Martin"]),                               # tous les mots, dans n'importe quel ordre
-    ("xefi.fr", [], ["Xefi"]),                                          # adresse mail
-    ("", [{"champ": "villenom", "valeur": "Lyon"}], ["Xefi", "Martin"]),
+    ("pixelo.fr", [], ["Pixelo"]),                                          # adresse mail
+    ("", [{"champ": "villenom", "valeur": "Lyon"}], ["Pixelo", "Martin"]),
     ("", [{"champ": "type", "valeur": "0"}], ["Écureuil"]),
     ("developpeur", [{"champ": "source", "valeur": "La Bonne Alternance"}, {"champ": "villenom", "valeur": "Bron"}],
      ["Écureuil"]),
-    ("", [{"champ": "villenom", "valeur": ""}], ["Xefi", "Écureuil", "Martin"]),   # « Toutes les villes »
+    ("", [{"champ": "villenom", "valeur": ""}], ["Pixelo", "Écureuil", "Martin"]),   # « Toutes les villes »
     ("introuvable", [], []),
 ])
 def test_filtres(recherche, filtres, attendu):

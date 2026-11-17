@@ -67,7 +67,7 @@ def _racine(url):
 
 
 def ressemble(nom, url):
-    """Vrai si le nom de domaine correspond au nom de l'entreprise (berger-levrault.com ↔ Berger Levrault)."""
+    """Vrai si le nom de domaine correspond au nom de l'entreprise (lambert-morel.com ↔ Lambert Morel)."""
     dom = _racine(url)
     if not dom or any(a in dom for a in ANNUAIRES):
         return False
