@@ -218,7 +218,7 @@ def cle_lieu(lieu):
 
 def deja_contactee(o, noms, domaines, sirets):
     """Vrai si l'entreprise est déjà dans le tableau, même écrite un peu différemment
-    (ex. « Xefi Lyon Est » vs « XEFI », « Lidl Villeurbanne » vs « LIDL »).
+    (ex. « Pixelo Lyon Est » vs « PIXELO », « Brio Villeurbanne » vs « BRIO »).
     noms : {nom normalisé: villes (cle_lieu)} (un simple ensemble de noms est aussi accepté).
     Même nom mais ville différente = autre établissement, pas un doublon ; si l'une des deux villes est
     inconnue, on considère que c'est la même entreprise (prudence)."""

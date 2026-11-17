@@ -2,104 +2,127 @@
 
 Agent IA local (LM Studio + Qwen3.5 9B) et routine de recherche d'alternance : candidatures et relances
 écrites par le modèle, déposées en **brouillon** (Outlook classique ou Gmail/IMAP), suivi dans un tableau Excel,
-interface web locale (Flask). Le mode d'emploi complet est dans `README.md` ; ce fichier dit comment travailler
-dans le dépôt et où en est le projet.
+interface web locale (Flask). Distribué aussi en version installée (`LMAgent.exe` + installeur `.msi`, mises à jour
+automatiques). Le mode d'emploi complet est dans `README.md` ; ce fichier dit comment travailler dans le dépôt et
+où en est le projet.
 
 ## Règles à respecter
 
 - **Ne jamais envoyer de mail** : le script ne fait que des brouillons. Pas d'envoi différé posé par le script non plus
   (l'utilisateur planifie lui-même dans le nouvel Outlook ou Gmail).
 - **Français** partout : code, commentaires, messages, journal, README, commits.
-- **Petits fichiers** : un module par sujet ; les scripts à lancer à la racine de `alternance/`, les modules internes
-  dans `alternance/src/` ; dans `web/`, seul `app.py` à la racine, le reste dans `web/src/`.
+- **Petits fichiers** : un module par sujet ; à la racine seulement `lmagent.py` (point d'entrée), les modules
+  généraux dans `src/` ; les scripts à lancer à la racine de `alternance/`, les modules internes dans
+  `alternance/src/` ; dans `web/`, seul `app.py` à la racine, le reste dans `web/src/`.
 - **Deux branches à garder synchronisées** : `main` (avec « la tour », PC distant à carte graphique, via Tailscale/SSH/
-  Wake-on-LAN) et `local-simple` (100 % local : pas de `tour.py`, pas de `docs/GUIDE_TOUR.md`, pas de page Tour).
+  Wake-on-LAN) et `local-simple` (100 % local : pas de `src/tour.py`, pas de `docs/GUIDE_TOUR.md`, pas de page Tour).
   Tout changement pertinent va sur les deux (commit sur `main`, puis cherry-pick sur `local-simple`). Le `README.md`
-  diffère entre les branches : en cas de conflit, garder la version de la branche et y réappliquer la modification.
+  et `src/agent.py` diffèrent entre les branches : en cas de conflit, garder la version de la branche et y réappliquer
+  la modification. Un changement qui ne concerne que la tour reste sur `main`.
 - **Récupérer avant de travailler** (`git fetch`) : un autre PC pousse aussi sur les deux branches.
 - **Aucun secret ni donnée personnelle dans git** : configs réelles, profil, tableau, export LinkedIn, CV restent
   hors du dépôt (voir `.gitignore`). Chercher les secrets avant chaque commit. Les exemples restent génériques
-  (villes d'exemple autour de Lyon, `utilisateur@nom-de-la-tour`, `toi@gmail.com`…).
+  (villes d'exemple autour de Lyon ou Grenoble, `utilisateur@nom-de-la-tour`, `toi@gmail.com`…).
+- **Jamais de vrais noms** : après un diagnostic sur les vraies données (tableau, mails), ne reprendre dans le code,
+  les tests, les commentaires ou les messages de commit **aucun** nom d'entreprise ou de personne réelle, ni adresse :
+  transposer en noms inventés (Forgeval Dev, Comptanova, Pixelo, Lambert-Morel…).
 - **Tests sans effet de bord** : mode `--essai` (rien n'est écrit), copie du tableau pour tester une écriture,
   faux modèle (`llm_json` remplacé) pour tester les consignes. Ne pas faire tourner le modèle sur le processeur
   du portable ; ne pas utiliser la tour si elle est occupée (le script vérifie sa carte graphique) ; ne jamais la
-  mettre en veille sans demander.
+  mettre en veille sans demander. Un diagnostic sur la tour ou sur la messagerie réelle se fait en lecture seule.
 - **Pas de valeur en dur** : tout réglage utile à l'utilisateur est décrit dans `alternance/src/reglages.py`
   (section, libellé, type, défaut, aide), lu dans le code avec `reglages.valeur("chemin")` et modifiable dans la page
   Paramètres. Seuls les détails techniques (délais réseau, tailles de lecture, noms des statuts) restent dans le code.
 - **Tests** : `python -m pytest` (dossier `tests/`, socle dans `tests/conftest.py` : données temporaires via
-  `LMAGENT_DONNEES`, réseau bloqué, modèle / messagerie simulés, config remise à zéro après chaque test).
-  Toute nouvelle fonction testable reçoit ses tests ; ne pas tester la tour ni la connexion au serveur LM Studio.
+  `LMAGENT_DONNEES` / `LMAGENT_DOSSIER`, réseau bloqué, modèle / messagerie simulés, config remise à zéro après chaque
+  test). Toute nouvelle fonction testable reçoit ses tests ; ne pas tester la tour ni la connexion au serveur
+  LM Studio. **Ne committer que si toute la suite passe** (vérifier le code de sortie, pas seulement la dernière ligne).
+  Les scripts JavaScript des pages sont vérifiés par Node.js (`tests/test_javascript.py`) : un seul retour à la ligne
+  dans une chaîne casse tout le script d'une page.
 - **Chemins** : ne jamais construire un chemin de fichier personnel à partir du dossier du code ; passer par
   `src/emplacements.py` (config, journaux, workspace, LinkedIn…) ou `donnees.chemin()` / `commun.chemin_tableau()`.
+- **Enregistrements** : le tableau (`Suivi.enregistrer_sur`) et `reponses_lba.json` sont écrits à côté puis remplacés
+  d'un seul coup (une routine annulée ne laisse jamais un fichier à moitié écrit) ; garder ce principe.
 - **Tour facultative** : réglage `utiliser_tour` (config.json) ; désactivée, seul « ce PC » est utilisé et tout ce qui
   concerne la tour est caché (`agent.utiliser_tour()`, `tour_web.disponible()`).
 - **Interface web** : uniquement sur 127.0.0.1, connexion obligatoire (`web/src/auth.py` : un seul compte,
-  mot de passe haché dans `alternance/donnees/acces_interface.json`), jeton exigé pour chaque action. Après une modification du code,
-  l'interface en cours doit être redémarrée (⏻ Quitter puis relance).
+  mot de passe haché dans `acces_interface.json` du dossier de données), jeton exigé pour chaque action. Après une
+  modification du code, l'interface en cours doit être redémarrée (Quitter par l'icône ou ⏻, puis relance).
+- **Remplacements de texte** : passer par l'outil Edit ou un script Python écrit dans un fichier (un heredoc bash mange
+  les antislashs et casse le code Python ou les chemins Windows).
 
 ## Où est quoi
 
 | Chemin | Contenu |
 |---|---|
-| `lmagent.py` | point d'entrée unique (devient `LMAgent.exe`) : interface, `--routine`, `--postuler`, `--maj-tableau`, `--agent` ; `commande_soi()` pour se relancer |
-| `web/src/icone_tache.py` | icône près de l'horloge (pystray) : Ouvrir / Quitter LMAgent ; l'exe n'a pas de console, sa sortie va dans `logs/` (`interface_…`, `web_…_planifiee`), les commandes interactives ouvrent leur console (`lmagent.preparer_sortie`) |
-| `web/src/planification.py` | routines quotidiennes via le Planificateur de tâches (`LMAgent_<routine>`) |
-| `src/version.py`, `src/mise_a_jour.py` | numéro de version (remplacé par le tag à la publication) ; mises à jour automatiques de la version installée (GitHub Releases, empreinte SHA-256, `msiexec /passive` : barre de progression sans questions, comme MyCMS) |
-| `installeur/`, `.github/workflows/publier.yml` | `LMAgent.spec` (PyInstaller), `LMAgent.wxs` (WiX v5, installation par utilisateur) ; un tag `vX.Y.Z` sur le dépôt public publie l'installeur |
-| `src/emplacements.py` | où vivent les fichiers personnels : dossier du projet (lancé depuis le code), `%APPDATA%\LMAgent` (version installée) ou `LMAGENT_DOSSIER` (tests) |
-| `src/agent.py` | agent en chat / tâches, connexion LM Studio (tour puis ce PC), choix du moteur GPU, journal (`logs/`) |
-| `src/tour.py` (main) | réveil, veille, état de la tour ; `docs/GUIDE_TOUR.md` pour l'installer |
-| `alternance/relances.py`, `recherche.py`, `alternance.py` | routines (suivi + relances, nouvelles candidatures, les deux) |
-| `alternance/postuler.py` | assistant de candidature par formulaire (La Bonne Alternance, formulaire du site) |
+| `lmagent.py` | point d'entrée unique (devient `LMAgent.exe`) : interface, `--routine <nom>` (`--fois N`, `--essai`), `--postuler`, `--maj-tableau`, `--agent` ; `commande_soi()` pour se relancer ; sortie en UTF-8 ligne par ligne, dans `logs/` quand il n'y a pas de console |
+| `src/emplacements.py` | où vivent les fichiers personnels : `perso/` du projet (lancé depuis le code ; les anciens fichiers de la racine y sont rangés au démarrage), `%APPDATA%\LMAgent` (version installée) ou `LMAGENT_DOSSIER` (tests) ; données de la routine dans `alternance/donnees/` (code) ou `donnees/` (installée) |
+| `src/agent.py` | agent en chat / tâches, connexion LM Studio (tour puis ce PC), choix du moteur GPU, journal (`logs/`), déchargement du modèle à la fin |
+| `src/boucle.py` | routine en plusieurs passages : modèle et LM Studio gardés ouverts jusqu'au dernier passage (fichier d'état partagé) |
+| `src/tour.py` (main) | réveil, veille, état de la tour, ouverture de LM Studio (tâche planifiée dans la session) et diagnostic en lecture seule en cas d'échec ; `docs/GUIDE_TOUR.md` pour l'installer |
+| `src/version.py`, `src/mise_a_jour.py` | numéro de version (remplacé par le tag à la publication) ; mises à jour automatiques de la version installée (GitHub Releases, empreinte SHA-256, `msiexec /passive` lancé par un PowerShell sans fenêtre — jamais `DETACHED_PROCESS`, qui le fait quitter sans rien faire) |
+| `installeur/`, `.github/workflows/publier.yml` | `LMAgent.spec` (PyInstaller, sans console ; **ajouter chaque nouveau module à `MODULES`**), `LMAgent.wxs` (WiX v5, installation par utilisateur) ; un tag `vX.Y.Z` sur le dépôt public publie l'installeur |
+| `outils/` | `lancer_interface.bat`, `planifier.ps1` (tâches de l'agent), `generer_logo.py` (logo style MyCMS à partir de `outils/logo/`) |
+| `alternance/relances.py`, `recherche.py`, `alternance.py` | routines : suivi + relances, nouvelles candidatures, les deux ; mode `mails` (lecture de la messagerie seulement) |
+| `alternance/reponses_lba.py` | routine « Réponses La Bonne Alternance » : lettre et réponses manquantes de toutes les candidatures La Bonne Alternance |
+| `alternance/postuler.py` | assistant de candidature par formulaire en ligne de commande ; fonctions réutilisées par l'interface (`ecrire_lettre`, `reponses_de`, `lettres_des_brouillons`) |
 | `alternance/maj_tableau.py` | mise à jour interactive du tableau |
 | `alternance/donnees/` | **données personnelles** (non versionnées) + modèles `*.example.*` versionnés : `config_alternance.json`, `profil.md`, `interdits.md` (contre-prompt), `suivi_alternance.xlsx`, `reponses_lba.json`, `entreprises_refusees.csv` |
-| `alternance/src/donnees.py` | chemins des données ; range automatiquement les anciens fichiers de `alternance/` dans `donnees/` |
-| `alternance/src/commun.py` | config, profil, contre-prompt (`interdits()`), mode essai, signature des mails |
+| `alternance/src/donnees.py`, `commun.py` | chemins des données (rangement des anciens fichiers) ; config, profil, contre-prompt, mode essai, signature, pièces jointes |
 | `alternance/src/reglages.py` | tous les réglages modifiables (défauts, aides) ; `web/src/reglages_web.py` les affiche et les enregistre |
+| `alternance/src/modele.py` | appels au modèle ; `lire_json` tolère ses erreurs de JSON (virgule en trop…), sinon redemande une fois |
 | `alternance/src/messagerie.py` | choisit `outlook.py` (COM) ou `imap.py` selon `messagerie.type` — même interface |
-| `alternance/src/suivi.py` | mise à jour du suivi, réponses, non-remises, relances |
-| `alternance/src/candidatures.py`, `sources.py`, `sites.py` | choix des entreprises (liste perso, alertes LinkedIn, API La Bonne Alternance), site et contact de l'entreprise |
+| `alternance/src/suivi.py` | lecture de la messagerie : envois, réponses classées par le modèle, non-remises, relances (`relancer=False` pour « Mails reçus ») ; bilan en fin de lecture |
+| `alternance/src/rapprochement.py` | quelle candidature un mail reçu concerne : adresse, domaine, outil à son nom (`…@entreprise.on.crisp.email`), mot distinctif du nom dans une adresse perso, sinon preuves dans le contenu (domaine, téléphone, nom + code postal) si une seule candidature correspond |
+| `alternance/src/candidatures.py`, `sources.py`, `sites.py` | choix des entreprises (liste perso, alertes LinkedIn, API La Bonne Alternance), site et contact de l'entreprise ; sans adresse : brouillon adressé à « Entreprise (adresse à trouver) » `<a-trouver@….invalid>` |
 | `alternance/src/pays.py` | sites d'entreprises en France seulement (extension, sinon code postal / ville / téléphone / SIRET dans les pages) ; réglage `sites.verifier_france` |
-| `alternance/src/reponses.py`, `refus.py` | lettres et réponses des candidatures par formulaire ; liste des entreprises écartées (raison, site, décision) |
-| `web/src/ecartees.py` | page « Écartées » : raison, site / recherche Google, « Candidater quand même » (ajout à la feuille « À contacter »), « Abandonner » (ne revient plus), « Remettre » |
-| `alternance/src/tableau.py` | tableau Excel (openpyxl, Excel non nécessaire), statuts et couleurs |
-| `web/src/assistant.py` | assistant de premier lancement (tour oui/non, messagerie, villes, profil, CV, import) ; s'affiche tant que `config.json` manque ou contient `assistant_a_faire: true` |
-| `web/app.py`, `web/src/`, `web/templates/` | interface : tableau de bord, Suivi, À postuler, Routines, Tour, LinkedIn, Journal, Paramètres |
-| `outils/generer_logo.py` | génère `web/static/logo.png`, `logo-wide.png` et `favicon.ico` (style MyCMS) à partir des icônes de `outils/logo/` |
-| `config.json` | réglages de l'agent et de la tour (non versionné ; modèle `config.example.json`) |
-| `linkedin/` | export LinkedIn de l'utilisateur (non versionné), lu par la page LinkedIn |
+| `alternance/src/reponses.py`, `refus.py` | lettres et réponses des formulaires (réponses pour **toute** candidature La Bonne Alternance, spontanée comprise) ; liste des entreprises écartées (raison, site, décision) |
+| `alternance/src/tableau.py` | tableau Excel (openpyxl), statuts et couleurs, doublons (même SIRET, domaine, ou nom **et** ville : plusieurs établissements du même nom permis), `PAGE_A_POSTULER` |
+| `web/app.py`, `web/src/`, `web/templates/` | interface : tableau de bord, Suivi (avec formulaire d'ajout), À postuler, Écartées, Routines, Tour, LinkedIn, Journal, Paramètres |
+| `web/src/lettres.py`, `redaction.py` | cartes de la page À postuler (lettres, réponses, adresses à trouver) ; bouton « Écrire ce qui manque » (modèle puis déchargement) |
+| `web/src/ecartees.py` | page « Écartées » : raison, site / Google, « Candidater quand même » (feuille « À contacter »), « Abandonner », « Remettre » ; candidatures faites retirées |
+| `web/src/routines.py`, `planification.py` | lancement d'une routine en arrière-plan, bouton « Annuler » (arbre de processus, puis modèle déchargé) ; routines quotidiennes via le Planificateur de tâches (`LMAgent_<routine>`) |
+| `web/src/icone_tache.py` | icône près de l'horloge (pystray) : Ouvrir / Quitter LMAgent |
+| `web/src/assistant.py` | assistant de premier lancement (tour oui/non, messagerie, villes, profil, CV, import d'une installation existante, `perso/` compris) |
+| `web/static/tri.js`, `filtres.js` | tri, recherche et filtres des pages À postuler et Écartées (testés par Node.js) |
+| `config.json` | réglages de l'agent et de la tour (non versionné, dans `perso/` ou AppData ; modèle `config.example.json`) |
 
 ## Fonctionnement en bref
 
 - **Statuts** : « Brouillon », « Brouillon (adresse à trouver) », « À postuler (La Bonne Alternance) »,
   « À postuler (formulaire du site) », puis « Candidaté (mail) » (suivi et relances automatiques),
-  « Candidaté (La Bonne Alternance / formulaire du site / LinkedIn / autre canal) », « Relance en brouillon »,
-  « Relance programmée », « Relancé », réponses (« Entretien », « Réponse positive », « Refus »,
-  « Candidature transmise » : suivie sans relance, « Réponse à lire »)… Liste dans `tableau.py` ; Excel la lit dans une feuille cachée
-  « Statuts » (limite de 255 caractères d'une liste écrite en dur).
-- **Candidature** : adresse mail trouvée → brouillon de mail ; sinon formulaire La Bonne Alternance **seulement si**
-  l'API donne un `recipient_id` (bouton « Postuler ») ; sinon formulaire de contact du site ; sinon « adresse à trouver ».
-  Les candidatures par formulaire ne créent **pas** de brouillon : lettre et réponses dans `reponses_lba.json`.
+  « Candidaté (La Bonne Alternance / formulaire du site / LinkedIn / autre canal) » (réponses suivies, sans relance),
+  « Relance en brouillon », « Relance programmée », « Relancé », réponses (« Entretien », « Réponse positive »,
+  « Refus », « Candidature transmise » : suivie sans relance, « Réponse à lire »)… Liste dans `tableau.py` ; Excel la
+  lit dans une feuille cachée « Statuts » (limite de 255 caractères d'une liste écrite en dur).
+- **Candidature** : adresse mail trouvée (site en France) → brouillon de mail ; sinon formulaire La Bonne Alternance
+  **seulement si** l'API donne un `recipient_id` (bouton « Postuler ») ; sinon formulaire de contact du site ; sinon
+  « adresse à trouver ». Les candidatures par formulaire ne créent **pas** de brouillon : lettre et réponses dans
+  `reponses_lba.json`.
 - **Filtre d'activité** : candidatures spontanées limitées aux codes NAF informatiques (`naf_acceptes`) ; les
-  entreprises écartées sont notées dans `entreprises_refusees.csv`.
+  entreprises écartées sont notées dans `entreprises_refusees.csv` et traitées dans la page Écartées.
 - **Consignes du modèle** : profil (`profil.md`) au début, contre-prompt (`interdits.md`) à la fin, relu à chaque mail.
   La taille de l'entreprise n'est volontairement pas donnée au modèle.
-- **Routines depuis l'interface** : `web/src/routines.py` lance le script dans un processus séparé, enveloppé dans
-  une petite boucle (`BOUCLE`) qui le relance N fois d'affilée (champ « passages », 1 à 50) ; un seul journal
-  `logs/web_…_xN.txt`, la boucle continue même si l'interface est arrêtée.
+- **Routines** (page Routines, planifiables) : Relances, Recherche, Les deux, Mails reçus (lecture seule de la
+  messagerie, sans relance), Réponses La Bonne Alternance. Lancées par `lmagent --routine <nom> [--fois N]` dans un
+  processus séparé ; plusieurs passages = une boucle qui relance des processus neufs (journal commun dans
+  `logs/web_…`, écrit en temps réel, modèle gardé chargé entre les passages) ; annulables depuis la page.
 - **Pièces jointes** : `commun.pieces_jointes()` ne renvoie que les fichiers qui existent ; un chemin cassé
-  (config d'un autre PC) est cherché par son nom dans `pieces_jointes/`, sinon signalé dans le journal
-  (avant : ignoré en silence, les brouillons partaient sans CV).
+  (config d'un autre PC) est cherché par son nom dans `pieces_jointes/`, sinon signalé dans le journal.
 - **Messagerie** : Outlook classique par COM (le nouvel Outlook n'a pas d'API ; Microsoft Graph refusé par le tenant
   de l'école) ou Gmail par IMAP (mot de passe d'application ; mails programmés trouvés avec `X-GM-RAW "in:scheduled"`,
   reconnexion automatique, lecture des brouillons en une requête sans les pièces jointes).
+- **Version installée** : l'exe n'a pas de console (icône près de l'horloge) ; il se met à jour seul au démarrage
+  et toutes les 6 h (fenêtre de progression de Windows), sauf si le réglage est coupé ; c'est la version installée
+  qui installe la suivante, donc une correction de la mise à jour ne vaut qu'à partir de la version d'après.
 
-## Où on en est (13/11/2026)
+## Où on en est (17/11/2026)
 
-Fait et en service : routines quotidiennes, interface web complète, Gmail ou Outlook au choix, recherche du site et
-des formulaires de contact, réponses aux questions de La Bonne Alternance, contre-prompt, signature réglable
-(page Paramètres), liste des refus, rangement des données dans `alternance/donnees/`.
+Fait et en service : version installée 1.2.0 (installeur, mises à jour automatiques, icône), routines (dont Mails
+reçus et Réponses La Bonne Alternance, annulables, planifiables), pages À postuler / Écartées (tri, recherche,
+filtres, bouton « Écrire ce qui manque »), formulaire d'ajout dans Suivi, sites en France seulement, réponses
+rattachées même depuis un outil de support, une adresse perso ou d'après la signature, diagnostic de LM Studio sur
+la tour, racine du dépôt rangée (`src/`, `outils/`, `docs/`, `perso/`).
 
 Pistes ouvertes, non demandées :
 - exceptions au filtre d'activité (éditeurs de logiciels déclarés comme commerces, réparation d'ordinateurs 95.11Z) ;
@@ -108,6 +131,8 @@ Pistes ouvertes, non demandées :
 ## Dépôt public
 
 Une copie anonymisée existe sur un dépôt public (remote `public`), branches `main` et `local-simple`, **sans
-historique** : chaque publication est un nouveau commit (`git commit-tree <branche>^{tree} -p public/<branche>`).
-Ne publier **que sur demande**, après avoir vérifié les deux arborescences (aucun nom, école, ville réelle, IP,
-nom de machine, identifiant ni secret ; seuls les modèles `*.example.*` de `alternance/donnees/`).
+historique privé** : chaque publication est un nouveau commit (`git commit-tree <branche>^{tree} -p public/<branche>`)
+avec un message rédigé pour l'occasion. Ne publier **que sur demande**, après avoir vérifié les deux arborescences
+(aucun nom, école, ville réelle, IP, nom de machine, identifiant ni secret, aucun nom d'entreprise ou de personne
+tiré des données ; seuls les modèles `*.example.*` de `alternance/donnees/`). Une version se publie avec un tag
+`vX.Y.Z` poussé sur `public` : le workflow fabrique l'installeur (vérifier ensuite sa taille, ~18 Mo).

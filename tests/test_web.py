@@ -170,9 +170,9 @@ class TestPostuler:
         assert "Abandonner (brouillon à la corbeille)" in h and "Sans Adresse (adresse à trouver)" in h
 
     def test_lettre_sans_destinataire(self):
-        brouillons = [("Candidature alternance", "Bonjour, je souhaite rejoindre XEFI SAS à Lyon"),
+        brouillons = [("Candidature alternance", "Bonjour, je souhaite rejoindre PIXELO SAS à Lyon"),
                       ("Candidature chez Autre", "...")]
-        assert lettres.lettre_sans_destinataire("Xefi", brouillons).startswith("Bonjour")
+        assert lettres.lettre_sans_destinataire("Pixelo", brouillons).startswith("Bonjour")
         assert lettres.lettre_sans_destinataire("Autre", brouillons) == "..."
         assert lettres.lettre_sans_destinataire("Inconnue", brouillons) is None
         assert lettres.lettre_sans_destinataire("AB", brouillons) is None          # nom trop court : pas de devinette

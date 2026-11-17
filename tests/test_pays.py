@@ -9,7 +9,7 @@ import sites
 
 
 @pytest.mark.parametrize("url, attendu", [
-    ("https://www.xefi.fr/contact", "France"), ("https://exemple.re", "France"), ("exemple.bzh", "France"),
+    ("https://www.pixelo.fr/contact", "France"), ("https://exemple.re", "France"), ("exemple.bzh", "France"),
     ("https://groupe.lu", "Luxembourg"), ("https://boite.be/fr", "Belgique"), ("https://firma.ch", "Suisse"),
     ("https://company.us", "États-Unis"), ("https://exemple.co.uk", "Royaume-Uni"), ("https://x.zz", "pays « .zz »"),
     ("https://boite.com", ""), ("https://boite.net", ""), ("https://boite.eu", ""), ("https://boite.io", ""),
@@ -90,11 +90,11 @@ class TestExplorerSite:
 
 class TestTrouverLeSite:
     def test_deviner_ecarte_l_homonyme_etranger(self, faux_web):
-        """berger-levrault.com répond avec le bon nom, mais c'est une entreprise des États-Unis : on n'en veut pas."""
-        faux_web["https://bergerlevrault.fr"] = ("Autre chose", "https://bergerlevrault.fr")
-        faux_web["https://bergerlevrault.com"] = ("Berger Levrault Inc., Austin TX, USA", "https://bergerlevrault.com")
-        faux_web["https://berger-levrault.fr"] = ("<h1>Berger-Levrault</h1>", "https://www.berger-levrault.fr/")
-        assert sites.deviner_site("Berger Levrault", LIEU) == "https://www.berger-levrault.fr"
+        """lambert-morel.com répond avec le bon nom, mais c'est une entreprise des États-Unis : on n'en veut pas."""
+        faux_web["https://lambertmorel.fr"] = ("Autre chose", "https://lambertmorel.fr")
+        faux_web["https://lambertmorel.com"] = ("Lambert Morel Inc., Austin TX, USA", "https://lambertmorel.com")
+        faux_web["https://lambert-morel.fr"] = ("<h1>Lambert-Morel</h1>", "https://www.lambert-morel.fr/")
+        assert sites.deviner_site("Lambert Morel", LIEU) == "https://www.lambert-morel.fr"
 
     def test_recherche_ecarte_les_resultats_etrangers(self, monkeypatch, faux_web):
         monkeypatch.setattr(sites.time, "sleep", lambda s: None)

@@ -44,19 +44,19 @@ def test_a_postuler_sans_date_d_envoi(client, tableau):
 
 
 def test_doublon_signale_puis_force(client, tableau):
-    tableau.add(**{"Entreprise": "Xefi", "Lieu": "69003 Lyon", "Statut": "Refus"})
+    tableau.add(**{"Entreprise": "Pixelo", "Lieu": "69003 Lyon", "Statut": "Refus"})
     tableau.save()
-    r = client.post("/api/suivi/ajouter", json={"Entreprise": "XEFI", "Lieu": "Lyon", "Statut": "Candidaté (autre canal)"})
+    r = client.post("/api/suivi/ajouter", json={"Entreprise": "PIXELO", "Lieu": "Lyon", "Statut": "Candidaté (autre canal)"})
     assert r.status_code == 400 and r.get_json()["doublon"] and "déjà dans le tableau" in r.get_json()["message"]
-    r = client.post("/api/suivi/ajouter", json={"Entreprise": "XEFI", "Lieu": "Lyon", "Statut": "Candidaté (autre canal)",
+    r = client.post("/api/suivi/ajouter", json={"Entreprise": "PIXELO", "Lieu": "Lyon", "Statut": "Candidaté (autre canal)",
                                                 "forcer": True})
     assert r.get_json()["ok"]
 
 
 def test_autre_etablissement_du_meme_nom(client, tableau):
-    tableau.add(**{"Entreprise": "Xefi", "Lieu": "69003 Lyon", "Statut": "Refus"})
+    tableau.add(**{"Entreprise": "Pixelo", "Lieu": "69003 Lyon", "Statut": "Refus"})
     tableau.save()
-    r = client.post("/api/suivi/ajouter", json={"Entreprise": "Xefi", "Lieu": "38000 Grenoble",
+    r = client.post("/api/suivi/ajouter", json={"Entreprise": "Pixelo", "Lieu": "38000 Grenoble",
                                                 "Statut": "Candidaté (autre canal)"})
     assert r.get_json()["ok"]
 

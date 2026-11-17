@@ -11,7 +11,7 @@ from tableau import Suivi
 
 class TestNorm:
     @pytest.mark.parametrize("brut, attendu", [
-        ("Berger-Levrault", "bergerlevrault"),
+        ("Lambert-Morel", "lambertmorel"),
         ("SARL Exemple Informatique", "exempleinformatique"),
         ("Groupe Ébène SAS", "ebene"),
         ("  Société   Démo  ", "societedemo"),
@@ -36,14 +36,14 @@ class TestAsDate:
 
 class TestDejaContactee:
     def setup_method(self):
-        self.noms = {tableau.norm(n) for n in ("XEFI", "Lidl", "Berger Levrault")}
+        self.noms = {tableau.norm(n) for n in ("PIXELO", "Brio", "Lambert Morel")}
         self.domaines = {"exemple.fr"}
         self.sirets = {"12345678900011"}
 
     @pytest.mark.parametrize("o, attendu", [
-        ({"entreprise": "Xefi Lyon Est"}, True),          # nom contenu dans l'autre
-        ({"entreprise": "LIDL"}, True),
-        ({"entreprise": "Berger-Levrault"}, True),
+        ({"entreprise": "Pixelo Lyon Est"}, True),          # nom contenu dans l'autre
+        ({"entreprise": "BRIO"}, True),
+        ({"entreprise": "Lambert-Morel"}, True),
         ({"entreprise": "Nouvelle Boîte"}, False),
         ({"entreprise": "Autre", "email": "rh@exemple.fr"}, True),   # même domaine
         ({"entreprise": "Autre", "email": "rh@ailleurs.fr"}, False),
@@ -58,18 +58,18 @@ class TestDejaContactee:
 
 class TestMemeNomAutreAdresse:
     """Plusieurs établissements du même nom : doublon seulement si même ville (ou ville inconnue)."""
-    noms = {"xefi": {"lyon"}, "lidl": {"villeurbanne", "bron"}, "capgemini": {""}}
+    noms = {"pixelo": {"lyon"}, "brio": {"villeurbanne", "bron"}, "techvia": {""}}
 
     @pytest.mark.parametrize("o, attendu", [
-        ({"entreprise": "XEFI", "lieu": "12 rue X 69003 Lyon"}, True),            # même ville
-        ({"entreprise": "XEFI", "lieu": "5 avenue Y 38000 Grenoble"}, False),        # autre établissement
-        ({"entreprise": "Xefi Grenoble", "lieu": "38000 Grenoble"}, False),             # nom proche, autre ville
-        ({"entreprise": "Xefi Lyon Est", "lieu": "69800 Saint-Priest"}, False),
-        ({"entreprise": "XEFI"}, True),                                           # ville inconnue : prudence
-        ({"entreprise": "Lidl", "lieu": "Bron"}, True),
-        ({"entreprise": "Lidl", "lieu": "Vénissieux"}, False),
-        ({"entreprise": "Capgemini", "lieu": "Grenoble"}, True),                     # ville inconnue dans le tableau
-        ({"entreprise": "XEFI", "lieu": "Grenoble", "siret": "12345678900011"}, True),   # même SIRET
+        ({"entreprise": "PIXELO", "lieu": "12 rue X 69003 Lyon"}, True),            # même ville
+        ({"entreprise": "PIXELO", "lieu": "5 avenue Y 38000 Grenoble"}, False),        # autre établissement
+        ({"entreprise": "Pixelo Grenoble", "lieu": "38000 Grenoble"}, False),             # nom proche, autre ville
+        ({"entreprise": "Pixelo Lyon Est", "lieu": "69800 Saint-Priest"}, False),
+        ({"entreprise": "PIXELO"}, True),                                           # ville inconnue : prudence
+        ({"entreprise": "Brio", "lieu": "Bron"}, True),
+        ({"entreprise": "Brio", "lieu": "Vénissieux"}, False),
+        ({"entreprise": "Techvia", "lieu": "Grenoble"}, True),                     # ville inconnue dans le tableau
+        ({"entreprise": "PIXELO", "lieu": "Grenoble", "siret": "12345678900011"}, True),   # même SIRET
     ])
     def test_cas(self, o, attendu):
         assert tableau.deja_contactee(o, self.noms, set(), {"12345678900011"}) is attendu
@@ -83,17 +83,17 @@ class TestMemeNomAutreAdresse:
 
     def test_tableau_avec_deux_etablissements(self, tableau):
         suivi = tableau          # (ici « tableau » est la fixture : le tableau de test)
-        suivi.add(**{"Entreprise": "Xefi", "Lieu": "69003 Lyon"})
-        suivi.add(**{"Entreprise": "XEFI", "Lieu": "38000 Grenoble"})
+        suivi.add(**{"Entreprise": "Pixelo", "Lieu": "69003 Lyon"})
+        suivi.add(**{"Entreprise": "PIXELO", "Lieu": "38000 Grenoble"})
         noms, _, _ = suivi.deja_vus()
-        assert noms == {"xefi": {"lyon", "grenoble"}}
+        assert noms == {"pixelo": {"lyon", "grenoble"}}
         import tableau as module
-        assert not module.deja_contactee({"entreprise": "Xefi", "lieu": "67000 Strasbourg"}, noms, set(), set())
+        assert not module.deja_contactee({"entreprise": "Pixelo", "lieu": "67000 Strasbourg"}, noms, set(), set())
 
     def test_retenir(self):
         noms = {}
-        tableau.retenir(noms, {"entreprise": "Xefi", "lieu": "38000 Grenoble"})
-        assert noms == {"xefi": {"grenoble"}}
+        tableau.retenir(noms, {"entreprise": "Pixelo", "lieu": "38000 Grenoble"})
+        assert noms == {"pixelo": {"grenoble"}}
 
 
 class TestStatuts:

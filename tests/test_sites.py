@@ -11,7 +11,7 @@ import sites
 @pytest.mark.parametrize("nom, attendu", [
     ("E.S.I. France", ["esi", "france"]),
     ("N Tech Services", ["n", "tech", "services"]),
-    ("Berger Levrault", ["berger", "levrault"]),
+    ("Lambert Morel", ["lambert", "morel"]),
     ("A B", ["ab"]),
     ("", []),
 ])
@@ -20,7 +20,7 @@ def test_mots_nom(nom, attendu):
 
 
 @pytest.mark.parametrize("nom, attendu", [
-    ("Berger Levrault", ["berger", "levrault"]),
+    ("Lambert Morel", ["lambert", "morel"]),
     ("SARL Opticod", ["opticod"]),
     ("E.S.I. France", ["esi"]),                 # « France » est générique
     ("N Tech Services", ["tech"]),
@@ -31,14 +31,14 @@ def test_mots(nom, attendu):
 
 
 @pytest.mark.parametrize("nom, url, attendu", [
-    ("Berger Levrault", "https://www.berger-levrault.com/fr/", True),
+    ("Lambert Morel", "https://www.lambert-morel.com/fr/", True),
     ("Opticod", "https://groupe-opticod.fr/", True),
     ("Unidoc", "https://unidoc.fr", True),
     ("Unidoc", "https://unidoctor.com", True),          # contient le nom : accepté (limite connue)
     ("Opticod", "https://www.societe.com/opticod", False),     # annuaire
     ("Opticod", "https://fr.linkedin.com/company/opticod", False),
     ("N Tech Services", "https://www.pagesjaunes.fr/x", False),
-    ("Berger Levrault", "https://www.autre-site.fr", False),
+    ("Lambert Morel", "https://www.autre-site.fr", False),
     ("Exemple", "", False),
 ])
 def test_ressemble(nom, url, attendu):
@@ -186,10 +186,10 @@ class TestExplorerSite:
 
 class TestDevinerSite:
     def test_domaine_evident(self, faux_web):
-        faux_web["https://bergerlevrault.fr"] = ("Autre chose", "https://bergerlevrault.fr")
-        faux_web["https://berger-levrault.com"] = ("<h1>Berger-Levrault</h1> éditeur, RCS Toulouse",
-                                                   "https://www.berger-levrault.com/")
-        assert sites.deviner_site("Berger Levrault") == "https://www.berger-levrault.com"
+        faux_web["https://lambertmorel.fr"] = ("Autre chose", "https://lambertmorel.fr")
+        faux_web["https://lambert-morel.com"] = ("<h1>Lambert-Morel</h1> éditeur, RCS Toulouse",
+                                                   "https://www.lambert-morel.com/")
+        assert sites.deviner_site("Lambert Morel") == "https://www.lambert-morel.com"
 
     def test_redirection_vers_un_autre_site_refusee(self, faux_web):
         faux_web["https://opticod.fr"] = ("Opticod", "https://pass-tech.fr/")
