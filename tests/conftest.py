@@ -80,11 +80,13 @@ def config_propre():
     commun.CFG.clear()
     commun.CFG.update(copy.deepcopy(CFG_ORIGINE))
     commun.ESSAI = False
+    commun.DEPUIS = None
     yield
     commun.CFG.clear()
     commun.CFG.update(copy.deepcopy(CFG_ORIGINE))
     commun.ESSAI = False
-    for nom in ("reponses_lba.json", "entreprises_refusees.csv", "acces_interface.json"):
+    commun.DEPUIS = None
+    for nom in ("reponses_lba.json", "entreprises_refusees.csv", "acces_interface.json", "mails_candidatures.json"):
         (DONNEES_TEST / nom).unlink(missing_ok=True)
     (TEMP / "config.json").write_text(json.dumps(CONFIG_AGENT_TEST), encoding="utf-8")
     agent.CONFIG.update(CONFIG_AGENT_TEST)

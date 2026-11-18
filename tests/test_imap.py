@@ -176,6 +176,31 @@ class TestImap:
             imap.Imap()
         assert "mot de passe d'application" in str(e.value)
 
+    def test_pas_d_internet_puis_retour(self, boite, monkeypatch):
+        import socket
+        import imap.connexion
+        essais, pauses = [], []
+        def connexion(*a, **k):
+            essais.append(1)
+            if len(essais) < 3:
+                raise socket.gaierror(11001, "getaddrinfo failed")
+            return boite.serveur
+        monkeypatch.setattr(imap.imaplib, "IMAP4_SSL", connexion)
+        monkeypatch.setattr(imap.connexion.time, "sleep", pauses.append)
+        imap.Imap()
+        assert len(essais) == 3 and pauses == [20, 20]
+
+    def test_pas_d_internet_message_clair(self, boite, monkeypatch):
+        import socket
+        import imap.connexion
+        def connexion(*a, **k):
+            raise socket.gaierror(11001, "getaddrinfo failed")
+        monkeypatch.setattr(imap.imaplib, "IMAP4_SSL", connexion)
+        monkeypatch.setattr(imap.connexion.time, "sleep", lambda s: None)
+        with pytest.raises(SystemExit) as e:
+            imap.Imap()
+        assert "connexion Internet" in str(e.value)
+
     def test_dossiers_speciaux(self, boite):
         d = {k: v.strip('"') for k, v in boite.dossiers.items()}
         assert d == {"recus": "INBOX", "envoyes": "[Gmail]/Envoy&AOk-s", "brouillons": "[Gmail]/Brouillons",

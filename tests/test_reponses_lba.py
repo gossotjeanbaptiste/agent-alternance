@@ -99,5 +99,5 @@ def test_routine_mails_recus(client, monkeypatch):
 def test_bouton_lance_la_routine(client, monkeypatch):
     import routines
     lances = []
-    monkeypatch.setattr(routines, "lancer", lambda nom, essai, fois: lances.append(nom))
+    monkeypatch.setattr(routines, "lancer", lambda nom, essai, fois, depuis=None: lances.append(nom))
     assert client.post("/api/routine/reponses", json={}).status_code == 200 and lances == ["reponses"]

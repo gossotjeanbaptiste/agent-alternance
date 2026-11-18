@@ -1,7 +1,7 @@
 """Point d'entrée unique de LMAgent (c'est lui qui devient LMAgent.exe dans la version installée).
 
     lmagent.py                                  interface web (http://127.0.0.1:8765)
-    lmagent.py --routine relances|recherche|tout|mails|reponses [--essai] [--fois N]
+    lmagent.py --routine relances|recherche|tout|mails|reponses [--essai] [--fois N] [--depuis AAAA-MM-JJ]
     lmagent.py --postuler [--reponses]          assistant de candidature par formulaire
     lmagent.py --maj-tableau [--voir]           mise à jour interactive du tableau
     lmagent.py --agent [--task "…" | --tache nom]   agent en chat / tâche automatique
@@ -108,6 +108,8 @@ def routine(args):
     if nom not in ROUTINES:
         sys.exit(f"Routine inconnue : {nom} (choisir parmi {', '.join(ROUTINES)})")
     essai = ["--essai"] if "--essai" in args else []
+    if _valeur(args, "--depuis"):   # mails envoyés et reçus lus à partir de ce jour (AAAA-MM-JJ)
+        essai += ["--depuis", _valeur(args, "--depuis")]
     try:
         fois = max(1, int(_valeur(args, "--fois", 1)))
     except ValueError:

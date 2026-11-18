@@ -97,7 +97,7 @@ Mot de passe oublié : supprime `alternance/donnees/acces_interface.json`, la pa
 | **Tableau de bord** | chiffres, graphique des envois, relances à venir |
 | **Suivi** | toutes les candidatures, filtres, changement de statut |
 | **À postuler** | candidatures par formulaire (La Bonne Alternance, formulaire de contact du site) : ouvrir la page, copier la lettre et, pour La Bonne Alternance, les réponses aux trois questions (motivations, missions, expériences), puis « Envoyée ». Les candidatures **📧 par mail** y sont aussi : site de l'entreprise, recherche Google, « Envoyée » (statut « Candidaté (mail) », date d'envoi et relance prévue), « Abandonner » (brouillon mis à la corbeille) |
-| **Routines** | lancer « Relances » / « Recherche » (« mode essai » pour tester sans rien écrire ; « passages » pour l'enchaîner N fois d'affilée, 1 par défaut), sortie en direct |
+| **Routines** | lancer « Relances » / « Recherche » (« mode essai » pour tester sans rien écrire ; « passages » pour l'enchaîner N fois d'affilée, 1 par défaut) ; « mails depuis » (par défaut le lundi de la semaine) : ne relit que les mails envoyés et reçus à partir de ce jour, bien plus rapide — vide = toute la période suivie ; une relance due d'une candidature plus ancienne va quand même chercher son mail d'origine, sortie en direct |
 | **Tour** | état, réveil, LM Studio, mise en veille |
 | **LinkedIn** | tes relations (`perso/linkedin/Connections.csv` depuis le code) qui travaillent dans une entreprise du tableau |
 | **Journal** | journaux des routines |
@@ -111,7 +111,7 @@ ratés), et chaque action exige en plus un jeton secret renouvelé à chaque dé
 
 | Commande | Rôle |
 |---|---|
-| `python lmagent.py` | point d'entrée unique (= `LMAgent.exe` de la version installée) : interface ; `--routine relances|recherche|tout [--essai] [--fois N]`, `--postuler`, `--maj-tableau`, `--agent` |
+| `python lmagent.py` | point d'entrée unique (= `LMAgent.exe` de la version installée) : interface ; `--routine relances|recherche|tout [--essai] [--fois N] [--depuis AAAA-MM-JJ]`, `--postuler`, `--maj-tableau`, `--agent` |
 | `python alternance\relances.py` | suivi des réponses + relances en brouillon |
 | `python alternance\recherche.py` | nouvelles candidatures |
 | `python alternance\alternance.py` | les deux à la suite |
@@ -309,6 +309,13 @@ la page **Paramètres**. Modèle : `interdits.example.md`.
   « Candidature transmise » (« j'ai fait suivre aux RH / au service » : plus de relance, mais la réponse suivante
   est classée), « Réponse à lire » (le reste) ; un accusé de réception automatique ne change rien.
   Une réponse qui n'a pas pu être classée (modèle injoignable) est retentée au lancement suivant.
+- **Candidatures faites ailleurs** (Indeed, HelloWork, LinkedIn, La Bonne Alternance, site d'une entreprise) :
+  leurs accusés de réception et réponses reçus par mail complètent le tableau. Entreprise absente → nouvelle ligne
+  « Candidaté (…) » (source = la plateforme), seulement si le poste est de l'informatique (réglage « Mots d'un poste
+  en informatique » : écarte « Serveur H/F »…) ; « À postuler » → « Candidaté » à la date du mail ; refus, entretien…
+  classés. Formats d'Indeed, HelloWork, LinkedIn et La Bonne Alternance lus directement, les autres par le modèle.
+  Les mails lus sont notés dans `alternance/donnees/mails_candidatures.json` (une ligne supprimée n'est pas rajoutée).
+  Désactivable dans Paramètres → « Candidatures faites ailleurs ».
 - Statuts d'une candidature envoyée, selon le canal : « Candidaté (mail) » (suivie et relancée automatiquement),
   « Candidaté (La Bonne Alternance) », « Candidaté (formulaire du site) », « Candidaté (LinkedIn) », « Candidaté (autre canal) ».
   Les anciens « Envoyé » et « Candidaté (hors mail) » sont convertis automatiquement (d'après les notes).
@@ -351,7 +358,7 @@ lm_agent/
 | `messagerie.py` | choix de la messagerie (réglage `messagerie.type`) |
 | `outlook.py` | Outlook classique : lecture, brouillons, boîte d'envoi |
 | `imap/` | Gmail / IMAP : lecture, brouillons déposés sur le serveur |
-| `suivi/` | mise à jour du suivi et relances |
+| `suivi/` | mise à jour du suivi et relances ; candidatures faites ailleurs (`ailleurs.py`) |
 | `sources.py` | liste « À contacter », alertes LinkedIn, La Bonne Alternance |
 | `candidatures.py` | choix et rédaction des nouvelles candidatures |
 | `sites/` | site des entreprises : le trouver, y chercher une adresse ou un formulaire de contact |

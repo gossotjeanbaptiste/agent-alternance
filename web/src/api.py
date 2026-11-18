@@ -202,7 +202,11 @@ def lancer_routine(nom):
         fois = int(donnees.get("fois") or 1)
     except (TypeError, ValueError):
         fois = 1
-    routines.lancer(nom, bool(donnees.get("essai")), fois)
+    try:   # mails envoyés et reçus lus à partir de ce jour (vide : fenêtre habituelle)
+        depuis = date.fromisoformat(donnees["depuis"]) if donnees.get("depuis") else None
+    except (TypeError, ValueError):
+        return jsonify(ok=False, message="Date « depuis » invalide."), 400
+    routines.lancer(nom, bool(donnees.get("essai")), fois, depuis)
     return jsonify(ok=True)
 
 
