@@ -300,6 +300,14 @@ class TestActions:
         client.post("/api/routine/relances", json={"fois": 999})
         assert lances[0][-2:] == ["--fois", "5"]
 
+    def test_mails_recus_depuis(self, client, monkeypatch):
+        lances = []
+        monkeypatch.setattr(routines.subprocess, "Popen",
+                            lambda cmd, **k: lances.append(cmd) or type("P", (), {"poll": lambda s: 0, "returncode": 0})())
+        assert client.post("/api/routine/relances", json={"depuis": "2026-11-16"}).get_json()["ok"]
+        assert lances[0][-2:] == ["--depuis", "2026-11-16"] and "depuis le 16/11" in routines.ROUTINE["nom"]
+        assert client.post("/api/routine/relances", json={"depuis": "16 novembre"}).status_code == 400
+
     def test_routine_inconnue(self, client):
         assert client.post("/api/routine/formatage", json={}).status_code == 404
 

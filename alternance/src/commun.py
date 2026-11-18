@@ -16,6 +16,7 @@ DONNEES = donnees.DONNEES
 CFG = json.loads(donnees.chemin("config_alternance.json").read_text(encoding="utf-8"))
 PROFIL = donnees.chemin("profil.md").read_text(encoding="utf-8")
 INTERDITS = donnees.chemin("interdits.md")   # « contre-prompt » : ce que tu ne veux pas dans tes mails (facultatif)
+DEPUIS = None   # date : ne lire les mails envoyés et reçus qu'à partir de ce jour (--depuis) ; None = fenêtre habituelle
 ESSAI = False   # True avec --essai : rien n'est écrit (ni brouillon, ni Excel)
 GARDE = None    # minuteur qui arrête tout si la lecture d'Outlook se bloque
 

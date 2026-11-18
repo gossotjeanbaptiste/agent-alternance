@@ -162,7 +162,8 @@ class TestReponses:
     def test_messagerie_grand_public_adresse_exacte_seulement(self, tableau, messagerie, faux_modele):
         self.base(tableau, Email="patron@gmail.com")
         suivi.mettre_a_jour(tableau, messagerie(recus=[recu("inconnu@gmail.com", jours=1)]))
-        assert faux_modele.consignes == []
+        # pas rattachée à cette ligne (le module des candidatures faites ailleurs peut lire le mail, sans effet ici)
+        assert ligne(tableau)["Statut"] == MAIL and not any("Classe-la" in c for c in faux_modele.consignes)
 
     def test_reponse_ancienne_ignoree(self, tableau, messagerie, faux_modele):
         self.base(tableau)
@@ -344,3 +345,33 @@ def test_classer_reponse(faux_modele):
     faux_modele.reponses_json = [{}]
     assert suivi.classer_reponse("E", "Re", "corps") == ("autre", "")
     assert "corps" in faux_modele.consignes[0]
+
+
+# --- mails reçus lus depuis une date choisie (--depuis) ----------------------------------------------
+def test_mails_recus_depuis_une_date(tableau, messagerie, monkeypatch):
+    import commun
+    demandes = {}
+    ol = messagerie()
+    monkeypatch.setattr(ol, "recus", lambda jours=120: demandes.setdefault("recus", jours) and [])
+    monkeypatch.setattr(ol, "envois", lambda jours=120: demandes.setdefault("envois", jours) and {})
+    commun.DEPUIS = AUJ - timedelta(days=2)
+    suivi.mettre_a_jour(tableau, ol, relancer=False)
+    assert demandes["recus"] == 3 and demandes["envois"] == 3
+
+
+def test_relance_due_mail_d_origine_avant_la_date(tableau, messagerie, faux_modele):
+    import commun
+    tableau.add(Entreprise="Exemple", Email="jean@exemple.fr", Statut=MAIL,
+                **{"Date envoi": AUJ - timedelta(days=12), "Dernière action": AUJ - timedelta(days=12),
+                   "Relance prévue": AUJ - timedelta(days=1)})
+    origine = envoi(12)
+    demandes = []
+    class Ol(messagerie):
+        def envois(self, jours=120):
+            demandes.append(jours)
+            return {"jean@exemple.fr": [origine]} if jours > 3 else {}
+    ol = Ol()
+    commun.DEPUIS = AUJ - timedelta(days=2)
+    suivi.mettre_a_jour(tableau, ol)
+    assert demandes == [3, 15]                       # période complète lue seulement pour cette relance
+    assert ol.deposes and ol.deposes[0]["base"] is origine[2]   # mail d'origine transféré sous la relance

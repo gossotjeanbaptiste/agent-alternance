@@ -4,10 +4,13 @@ import email
 import email.policy
 import imaplib
 import re
+import time
 from datetime import datetime, timedelta
 
 from commun import CFG, say
 from .texte import _date_imap
+
+ESSAIS_RESEAU, PAUSE_RESEAU = 4, 20   # 1 essai + 3 nouveaux essais à 20 s d'intervalle
 
 
 class Connexion:
@@ -27,7 +30,17 @@ class Connexion:
 
     def _connecter(self):
         c = self._reglages
-        self.cx = imaplib.IMAP4_SSL(c["serveur"], int(c.get("port", 993)), timeout=60)
+        for essai in range(1, ESSAIS_RESEAU + 1):
+            try:
+                self.cx = imaplib.IMAP4_SSL(c["serveur"], int(c.get("port", 993)), timeout=60)
+                break
+            except OSError as e:   # pas d'Internet (serveur introuvable), coupure, délai dépassé
+                if essai == ESSAIS_RESEAU:
+                    raise SystemExit(f"❌ Pas d'accès à {c['serveur']} ({e}) : vérifie ta connexion Internet "
+                                     "puis relance la routine.")
+                say(f"   🔌 {c['serveur']} injoignable ({e}) : nouvel essai dans {PAUSE_RESEAU} s "
+                    f"({essai}/{ESSAIS_RESEAU - 1})...")
+                time.sleep(PAUSE_RESEAU)
         try:
             self.cx.login(self.adresse, c["mot_de_passe_app"])
         except imaplib.IMAP4.error as e:

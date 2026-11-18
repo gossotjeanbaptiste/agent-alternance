@@ -17,14 +17,15 @@ def en_cours():
     return p is not None and p.poll() is None
 
 
-def commande(nom, essai=False, fois=1):
+def commande(nom, essai=False, fois=1, depuis=None):
     """lmagent --routine <nom> [--fois N] [--essai] : l'exe dans la version installée, python lmagent.py sinon.
     La boucle des passages tourne dans ce processus séparé : elle continue même si l'interface est arrêtée."""
     import lmagent
-    return lmagent.commande_soi() + ["--routine", nom, "--fois", str(fois)] + (["--essai"] if essai else [])
+    return (lmagent.commande_soi() + ["--routine", nom, "--fois", str(fois)] + (["--essai"] if essai else [])
+            + (["--depuis", depuis.isoformat()] if depuis else []))
 
 
-def lancer(nom, essai=False, fois=1):
+def lancer(nom, essai=False, fois=1, depuis=None):
     """Lance la routine (fois passages d'affilée) dans un processus séparé ;
     sa sortie va dans logs/web_<date>_<nom>.txt."""
     import reglages
@@ -35,10 +36,11 @@ def lancer(nom, essai=False, fois=1):
     sortie = open(fichier, "a", encoding="utf-8")   # ajout en fin de fichier, quel que soit le processus qui écrit
     # LMAGENT_SORTIE : l'exe installé (sans console) écrit lui-même dans ce fichier
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", LMAGENT_SORTIE=str(fichier))
-    cmd = commande(nom, essai, fois)
+    cmd = commande(nom, essai, fois, depuis)
     proc = subprocess.Popen(cmd, cwd=ROOT, stdout=sortie, stderr=subprocess.STDOUT, env=env,
                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-    libelle = nom + (f" ×{fois}" if fois > 1 else "") + (" (essai)" if essai else "")
+    libelle = nom + (f" ×{fois}" if fois > 1 else "") + (f", mails depuis le {depuis:%d/%m}" if depuis else "")
+    libelle += " (essai)" if essai else ""
     ROUTINE.update(proc=proc, nom=libelle, fichier=fichier, debut=datetime.now(), annulee=False)
 
 

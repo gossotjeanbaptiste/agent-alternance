@@ -11,6 +11,7 @@
     <button onclick="lancer('reponses')" title="Écrit les réponses aux questions (et la lettre si elle manque) de toutes les candidatures à postuler sur La Bonne Alternance">✍️ Réponses La Bonne Alternance</button>
     <label style="align-self:center"><input type="checkbox" id="essai"> mode essai (rien n'est écrit)</label>
     <label style="align-self:center">passages <input type="number" id="fois" value="1" min="1" max="50" style="width:4em"></label>
+    <label style="align-self:center" title="Mails envoyés et reçus lus à partir de ce jour (plus rapide). Vide : toute la période suivie. Mails envoyés aussi (les plus anciens ne sont relus que si une relance en a besoin).">mails depuis <input type="date" id="depuis"></label>
   </div>
   <p class="doux">« Mails reçus » lit seulement ta messagerie (réponses classées, adresses invalides, envois repérés)
     et met le tableau à jour, sans relance ni nouvelle candidature.
@@ -64,10 +65,17 @@ async function planifier(nom) {
   chargerPlanification();
 }
 chargerPlanification();
+// par défaut : lundi de la semaine en cours (les mails plus anciens ont déjà été lus)
+(function () {
+  const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  const p = n => String(n).padStart(2, "0");
+  document.getElementById("depuis").value = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+})();
 async function lancer(nom) {
   const r = await poster("/api/routine/" + nom, {
     essai: document.getElementById("essai").checked,
     fois: parseInt(document.getElementById("fois").value, 10) || 1,
+    depuis: document.getElementById("depuis").value,
   });
   if (!r.ok) { annoncer(r.message || "Impossible de lancer", true); return; }
   annoncer("Routine lancée."); actualiser();

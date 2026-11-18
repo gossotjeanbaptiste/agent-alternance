@@ -11,7 +11,7 @@ from mails import domaine, est_adresse
 from messagerie import nom_messagerie
 from rapprochement import mots_distinctifs
 from tableau import HORS_MAIL, MAIL, TRANSMISE, as_date
-from . import envois, reponses
+from . import ailleurs, envois, reponses
 from .classement import reconnus_par_le_contenu
 from .relance import preparer_relance
 
@@ -25,9 +25,11 @@ class Passage:
     """Ce qu'une lecture de la messagerie a rassemblé, et ce qu'elle a changé (bilan, relances dues)."""
     def __init__(self, suivi, ol):
         self.suivi, self.ol = suivi, ol
-        jours = self._jours()
-        self.envois = ol.envois(jours)
-        self.recus = ol.recus(jours)
+        self.jours = self._jours()
+        n = self._jours_depuis(self.jours)
+        self.envois = ol.envois(n)
+        self.recus = ol.recus(n)
+        self._envois_complets = None if commun.DEPUIS else self.envois
         self.brouillons = ol.destinataires_brouillons()
         self.programmes = ol.programmes()
         if commun.GARDE:  # Outlook a répondu : la suite (le modèle) peut prendre le temps qu'il faut
@@ -40,6 +42,24 @@ class Passage:
         # mots du nom propres à une seule entreprise du tableau (réponse depuis une adresse personnelle)
         self.distinctifs = mots_distinctifs([suivi.get(r, "Entreprise") for r in suivi.rows()])
         self.par_contenu = reconnus_par_le_contenu(suivi, self.recus, self.ndr, STATUTS_ACTIFS)
+        self.rattaches = set()   # id des mails rattachés à une ligne (les autres : candidatures faites ailleurs ?)
+
+    @staticmethod
+    def _jours_depuis(jours):
+        """Mails envoyés et reçus : depuis la date choisie au lancement (--depuis, ex. le lundi de la semaine),
+        sinon toute la période suivie (voir _jours)."""
+        if not commun.DEPUIS:
+            return jours
+        say(f"   Mails envoyés et reçus lus depuis le {commun.DEPUIS:%d/%m/%Y}")
+        return max(1, (date.today() - commun.DEPUIS).days + 1)
+
+    def envois_complets(self):
+        """Envois de toute la période suivie, lus seulement si une relance due a son mail d'origine avant la date
+        choisie (il faut ce mail pour le transférer sous la relance)."""
+        if self._envois_complets is None:
+            say("   Relance due d'une candidature plus ancienne : lecture des mails envoyés plus anciens...")
+            self._envois_complets = self.ol.envois(self.jours)
+        return self._envois_complets
 
     def _jours(self):
         """On ne remonte pas plus loin que la plus ancienne candidature encore en cours (15 à 120 jours)."""
@@ -75,6 +95,8 @@ def _relance_due(p, l):
     prevue = as_date(s.get(l.row, "Relance prévue"))
     if l.statut in (MAIL, "Relancé") and nb < CFG["relances_max"] and prevue \
             and prevue <= prochain_ouvrable(p.aujourd_hui, inclus=False):
+        if not l.mes_envois and commun.DEPUIS:   # mail d'origine envoyé avant la date choisie
+            l.mes_envois = sorted(p.envois_complets().get(l.mail, []), key=lambda x: x[0])
         if l.mes_envois:
             p.a_relancer.append((l.row, l.mes_envois[-1]))
         else:  # mail d'origine pas dans « Éléments envoyés » (autre boîte, webmail...) : relance sans transfert
@@ -110,8 +132,9 @@ def mettre_a_jour(suivi, ol, relancer=True):
     les brouillons de relance dus (routine « Mails reçus »)."""
     say(f"📬 Lecture de {nom_messagerie()}...")
     p = Passage(suivi, ol)
-    for row in suivi.rows():
+    for row in list(suivi.rows()):
         _passer_en_revue(p, row)
+    ailleurs.traiter(p)   # accusés de réception / réponses de candidatures faites hors de LM Agent
     say("📊 Bilan : " + (", ".join(f"{n} {quoi}" for quoi, n in p.bilan.items()) if p.bilan else
                          "rien de nouveau dans la messagerie depuis le dernier passage (les réponses déjà classées et "
                          "les accusés de réception automatiques ne changent pas le tableau)."))

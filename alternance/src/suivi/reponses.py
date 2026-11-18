@@ -44,6 +44,7 @@ def _rattachees(p, l):
             say(f"   🔎 {l.ent} : mail de {m['de']} reconnu grâce à son contenu ({', '.join(p.par_contenu[id(m)][1])})")
         if par_adresse or par_contenu:
             reps.append(m)
+            p.rattaches.add(id(m))
     return reps
 
 

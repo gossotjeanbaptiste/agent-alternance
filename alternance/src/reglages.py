@@ -24,6 +24,11 @@ ANNUAIRES = ["societe.com", "pappers", "pagesjaunes", "kompass", "dnb.com", "lin
 MOTS_CONTACT = ["contact", "nous-contacter", "contactez", "recrutement", "carriere", "carrieres", "emploi", "jobs",
                 "join", "rejoindre", "candidature", "postuler", "mentions-legales", "a-propos", "about"]
 PAGES_CLASSIQUES = ["/contact", "/nous-contacter", "/contact/", "/contact.html", "/recrutement", "/mentions-legales"]
+# poste d'une candidature faite ailleurs (Indeed, HelloWork…) : ajoutée au tableau s'il contient l'un de ces mots
+MOTS_POSTES = ["develop", "informati", "logiciel", "software", "web", "data", "cloud", "devops", "reseau", "systeme",
+               "full stack", "fullstack", "full-stack", "front", "back", "java", "python", ".net", "c#", "php",
+               "react", "ingenieur", "engineer", "technicien", "cyber", "securite", "digital", "numerique",
+               "application", "programm", "it", "ia", "alternance", "apprenti"]
 NAF_ACCEPTES = ["62", "63.11", "63.12", "58.2", "26.1", "26.2", "26.3", "26.4", "26.5", "46.51", "61"]
 OUTLOOK_EXE = [r"C:\Program Files\Microsoft Office\root\Office16\OUTLOOK.EXE",
                r"C:\Program Files (x86)\Microsoft Office\root\Office16\OUTLOOK.EXE"]
@@ -56,6 +61,13 @@ REGLAGES = [
        "Ajoute le Vendredi saint et le 26 décembre."),
     _r("Candidatures et relances", A, "domaines_ignores", "Domaines de ton école / employeur", "liste", [],
        "Leurs mails ne sont jamais comptés comme des réponses d'entreprise."),
+    # --- candidatures faites ailleurs
+    _r("Candidatures faites ailleurs", A, "suivi_ailleurs.actif", "Suivre les candidatures faites ailleurs", "oui_non",
+       True, "Accusés de réception et réponses reçus par mail (Indeed, HelloWork, LinkedIn, La Bonne Alternance, "
+             "site d'une entreprise) : la candidature est ajoutée au tableau, ou mise à jour si elle y est déjà."),
+    _r("Candidatures faites ailleurs", A, "suivi_ailleurs.mots_postes", "Mots d'un poste en informatique", "liste",
+       MOTS_POSTES, "Une candidature faite ailleurs n'est ajoutée que si son poste contient l'un de ces mots "
+                    "(ou si le poste est inconnu) : écarte « Serveur H/F » et autres candidatures à côté."),
     # --- rédaction par le modèle
     _r("Rédaction par le modèle", A, "reflexion", "Réflexion du modèle", "oui_non", False,
        "Le modèle « réfléchit » avant d'écrire : environ 10 fois plus lent."),

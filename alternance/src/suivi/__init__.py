@@ -5,6 +5,8 @@
     reponses.py    adresse invalide (non-remise), réponses reçues rattachées puis classées
     classement.py  classement d'une réponse par le modèle ; réponses reconnues par leur contenu
     relance.py     écriture d'un brouillon de relance par le modèle
+    ailleurs.py    candidatures faites hors de LM Agent (Indeed, HelloWork…) : ajoutées / mises à jour d'après
+                   leurs accusés de réception et réponses ; ailleurs_lecture.py lit ces mails
 """
 from .classement import classer_reponse, reconnus_par_le_contenu  # noqa: F401
 from .lecture import mettre_a_jour  # noqa: F401

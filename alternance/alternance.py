@@ -22,7 +22,7 @@ import argparse
 import os
 import sys
 import threading
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))  # modules internes (alternance/src)
@@ -43,13 +43,15 @@ def main(mode=None):
                     help="seulement suivi des réponses + relances")
     ap.add_argument("--recherche", action="store_true", help="seulement les nouvelles candidatures")
     ap.add_argument("--essai", action="store_true", help="ne rien écrire")
+    ap.add_argument("--depuis", type=date.fromisoformat, default=None, metavar="AAAA-MM-JJ",
+                    help="ne lire les mails envoyés et reçus qu'à partir de ce jour (plus rapide)")
     a = ap.parse_args()
     commun.ESSAI = a.essai
+    commun.DEPUIS = a.depuis
     mode = mode or ("relances" if a.relances else "recherche" if a.recherche else "tout")
 
     agent.log(f"===== ROUTINE ALTERNANCE ({mode}) =====")
     t0 = datetime.now()
-    agent.ensure_server()
     suivi = Suivi(commun.chemin_tableau())
 
     # Garde-fou : si la LECTURE d'Outlook dépasse 10 min (connexion demandée, Outlook bloqué...),
@@ -65,6 +67,8 @@ def main(mode=None):
     commun.GARDE.daemon = True
     commun.GARDE.start()
     ol = ouvrir()
+    # le modèle n'est chargé qu'une fois la messagerie ouverte : sans Internet, on s'arrête avant de l'attendre
+    agent.ensure_server()
     try:
         if mode in ("tout", "relances", "mails"):
             mettre_a_jour(suivi, ol, relancer=mode != "mails")
