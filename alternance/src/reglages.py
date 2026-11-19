@@ -115,6 +115,10 @@ REGLAGES = [
     _r("La Bonne Alternance", A, "la_bonne_alternance.villes", "Villes de recherche", "json", [],
        "Liste de {\"nom\", \"lat\", \"lon\"} (un \"poids\" écrit à la main passe avant le calcul)."),
     _r("La Bonne Alternance", A, "la_bonne_alternance.recherches_site_max", "Sites d'entreprise fouillés par passage", "entier", 30),
+    _r("La Bonne Alternance", A, "la_bonne_alternance.situation", "Ma situation (formulaire prérempli)", "choix",
+       "ne pas cocher", "Case « Ma situation » du formulaire La Bonne Alternance, cochée par le bouton « Ouvrir le "
+       "formulaire prérempli » (nom, prénom, mail et téléphone viennent de la signature des formulaires).",
+       choix=["ne pas cocher", "déjà inscrit(e) en formation", "pas encore inscrit(e) en formation"]),
     # --- sites des entreprises
     _r("Sites des entreprises", A, "sites.pages_max", "Pages lues par site", "entier", 6),
     _r("Sites des entreprises", A, "sites.verifier_france", "N'utiliser que des sites d'entreprises en France", "oui_non",

@@ -2,7 +2,8 @@
 {% block titre %}À postuler{% endblock %}
 {% block contenu %}
 <h1>À postuler <span class="doux" id="compte">({{ lignes|length }})</span></h1>
-<p class="doux">Formulaires (La Bonne Alternance ou site de l'entreprise) : ouvre la page, copie la lettre et les réponses aux questions, colle-les (Ctrl+V) et envoie, puis clique « Envoyée ».
+<p class="doux">La Bonne Alternance : « 🧾 Ouvrir le formulaire prérempli » le remplit dans Chrome (identité, lettre, réponses, CV) ; relis, envoie-le toi-même, puis clique « Envoyée ».
+Formulaire du site de l'entreprise : ouvre la page, copie la lettre, colle-la (Ctrl+V) et envoie, puis clique « Envoyée ».
 Par mail : le brouillon t'attend dans {{ messagerie }}, relis-le et envoie-le ; l'envoi est repéré tout seul au prochain suivi, ou clique « Envoyée » si tu l'as déjà envoyé.
 Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de l'entreprise ; trouve l'adresse (site, recherche), mets-la à la place dans le champ « À », envoie, puis clique « Envoyée ».</p>
 {% if erreur %}<div class="carte erreur">{{ erreur }}</div>{% endif %}
@@ -87,6 +88,7 @@ Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de 
     <a href="{{ l['_recherche'] }}" target="_blank" rel="noopener"><button>🔎 Rechercher sur Google</button></a>
     <button onclick="abandonnerMail({{ l['_ligne'] }})">Abandonner (brouillon à la corbeille)</button>
     {% else %}
+    {% if l['_lba'] and l['Lien'] and l['Lien'].startswith('http') %}<button class="principal" onclick="ouvrirFormulaire(this, {{ l['_ligne'] }})" title="Ouvre le formulaire de La Bonne Alternance dans Chrome et le remplit (identité, lettre, réponses, CV). Rien n'est envoyé : tu relis et tu cliques toi-même « J'envoie ma candidature ».">🧾 Ouvrir le formulaire prérempli</button>{% endif %}
     {% if l['Lien'] and l['Lien'].startswith('http') %}<a href="{{ l['Lien'] }}" target="_blank" rel="noopener"><button>🌐 Ouvrir la page</button></a>{% endif %}
     {% if l['_formulaire'] %}<a href="{{ l['_formulaire'] }}" target="_blank" rel="noopener"><button>📝 Formulaire du site</button></a>{% endif %}
     {% if l['_manque'] %}<button onclick="ecrireManque(this, {{ l['_ligne'] }})" title="Le modèle rédige ce qui manque (la tour, sinon ce PC), puis il est déchargé">✍️ Écrire ce qui manque ({{ l['_manque']|join(' et ') }})</button>{% endif %}
@@ -133,6 +135,15 @@ async function ecrireManque(bouton, ligne) {
   if (r.ok) { location.reload(); return; }
   bouton.textContent = texte;
   document.querySelectorAll("button[onclick^='ecrireManque']").forEach(b => b.disabled = false);
+}
+async function ouvrirFormulaire(bouton, ligne) {
+  const carte = document.getElementById("c" + ligne), texte = bouton.textContent;
+  bouton.disabled = true;
+  bouton.textContent = "🧾 Ouverture dans Chrome…";
+  const r = await poster("/api/formulaire", { ligne, entreprise: carte.dataset.entreprise });
+  annoncer(r.message || (r.ok ? "Formulaire prérempli." : "Erreur"), !r.ok);
+  bouton.textContent = texte;
+  bouton.disabled = false;
 }
 async function abandonnerMail(ligne) {
   const carte = document.getElementById("c" + ligne);
