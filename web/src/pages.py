@@ -69,8 +69,9 @@ def postuler():
     a_faire.sort(key=lambda l: ordre.get(l.get("Statut"), 0))
     erreur = lettres.ajouter_lettres(a_faire)
     from messagerie import nom_messagerie
+    import extension_lba
     return render_template("postuler.html", page="postuler", lignes=a_faire, erreur=erreur,
-                           messagerie=nom_messagerie())
+                           messagerie=nom_messagerie(), extension=extension_lba.etat())
 
 
 @pages.route("/ecartees")
