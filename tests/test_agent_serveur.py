@@ -47,3 +47,23 @@ def test_modele_deja_charge(api):
     api["reponses"] = [{"models": [{"key": "qwen/qwen3.5-9b", "loaded_instances": [{"id": "deja"}]}]}]
     serveur._charger_distant("tour", "http://tour:1236/v1")
     assert agent.A_DECHARGER == [("distant", "tour", "http://tour:1236", "deja")] and "attentes" not in api
+
+
+def test_tour_injoignable_puis_niveaux_de_ce_pc_dans_l_ordre(monkeypatch):
+    """La tour ne répond pas : niveaux de ce PC dans l'ordre, le premier qui marche est gardé ; ils ne sont
+    cherchés qu'une fois la tour écartée."""
+    monkeypatch.setitem(agent.CONFIG, "utiliser_tour", True)
+    monkeypatch.setitem(agent.CONFIG, "serveurs", [{"nom": "tour", "url": "http://tour:1236/v1"},
+                                                   {"nom": "ce PC", "url": "local"}])
+    monkeypatch.delenv("LMSTUDIO_URL", raising=False)
+    monkeypatch.setattr(agent, "SERVEUR", "?")
+    monkeypatch.setattr(agent, "BASE_URL", None)
+    ordre = []
+    monkeypatch.setattr(agent, "_reachable", lambda url: ordre.append("tour") or False)
+    monkeypatch.setattr(agent, "niveaux_locaux", lambda: ordre.append("détection") or [
+        ("npu", "ce PC (NPU Intel)"), ("carte_integree", "ce PC (carte graphique du processeur)")])
+    monkeypatch.setattr(agent, "demarrer_local", lambda n: ordre.append(n) or (None if n == "npu" else "http://l/v1"))
+    monkeypatch.setattr(agent, "say", lambda m: None)
+    agent.ensure_server()
+    assert ordre[-3:] == ["détection", "npu", "carte_integree"] and set(ordre[:-3]) == {"tour"}
+    assert agent.SERVEUR == "ce PC (carte graphique du processeur)" and agent.BASE_URL == "http://l/v1"

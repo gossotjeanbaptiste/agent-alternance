@@ -57,6 +57,10 @@ def liberer_modele():
             print(f"🧹 Modèle déchargé de {nom}")
         except Exception as e:
             agent.log(f"⚠️ Déchargement impossible sur {nom} : {e}")
+    try:
+        agent.npu.arreter()                  # OpenVINO (NPU), s'il a été lancé par le script
+    except Exception as e:
+        agent.log(f"⚠️ Arrêt d'OpenVINO impossible : {e}")
     agent.fermer_lmstudio()
     agent.remettre_tour_en_veille()
 

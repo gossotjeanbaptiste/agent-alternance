@@ -173,7 +173,9 @@ Le PC doit être allumé, session ouverte.
 
 | Clé | Défaut | Effet |
 |---|---|---|
-| `gpu` | `"auto"` | Moteur LM Studio quand le modèle tourne sur **ce PC** : NVIDIA → CUDA le plus récent, AMD / Intel → Vulkan, sinon CPU. Forcer avec `"cuda"`, `"vulkan"` ou `"cpu"` (mesuré sur un Core Ultra 5 125H : Intel Arc / Vulkan ≈ 46 s par mail, CPU ≈ 72 s) |
+| `ordre_ce_pc` | `["carte_dediee", "npu", "carte_integree", "processeur"]` | Sur **ce PC**, dans l'ordre : carte graphique dédiée (NVIDIA, AMD RX, Intel Arc A/B — LM Studio en CUDA ou Vulkan), **NPU Intel** des Core Ultra (OpenVINO Model Server : la carte graphique reste libre, le PC reste utilisable pendant une routine), carte graphique du processeur (Vulkan), processeur seul. Ce qui manque sur le PC est sauté ; ce qui échoue passe la main au suivant ; retirer une ligne pour ne jamais l'utiliser |
+| `modele_npu` / `npu_installation_auto` | `OpenVINO/Qwen3-8B-int4-cw-ov` / `true` | Modèle du NPU, et son installation la première fois qu'il sert (OVMS et le modèle, ~5 Go une seule fois, dans `%LOCALAPPDATA%\LMAgent\openvino`) |
+| `gpu` | `"auto"` | Moteur LM Studio des cartes graphiques de ce PC : NVIDIA → CUDA le plus récent, AMD / Intel → Vulkan. Forcer avec `"cuda"` ou `"vulkan"` (mesuré sur un Core Ultra 5 125H, même lettre : carte du processeur / Vulkan ≈ 45-50 s, NPU / OpenVINO ≈ 40-60 s) |
 | `modele` | `qwen/qwen3.5-9b` | Identifiant du modèle dans LM Studio |
 | `contexte` | `16384` | Taille du contexte (doit tenir dans la mémoire de la carte graphique) |
 | `reflexion` | `false` | `true` = le modèle « réfléchit » avant de répondre : ~10× plus lent |

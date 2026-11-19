@@ -65,7 +65,8 @@ où en est le projet.
 |---|---|
 | `lmagent.py` | point d'entrée unique (devient `LMAgent.exe`) : interface, `--routine <nom>` (`--fois N`, `--essai`), `--postuler`, `--maj-tableau`, `--agent` ; `commande_soi()` pour se relancer ; sortie en UTF-8 ligne par ligne, dans `logs/` quand il n'y a pas de console |
 | `src/emplacements.py` | où vivent les fichiers personnels : `perso/` du projet (lancé depuis le code ; les anciens fichiers de la racine y sont rangés au démarrage), `%APPDATA%\LMAgent` (version installée) ou `LMAGENT_DOSSIER` (tests) ; données de la routine dans `alternance/donnees/` (code) ou `donnees/` (installée) |
-| `src/agent/` | agent en chat / tâches : état et journal (`__init__`), outils (`fichiers`, `outils`), LM Studio (`lmstudio`, `moteur` : choix du moteur GPU), choix du serveur tour puis ce PC (`serveur`), déchargement et fermeture à la fin (`liberation`), chat et ligne de commande (`conversation`) |
+| `src/agent/` | agent en chat / tâches : état et journal (`__init__`), outils (`fichiers`, `outils`), LM Studio (`lmstudio`, `moteur` : moteur CUDA / Vulkan / processeur), choix du serveur tour puis ce PC (`serveur`), niveaux de ce PC (`local`, `materiel`), NPU Intel par OpenVINO (`npu`, `npu_installation`), déchargement et fermeture à la fin (`liberation`), chat et ligne de commande (`conversation`) |
+| `src/agent/local.py`, `materiel.py`, `npu.py`, `npu_installation.py` | **ordre des machines** : (1) la tour (main), puis sur ce PC, réglage `ordre_ce_pc` : (2) carte graphique dédiée (NVIDIA, AMD RX, Intel Arc A/B ; reconnue par son nom — la carte des Core Ultra s'appelle aussi « Arc » mais est intégrée), (3) NPU Intel « AI Boost » par **OpenVINO Model Server** (`ovms.exe` sans fenêtre sur 127.0.0.1:8771, API `/v3`, prêt quand `/v2/models/<nom>/ready` répond 200 ; requête adaptée par `npu.adapter` : nom du modèle, réflexion coupée par `chat_template_kwargs`), (4) carte graphique du processeur (Vulkan), (5) processeur (`--gpu off`). Niveau absent sauté, niveau qui échoue → suivant ; en cours de route, `post_chat` bascule sur les **suivants** seulement (`agent.ECARTES`). OVMS et le modèle (~5 Go) téléchargés une fois dans `%LOCALAPPDATA%\LMAgent\openvino` (`emplacements.gros_fichiers`, empreinte d'OVMS vérifiée) ; démarrer OVMS avec `--model_path` (avec `--source_model` sans `--target_device`, il régénère le graphe et prend la carte graphique) ; arrêté à la fin d'après son numéro de processus noté (`ovms.pid`), aussi par l'annulation d'une routine |
 | `src/sans_fenetre.py` | activé par `lmagent.main` : sans console (exe installé), toute commande lancée (tasklist, powershell, lms…) reçoit CREATE_NO_WINDOW — plus de terminal qui clignote pendant une routine |
 | `src/chrome/` | pilotage de Google Chrome sans dépendance (protocole DevTools, client WebSocket en bibliothèque standard) : profil à part (dossier `chrome` des données), port 9333 sur 127.0.0.1, fenêtre laissée ouverte |
 | `src/boucle.py` | routine en plusieurs passages : modèle et LM Studio gardés ouverts jusqu'au dernier passage (fichier d'état partagé) |
@@ -139,7 +140,9 @@ filtres, bouton « Écrire ce qui manque », formulaire La Bonne Alternance pré
 rattachées même depuis un outil de support, une adresse perso ou d'après la signature, diagnostic de LM Studio sur
 la tour, racine du dépôt rangée (`src/`, `outils/`, `docs/`, `perso/`), plus de terminal qui clignote pendant
 une routine (`src/sans_fenetre.py`), gros fichiers découpés en dossiers de petits modules (`agent`, `tour`, `imap`,
-`sites`, `suivi`, `tableau`).
+`sites`, `suivi`, `tableau`), ordre des machines tour → carte dédiée → NPU Intel (OpenVINO) → carte du processeur
+→ processeur (mesuré sur un Core Ultra 5 125H : NPU ≈ 8 jetons/s, carte du processeur ≈ 8-12 jetons/s ; le NPU
+laisse le PC utilisable).
 
 Pistes ouvertes, non demandées :
 - exceptions au filtre d'activité (éditeurs de logiciels déclarés comme commerces, réparation d'ordinateurs 95.11Z) ;

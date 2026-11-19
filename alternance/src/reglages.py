@@ -164,7 +164,18 @@ REGLAGES = [
        "Décoché : l'IA tourne sur ce PC uniquement, la page et les réglages de la tour sont cachés."),
     _r("Agent et modèle", G, "modele", "Modèle LM Studio", "texte", "qwen/qwen3.5-9b"),
     _r("Agent et modèle", G, "contexte", "Taille du contexte", "entier", 16384),
-    _r("Agent et modèle", G, "gpu", "Moteur sur ce PC", "choix", "auto", choix=["auto", "cuda", "vulkan", "cpu"]),
+    _r("Agent et modèle", G, "ordre_ce_pc", "Sur ce PC, essayer dans l'ordre", "liste",
+       ["carte_dediee", "npu", "carte_integree", "processeur"],
+       "Quand la tour n'est pas disponible (ou pas utilisée). carte_dediee : carte graphique NVIDIA / AMD / Intel Arc ; "
+       "npu : NPU Intel des Core Ultra (OpenVINO), le PC reste utilisable pendant la routine ; carte_integree : carte "
+       "graphique du processeur ; processeur : le plus lent. Ce qui manque sur ce PC est sauté ; retirer une ligne "
+       "pour ne jamais l'utiliser."),
+    _r("Agent et modèle", G, "modele_npu", "Modèle pour le NPU (OpenVINO)", "texte", "OpenVINO/Qwen3-8B-int4-cw-ov",
+       "Modèle Hugging Face au format NPU d'OpenVINO (« int4-cw »)."),
+    _r("Agent et modèle", G, "npu_installation_auto", "Installer OpenVINO la première fois que le NPU sert", "oui_non",
+       True, "Téléchargement unique d'environ 5 Go dans %LOCALAPPDATA%\\LMAgent\\openvino. Décoché : le NPU est sauté."),
+    _r("Agent et modèle", G, "gpu", "Moteur des cartes graphiques (LM Studio)", "choix", "auto",
+       "auto : CUDA pour NVIDIA, Vulkan pour AMD et Intel.", choix=["auto", "cuda", "vulkan", "cpu"]),
     _r("Agent et modèle", G, "reflexion", "Réflexion du modèle (agent)", "oui_non", False),
     _r("Agent et modèle", G, "afficher_reflexion", "Afficher la réflexion", "oui_non", False),
     _r("Agent et modèle", G, "decharger_a_la_fin", "Décharger le modèle à la fin", "oui_non", True),

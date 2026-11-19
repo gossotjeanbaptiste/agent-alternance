@@ -52,32 +52,32 @@ def _charger_distant(nom, url):
         return
 
 
-def _serveur_local():
-    """LM Studio de CE PC : l'ouvre (en arrière-plan) si besoin, démarre le serveur, charge le modèle."""
-    c = agent.CONFIG
+def _lmstudio_demarre():
+    """URL du serveur LM Studio de CE PC (appli ouverte en arrière-plan et serveur démarré si besoin), ou None."""
     candidates = [f"http://localhost:{p}/v1" for p in (1234, 1235)]
     url = next((u for u in candidates if agent._reachable(u)), None)
-    if not url and not agent._lmstudio_local_ouvert() and c.get("fermer_lmstudio_apres", True):
+    if url:
+        return url
+    if not agent.LMS.exists():
+        agent.say("   LM Studio absent de ce PC : on passe au suivant")
+        return None
+    if not agent._lmstudio_local_ouvert() and agent.CONFIG.get("fermer_lmstudio_apres", True):
         agent.LMSTUDIO_LOCAL_OUVERT_PAR_SCRIPT = True  # « lms server start » va l'ouvrir : on le refermera
-    if not url:
-        agent.say("Démarrage du serveur LM Studio local...")
-        agent._lms("server", "start")
-        time.sleep(3)
-        url = next((u for u in candidates if agent._reachable(u)), None)
-        if not url:
-            return None
-    agent.choisir_moteur()
-    if c["modele"] not in agent._lms("ps").stdout:
-        agent.say(f"Chargement de {c['modele']} sur ce PC...")
-        agent._lms("load", c["modele"], "--context-length", str(c["contexte"]), "--gpu", "max", "-y")
-        if c.get("decharger_a_la_fin", True):
-            agent.A_DECHARGER.append(("local", "ce PC", None, c["modele"]))
-    return url
+    agent.say("Démarrage du serveur LM Studio local...")
+    agent._lms("server", "start")
+    time.sleep(3)
+    return next((u for u in candidates if agent._reachable(u)), None)
+
+
+def a_decharger_local():
+    """Modèle chargé dans LM Studio de ce PC, tel que liberation.py le décharge à la fin."""
+    return ("local", "ce PC", None, agent.CONFIG["modele"])
 
 
 def _serveurs_a_essayer():
-    """Liste des serveurs, dans l'ordre : LMSTUDIO_URL, ceux de config.json (sans la tour si elle n'est pas
-    utilisée), ce PC en dernier recours."""
+    """Serveurs dans l'ordre : LMSTUDIO_URL, ceux de config.json (sans la tour si elle n'est pas utilisée), ce PC
+    en dernier recours. « ce PC » est remplacé par ses niveaux (carte dédiée, NPU, carte du processeur, processeur),
+    cherchés seulement quand on en arrive là."""
     liste = list(agent.CONFIG.get("serveurs") or [])
     if not agent.utiliser_tour():  # pas de deuxième PC : uniquement ce PC (aucun réveil, aucune attente)
         liste = [s for s in liste if s.get("url") == "local"]
@@ -85,7 +85,11 @@ def _serveurs_a_essayer():
         liste.insert(0, {"nom": "LMSTUDIO_URL", "url": os.environ["LMSTUDIO_URL"]})
     if not any(s.get("url") == "local" for s in liste):
         liste.append({"nom": "ce PC", "url": "local"})
-    return liste
+    for s in liste:
+        if s.get("url") == "local":
+            yield from ({"nom": nom, "url": "local", "niveau": n} for n, nom in agent.niveaux_locaux())
+        else:
+            yield s
 
 
 def _serveur_distant(s):
@@ -119,7 +123,11 @@ def ensure_server(sauf=()):
     for s in _serveurs_a_essayer():
         if s["nom"] in sauf:
             continue
-        url = agent._serveur_local() if s["url"] == "local" else _serveur_distant(s)
+        if s["url"] == "local":
+            url = agent.demarrer_local(s["niveau"])
+        else:
+            agent.MOTEUR = "lmstudio"
+            url = _serveur_distant(s)
         if url:
             agent.BASE_URL, agent.SERVEUR = url, s["nom"]
             agent.say(f"🧠 Modèle utilisé : {agent.SERVEUR} ({agent.BASE_URL})")
@@ -131,9 +139,9 @@ def ensure_server(sauf=()):
 def post_chat(req_body):
     """Envoie une requête au modèle. Si le serveur lâche en cours de route (tour éteinte,
     connexion coupée), bascule une fois sur le serveur suivant et recommence."""
-    body = json.dumps(req_body).encode()
     for essai in range(2):
-        req = urllib.request.Request(f"{agent.BASE_URL}/chat/completions", data=body,
+        corps = agent.npu.adapter(req_body) if agent.MOTEUR == "openvino" else req_body
+        req = urllib.request.Request(f"{agent.BASE_URL}/chat/completions", data=json.dumps(corps).encode(),
                                      headers={"Content-Type": "application/json"})
         try:
             with urllib.request.urlopen(req, timeout=900) as resp:
@@ -142,4 +150,7 @@ def post_chat(req_body):
             if essai:
                 raise
             agent.say(f"⚠️ {agent.SERVEUR} ne répond plus ({e}) : bascule sur le serveur suivant")
-            agent.ensure_server(sauf=(agent.SERVEUR,))
+            if agent.MOTEUR == "openvino":
+                agent.npu.arreter()
+            agent.ECARTES.append(agent.SERVEUR)       # les serveurs déjà lâchés ne sont pas réessayés
+            agent.ensure_server(sauf=tuple(agent.ECARTES))
