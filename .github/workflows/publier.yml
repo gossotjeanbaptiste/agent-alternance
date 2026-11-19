@@ -1,5 +1,5 @@
 # Publication d'une version : pousser un tag vX.Y.Z (ex. git tag v1.2.0 && git push origin v1.2.0)
-# -> tests, compilation de LMAgent.exe (PyInstaller), installeur LMAgent-X.Y.Z.msi (WiX), empreinte SHA-256,
+# -> tests (tests.yml, l'installeur n'est fabriqué que s'ils passent), compilation de LMAgent.exe (PyInstaller), installeur LMAgent-X.Y.Z.msi (WiX), empreinte SHA-256,
 #    et création de la version GitHub avec ces fichiers. Les installations existantes s'y mettent à jour seules.
 name: Publier une version
 
@@ -12,7 +12,11 @@ permissions:
   contents: write
 
 jobs:
+  tests:                  # tous les tests d'abord (workflow tests.yml) : pas d'installeur si l'un échoue
+    uses: ./.github/workflows/tests.yml
+
   installeur:
+    needs: tests
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,10 +26,7 @@ jobs:
           python-version: "3.12"
 
       - name: Dépendances
-        run: pip install -r requirements.txt pyinstaller pytest
-
-      - name: Tests
-        run: python -m pytest
+        run: pip install -r requirements.txt pyinstaller
 
       - name: Numéro de version (depuis le tag)
         shell: pwsh

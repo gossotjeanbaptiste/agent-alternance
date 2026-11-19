@@ -1,0 +1,37 @@
+# Tests de LMAgent (python -m pytest, sous Windows comme l'application) :
+# - à chaque envoi sur main ou local-simple, et sur chaque pull request ;
+# - appelés par « Publier une version » avant la fabrication de l'installeur (qui n'a lieu que s'ils passent).
+name: Tests
+
+on:
+  push:
+    branches: [main, local-simple]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    # dépôt public seulement : sur le dépôt privé, chaque envoi consommerait les minutes Actions (limitées)
+    if: ${{ !github.event.repository.private }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4     # vérification des scripts JavaScript des pages et de l'extension Chrome
+        with:
+          node-version: "20"
+
+      - name: Dépendances
+        run: pip install -r requirements.txt pytest
+
+      - name: Tests
+        run: python -m pytest -q
