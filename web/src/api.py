@@ -123,8 +123,36 @@ def formulaire():
         ligne = int(d.get("ligne"))
     except (TypeError, ValueError):
         return jsonify(ok=False, message="Ligne invalide."), 400
-    ok, message = formulaire_web.ouvrir_formulaire(ligne, str(d.get("entreprise") or ""))
+    ok, message = formulaire_web.ouvrir_formulaire(ligne, str(d.get("entreprise") or ""), request.host)
     return jsonify(ok=ok, message=message), (200 if ok else 400)
+
+
+@api.post("/extension_installer")
+def extension_installer():
+    """Aide à l'installation de l'extension : ouvre son dossier et la page des extensions de Chrome."""
+    import os
+    import subprocess
+    import chrome
+    import extension_lba
+    dossier = extension_lba.dossier_extension()
+    os.startfile(dossier)
+    exe = chrome.trouver_chrome()
+    if exe:
+        subprocess.Popen([str(exe), "chrome://extensions"], close_fds=True)
+    return jsonify(ok=True, dossier=str(dossier),
+                   message=f"Dans Chrome : active « Mode développeur », clique « Charger l'extension non empaquetée » "
+                           f"et choisis le dossier {dossier}.")
+
+
+@api.post("/extension/<jeton>")
+def extension(jeton):
+    """Données d'un formulaire prérempli, pour l'extension Chrome de LMAgent seulement (jeton à usage unique,
+    origine de l'extension vérifiée ; pas de session ni de jeton d'interface : voir extension_lba.py)."""
+    import extension_lba
+    donnees = extension_lba.retirer(jeton, request.headers.get("Origin"))
+    r = jsonify(ok=donnees is not None, donnees=donnees)
+    r.headers["Cache-Control"] = "no-store"
+    return r, (200 if donnees is not None else 404)
 
 
 @api.post("/ecartee")

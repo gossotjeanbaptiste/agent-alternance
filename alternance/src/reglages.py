@@ -48,6 +48,7 @@ def _r(section, fichier, chemin, libelle, type_, defaut, aide="", choix=None, to
 
 
 A, G = "alternance", "agent"
+F = "Formulaire La Bonne Alternance prérempli"
 REGLAGES = [
     # --- candidatures et relances
     _r("Candidatures et relances", A, "mails_par_jour", "Nouvelles candidatures par lancement", "entier", 5),
@@ -115,10 +116,26 @@ REGLAGES = [
     _r("La Bonne Alternance", A, "la_bonne_alternance.villes", "Villes de recherche", "json", [],
        "Liste de {\"nom\", \"lat\", \"lon\"} (un \"poids\" écrit à la main passe avant le calcul)."),
     _r("La Bonne Alternance", A, "la_bonne_alternance.recherches_site_max", "Sites d'entreprise fouillés par passage", "entier", 30),
-    _r("La Bonne Alternance", A, "la_bonne_alternance.situation", "Ma situation (formulaire prérempli)", "choix",
-       "ne pas cocher", "Case « Ma situation » du formulaire La Bonne Alternance, cochée par le bouton « Ouvrir le "
-       "formulaire prérempli » (nom, prénom, mail et téléphone viennent de la signature des formulaires).",
+    # --- formulaire La Bonne Alternance prérempli (bouton de la page À postuler)
+    _r(F, A, "la_bonne_alternance.ouverture", "Ouvrir le formulaire dans", "choix", "mon Chrome (extension LMAgent)",
+       "« Mon Chrome » : nouvel onglet dans ton Chrome habituel, rempli par l'extension LMAgent (à installer une fois, "
+       "voir l'aide de la page À postuler). « Chrome à part » : fenêtre Chrome pilotée par LMAgent, avec son propre profil.",
+       choix=["mon Chrome (extension LMAgent)", "Chrome à part (piloté par LMAgent)"]),
+    _r(F, A, "la_bonne_alternance.situation", "Ma situation", "choix", "ne pas cocher",
+       "Nom, prénom, mail et téléphone viennent de la signature des formulaires ; la lettre, les réponses et le CV "
+       "de la candidature. Les champs « école » et « rythme » n'existent que si tu es déjà inscrit(e).",
        choix=["ne pas cocher", "déjà inscrit(e) en formation", "pas encore inscrit(e) en formation"]),
+    _r(F, A, "la_bonne_alternance.debut_contrat", "Début de contrat souhaité", "liste", [],
+       "Un choix par ligne, écrit comme sur le site : « Dès que possible », « Janvier 2027 »…"),
+    _r(F, A, "la_bonne_alternance.duree_contrat", "Durée du contrat souhaitée", "choix", "",
+       choix=["", "6 mois", "12 mois", "18 mois", "24 mois", "36 mois"]),
+    _r(F, A, "la_bonne_alternance.formation", "École et formation", "texte", "",
+       "Ex. : nom de l'école / intitulé de la formation / ville (200 caractères au plus)."),
+    _r(F, A, "la_bonne_alternance.rythme", "Rythme de l'alternance", "texte", "",
+       "Ex. : 1 semaine à l'école / 2 semaines en entreprise (200 caractères au plus)."),
+    _r(F, A, "la_bonne_alternance.cv", "CV à joindre (fichier)", "texte", "",
+       "Chemin, ou simple nom d'un fichier du dossier pieces_jointes (ex. CV+Calendrier.pdf). PDF ou Word, 3 Mo au plus. "
+       "Vide = le CV des pièces jointes des candidatures."),
     # --- sites des entreprises
     _r("Sites des entreprises", A, "sites.pages_max", "Pages lues par site", "entier", 6),
     _r("Sites des entreprises", A, "sites.verifier_france", "N'utiliser que des sites d'entreprises en France", "oui_non",
