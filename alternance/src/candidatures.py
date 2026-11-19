@@ -19,7 +19,7 @@ def rediger_candidature(o):
         f"- Lieu : {o.get('lieu') or '?'}\n- Contact : {o.get('contact') or 'inconnu'}\n"
         f"- Ce qu'on sait de l'entreprise / de l'offre : {o.get('infos') or 'rien de plus'}\n"
         f"Ton : {'formel, « Madame, Monsieur, »' if formel else 'vouvoiement, plus direct, « Bonjour Madame/Monsieur Nom, »'}.\n"
-        f"{interdits()}"
+        f"{reponses.NE_PAS_INVENTER}{interdits()}"
         '{"objet": "objet du mail", "corps": "corps du mail, paragraphes séparés par une ligne vide"}')
     return r["objet"], r["corps"]
 
@@ -83,6 +83,8 @@ def nouvelles_candidatures(suivi, ol):
             continue
         lba = bool(o.get("lba_postulable"))  # formulaire « Postuler » disponible sur La Bonne Alternance
         notes = [f"SIRET {o['siret']}"] if o.get("siret") else []
+        if o.get("activite"):   # activité officielle (code NAF) : redonnée au modèle s'il réécrit depuis le tableau
+            notes.append(f"Activité : {o['activite']}")
         if o.get("site"):
             notes.append(f"Site : {o['site']}")
         if o.get("formulaire"):

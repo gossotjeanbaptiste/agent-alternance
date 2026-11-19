@@ -19,6 +19,23 @@ QUESTIONS = [(cle, reglages.valeur(f"redaction.questions.{cle}.titre"),
 
 SPONTANEE = "Candidature spontanée"   # poste noté quand La Bonne Alternance n'a pas d'offre pour l'entreprise
 
+# Le modèle inventait le secteur d'une entreprise d'après son nom (« Xxx Tech » -> « éditeur de logiciels de… ») :
+# règle ajoutée à toutes les consignes de lettre et de réponses.
+NE_PAS_INVENTER = (
+    "RÈGLE ABSOLUE SUR L'ENTREPRISE : son secteur d'activité, ses produits, ses services, ses clients, ses projets ou "
+    "ses technologies ne peuvent venir QUE de « Ce qu'on sait de l'entreprise » ci-dessus, recopiés sans rien ajouter. "
+    "Ne déduis RIEN de son nom ni de sa ville, ne devine pas son métier. Si cette information manque (« rien de plus »), "
+    "ne nomme aucun secteur, produit ou client : parle de l'entreprise en termes généraux (son équipe, l'intérêt du "
+    "poste, ce que l'alternance m'apportera et ce que je peux apporter). Ne commente JAMAIS le nom de l'entreprise : "
+    "ne dis pas qu'il m'inspire, m'évoque, m'attire, me parle ou reflète quelque chose.\n")
+
+
+def infos_du_tableau(notes):
+    """Ce que le tableau sait vraiment de l'entreprise (colonne Notes) : activité officielle et site, pour le modèle."""
+    import re
+    morceaux = [m.strip() for m in str(notes or "").split("|")]
+    return " | ".join(m for m in morceaux if re.match(r"(Activité|Site) : \S", m))
+
 
 def questions_attendues(statut, poste=None):
     """Vrai si le formulaire pose les trois questions : toute candidature par le formulaire La Bonne Alternance,
@@ -47,9 +64,8 @@ def rediger_reponses(o):
         f"- Lieu : {o.get('lieu') or '?'}\n- Ce qu'on sait de l'entreprise : {o.get('infos') or 'rien de plus'}\n\n"
         f"Questions :\n{consignes}\n\n"
         f"Chaque réponse : {reglages.valeur('redaction.longueur_reponses')}, ton sincère et professionnel, "
-        "sans formule de politesse, sans inventer d'expérience absente du profil. "
-        "Si on ne sait rien de l'entreprise, appuie-toi sur son nom et son secteur sans inventer de faits.\n"
-        + interdits() +
+        "sans formule de politesse, sans inventer d'expérience absente du profil.\n"
+        + NE_PAS_INVENTER + interdits() +
         "{" + ", ".join(f'"{cle}": "..."' for cle, _, _ in QUESTIONS) + "}")
     return {cle: str(r.get(cle) or "").strip() for cle, _, _ in QUESTIONS}
 

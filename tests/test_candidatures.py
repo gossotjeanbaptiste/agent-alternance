@@ -236,3 +236,34 @@ class TestOrientation:
         candidatures.nouvelles_candidatures(tableau, messagerie())
         assert tableau.ac.cell(2, 8).value is None              # rien marqué
         assert reponses.lire() == {}                             # rien enregistré
+
+
+# --- pas d'invention sur l'entreprise ------------------------------------------------------------------
+class TestPasDInvention:
+    def test_regle_dans_les_deux_consignes(self, faux_modele, monkeypatch):
+        """Lettre et réponses : secteur, produits… seulement d'après les infos données ; nom jamais commenté."""
+        import modele
+        monkeypatch.setattr(modele, "llm_json", faux_modele.llm_json)
+        faux_modele.reponses_json = [{"objet": "o", "corps": "c"}, {"motivations": "m"}]
+        candidatures.rediger_candidature({"entreprise": "Pixelo"})
+        reponses.rediger_reponses({"entreprise": "Pixelo"})
+        for p in faux_modele.consignes:
+            assert reponses.NE_PAS_INVENTER in p and "Ne déduis RIEN de son nom" in p and "m'inspire" in p
+            assert p.index("RÈGLE ABSOLUE") < p.index("INTERDIT")      # contre-prompt toujours à la fin
+        assert "appuie-toi sur son nom et son secteur" not in faux_modele.consignes[1]
+
+    @pytest.mark.parametrize("notes, attendu", [
+        ("SIRET 12345678900011 | Activité : Edition de logiciels applicatifs | Site : https://pixelo.example",
+         "Activité : Edition de logiciels applicatifs | Site : https://pixelo.example"),
+        ("Relance 1 en brouillon | Formulaire : https://pixelo.example/contact", ""),
+        (None, ""),
+    ])
+    def test_infos_du_tableau(self, notes, attendu):
+        assert reponses.infos_du_tableau(notes) == attendu
+
+    def test_activite_notee_au_tableau(self, scenario, tableau, messagerie):
+        """L'activité officielle (code NAF de La Bonne Alternance) est gardée dans Notes pour les réécritures."""
+        scenario.lba = [{**lba("Pixelo"), "activite": "Edition de logiciels applicatifs"}]
+        candidatures.nouvelles_candidatures(tableau, messagerie())
+        notes = [tableau.get(r, "Notes") for r in tableau.rows() if tableau.get(r, "Entreprise") == "Pixelo"][0]
+        assert "Activité : Edition de logiciels applicatifs" in notes

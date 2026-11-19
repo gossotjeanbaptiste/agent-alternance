@@ -92,6 +92,7 @@ où en est le projet.
 | `alternance/src/tableau/` | tableau Excel (`classeur` : `Suivi`, `mise_en_forme`), statuts et couleurs (`statuts`), doublons (`doublons`, `texte`) (même SIRET, domaine, ou nom **et** ville : plusieurs établissements du même nom permis), `PAGE_A_POSTULER` |
 | `web/app.py`, `web/src/`, `web/templates/` | interface : tableau de bord, Suivi (avec formulaire d'ajout), À postuler, Écartées, Routines, Tour, LinkedIn, Journal, Paramètres |
 | `web/src/lettres.py`, `redaction.py` | cartes de la page À postuler (lettres, réponses, adresses à trouver) ; bouton « Écrire ce qui manque » (modèle puis déchargement) |
+| `web/src/vers_lba.py` | bouton « 🎓 Postuler par La Bonne Alternance » des « adresse à trouver » venues de La Bonne Alternance : lettre du brouillon gardée (`reponses_lba.json`), statut « À postuler (La Bonne Alternance) », brouillon à la corbeille, puis « Écrire ce qui manque » (réponses aux questions) |
 | `web/src/ecartees.py` | page « Écartées » : raison, site / Google, « Candidater quand même » (feuille « À contacter »), « Abandonner », « Remettre » ; candidatures faites retirées |
 | `web/src/routines.py`, `planification.py` | lancement d'une routine en arrière-plan, bouton « Annuler » (arbre de processus, puis modèle déchargé) ; routines quotidiennes via le Planificateur de tâches (`LMAgent_<routine>`) |
 | `web/src/icone_tache.py` | icône près de l'horloge (pystray) : Ouvrir / Quitter LMAgent |
@@ -114,6 +115,7 @@ où en est le projet.
 - **Filtre d'activité** : candidatures spontanées limitées aux codes NAF informatiques (`naf_acceptes`) ; les
   entreprises écartées sont notées dans `entreprises_refusees.csv` et traitées dans la page Écartées.
 - **Consignes du modèle** : profil (`profil.md`) au début, contre-prompt (`interdits.md`) à la fin, relu à chaque mail.
+  Règle `reponses.NE_PAS_INVENTER` dans toute lettre et toute réponse : secteur, produits, clients seulement d'après les infos données (activité NAF notée « Activité : … » dans Notes et redonnée par `reponses.infos_du_tableau`), rien déduit du nom, nom jamais commenté (« m'inspire »…).
   La taille de l'entreprise n'est volontairement pas donnée au modèle.
 - **Routines** (page Routines, planifiables) : Relances, Recherche, Les deux, Mails reçus (lecture seule de la
   messagerie, sans relance), Réponses La Bonne Alternance. Lancées par `lmagent --routine <nom> [--fois N]` dans un

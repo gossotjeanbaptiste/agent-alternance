@@ -34,9 +34,11 @@ OUTLOOK_EXE = [r"C:\Program Files\Microsoft Office\root\Office16\OUTLOOK.EXE",
                r"C:\Program Files (x86)\Microsoft Office\root\Office16\OUTLOOK.EXE"]
 QUESTIONS = {
     "motivations": ("Vos motivations : pourquoi souhaitez-vous rejoindre l'entreprise ?",
-                    "pourquoi je souhaite rejoindre cette entreprise précisément (son activité, ce qui m'attire chez elle)"),
+                    "pourquoi je souhaite rejoindre cette entreprise (son activité seulement si elle est donnée, "
+                    "sinon ce qui m'attire dans le poste et dans l'alternance chez elle, sans rien inventer)"),
     "missions": ("Quelles missions souhaiteriez-vous accomplir au sein de l'entreprise ?",
-                 "le poste visé, les missions que je souhaite accomplir et ma contribution concrète aux activités de l'entreprise"),
+                 "le poste visé, les missions que je souhaite accomplir et ma contribution concrète, rattachées au métier "
+                 "visé (développement, informatique…) plutôt qu'à des produits de l'entreprise que je ne connais pas"),
     "experiences": ("Vos expériences passées (stage, job, bénévolat) en lien avec le poste visé",
                     "mes expériences passées (stages, jobs, bénévolat, projets) en lien avec le poste visé, et ce qu'elles m'ont apporté"),
 }
