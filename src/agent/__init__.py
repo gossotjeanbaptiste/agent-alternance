@@ -14,8 +14,11 @@ cet état et s'appellent entre eux par `agent.X` : une valeur ou une fonction se
     fichiers.py      outils de fichiers proposés au modèle (limités aux dossiers autorisés)
     outils.py        PowerShell, page web, liste des outils et consigne système
     lmstudio.py      appels de base à LM Studio (API REST, lms.exe)
-    moteur.py        choix du moteur selon la carte graphique
-    serveur.py       LM Studio de ce PC : serveur démarré, modèle chargé, requêtes
+    moteur.py        choix du moteur LM Studio (CUDA, Vulkan, processeur)
+    materiel.py      carte graphique dédiée ou intégrée, NPU Intel
+    local.py         ce PC, dans l'ordre : carte dédiée, NPU, carte du processeur, processeur
+    npu.py           le modèle sur le NPU (OpenVINO Model Server) ; npu_installation.py : téléchargements
+    serveur.py       niveaux de ce PC essayés dans l'ordre, LM Studio démarré, requêtes (avec bascule)
     liberation.py    à la fin : modèle déchargé, LM Studio refermé
     conversation.py  chat interactif, tâches automatiques, ligne de commande
 """
@@ -60,9 +63,11 @@ LMS = Path(os.path.expanduser(CONFIG.get("lms_local") or "~/.lmstudio/bin/lms.ex
 ALLOWED = [WORKSPACE] + [Path(os.path.expanduser(p)).resolve() for p in CONFIG["dossiers_autorises"]]
 AUTO = False          # passe à True en mode --task / --tache
 BASE_URL = None       # choisi par ensure_server()
-# Tout tourne sur CE PC. Au démarrage : choix du moteur selon la carte graphique, chargement du modèle avec toutes
-# les couches sur la carte graphique ; à la fin : déchargement (VRAM libérée).
-SERVEUR = "ce PC"
+# Tout tourne sur CE PC, dans l'ordre : carte graphique dédiée, NPU Intel (OpenVINO), carte graphique du processeur,
+# processeur (voir local.py) ; à la fin : déchargement (mémoire libérée).
+SERVEUR = "ce PC"     # niveau de ce PC qui fait tourner le modèle (pour le journal)
+MOTEUR = "lmstudio"   # « openvino » quand le modèle tourne sur le NPU (requêtes adaptées)
+ECARTES = []          # niveaux qui ont lâché en cours de route : pas réessayés
 A_DECHARGER = []      # modèles chargés par le script, déchargés à la fin
 LMSTUDIO_OUVERT_PAR_SCRIPT = False  # True si LM Studio était fermé -> refermé à la fin
 
@@ -85,7 +90,10 @@ from .fichiers import (_confirm, _safe_path, _to_trash, create_folder, delete_fi
 from .outils import TOOL_SCHEMAS, TOOLS, fetch_url, run_powershell, system_prompt  # noqa: E402
 from .lmstudio import _lms, _lmstudio_ouvert, _reachable  # noqa: E402
 from .moteur import _cuda, _moteurs_installes, _version, cartes_graphiques, choisir_moteur, type_gpu  # noqa: E402
-from .serveur import ensure_server, post_chat  # noqa: E402
+from .materiel import carte_dediee, carte_integree, est_dediee, est_integree, npu_intel  # noqa: E402
+from . import npu, npu_installation  # noqa: E402
+from .local import demarrer as demarrer_local, niveaux as niveaux_locaux  # noqa: E402
+from .serveur import _lmstudio_demarre, a_decharger_local, ensure_server, post_chat  # noqa: E402
 from .liberation import _garder_pour_le_passage_suivant, _reprendre_boucle, liberer_modele  # noqa: E402
 from .conversation import chat, main, run_auto, run_chat, run_turn  # noqa: E402
 

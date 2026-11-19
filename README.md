@@ -160,7 +160,9 @@ Rien d'obligatoire : les valeurs par défaut marchent. Le modèle tourne **sur c
 
 | Clé | Défaut | Effet |
 |---|---|---|
-| `gpu` | `"auto"` | Moteur LM Studio choisi selon la carte graphique (voir ci-dessous). Forcer avec `"cuda"`, `"vulkan"` ou `"cpu"` |
+| `ordre_ce_pc` | `["carte_dediee", "npu", "carte_integree", "processeur"]` | Ordre d'essai sur ce PC (voir ci-dessous) ; ce qui manque est sauté, ce qui échoue passe la main au suivant ; retirer une ligne pour ne jamais l'utiliser |
+| `modele_npu` / `npu_installation_auto` | `OpenVINO/Qwen3-8B-int4-cw-ov` / `true` | Modèle du NPU Intel, et son installation la première fois qu'il sert (OVMS et le modèle, ~5 Go une seule fois, dans `%LOCALAPPDATA%\LMAgent\openvino`) |
+| `gpu` | `"auto"` | Moteur LM Studio des cartes graphiques (voir ci-dessous). Forcer avec `"cuda"` ou `"vulkan"` |
 | `modele` | `qwen/qwen3.5-9b` | Identifiant du modèle dans LM Studio |
 | `contexte` | `16384` | Taille du contexte (doit tenir dans la mémoire de la carte graphique) |
 | `reflexion` | `false` | `true` = le modèle « réfléchit » avant de répondre : ~10× plus lent |
@@ -170,18 +172,20 @@ Rien d'obligatoire : les valeurs par défaut marchent. Le modèle tourne **sur c
 | `powershell_en_auto` | `false` | Autorise PowerShell dans les tâches automatiques (risqué) |
 | `etapes_max` | `20` | Nombre max d'actions de l'agent par demande |
 
-### Choix automatique du moteur (`"gpu": "auto"`)
+### Où tourne le modèle (`ordre_ce_pc`)
 
-À chaque lancement, le script regarde les cartes graphiques du PC (la carte **dédiée** passe avant la carte intégrée) :
+À chaque lancement, le script essaie dans l'ordre ce que ce PC possède :
 
-| Carte détectée | Moteur LM Studio sélectionné |
-|---|---|
-| **NVIDIA** | **CUDA le plus récent compatible** (CUDA 13 → 12 → base, LM Studio vérifie le pilote). Téléchargé automatiquement s'il n'est pas installé |
-| AMD Radeon | Vulkan (dernière version installée) |
-| Intel Arc / Iris | Vulkan (dernière version installée) |
-| aucune | CPU |
+| Niveau | Matériel | Moteur |
+|---|---|---|
+| `carte_dediee` | carte graphique **dédiée** : NVIDIA, AMD Radeon RX, Intel Arc A / B | LM Studio : **CUDA le plus récent compatible** pour NVIDIA (téléchargé s'il manque), Vulkan pour AMD et Intel |
+| `npu` | **NPU Intel** des Core Ultra (« Intel AI Boost ») | **OpenVINO Model Server**, installé la première fois (~5 Go) ; la carte graphique et le processeur restent libres : le PC reste utilisable pendant une routine |
+| `carte_integree` | carte graphique du processeur (Intel Arc des Core Ultra, Iris, Radeon intégrée) | LM Studio : Vulkan |
+| `processeur` | processeur seul | LM Studio : moteur CPU (le plus lent) |
 
-Puis le modèle est chargé **avec toutes ses couches sur la carte graphique** (`--gpu max`) et déchargé à la fin.
+Avec LM Studio, le modèle est chargé **avec toutes ses couches sur la carte graphique** (`--gpu max`, ou aucune pour
+le processeur) et déchargé à la fin ; OpenVINO est arrêté à la fin. Mesuré sur un Core Ultra 5 125H, même lettre :
+NPU ≈ 40-60 s, carte du processeur ≈ 45-50 s.
 Pour CUDA 13, il faut un pilote NVIDIA récent : mets-le à jour si LM Studio ne propose que CUDA 12.
 
 ---

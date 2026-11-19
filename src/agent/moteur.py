@@ -59,12 +59,20 @@ def _telecharger_cuda_recent():
             agent._lms("runtime", "get", cible, "-y", timeout=1800)
 
 
-def choisir_moteur():
-    """Sélectionne dans LM Studio le meilleur moteur pour la carte graphique de ce PC."""
+FAMILLES = {"nvidia": "cuda", "cuda": "cuda", "amd": "vulkan", "intel": "vulkan", "vulkan": "vulkan"}
+
+
+def choisir_moteur(famille=None):
+    """Sélectionne dans LM Studio le meilleur moteur de la famille demandée (cuda, vulkan, cpu ; par défaut d'après
+    la carte graphique de ce PC). Le réglage « gpu » (autre que auto) impose la famille des cartes graphiques.
+    Renvoie False si aucun moteur de cette famille n'est installé."""
     voulu = agent.CONFIG.get("gpu", "auto")
-    gpu = agent.type_gpu() if voulu == "auto" else voulu
-    famille = {"nvidia": "cuda", "cuda": "cuda", "amd": "vulkan", "intel": "vulkan",
-               "vulkan": "vulkan"}.get(gpu, "cpu")
+    if famille is None:
+        gpu = agent.type_gpu() if voulu == "auto" else voulu
+        famille = FAMILLES.get(gpu, "cpu")
+    elif famille != "cpu" and voulu not in ("auto", "cpu"):
+        famille = FAMILLES.get(voulu, famille)
+    gpu = famille
     if famille == "cuda":
         _telecharger_cuda_recent()
     installes = _moteurs_installes()
@@ -78,14 +86,14 @@ def choisir_moteur():
         candidats = [n for n in installes if re.match(r"llama\.cpp-win-x86_64-avx2@", n)]
         cle = _version
     if not candidats:
-        agent.say(f"   ⚠️ Aucun moteur {famille} installé dans LM Studio : on garde le moteur actuel "
-                  "(installe-le dans LM Studio → Runtime)")
-        return
+        agent.say(f"   ⚠️ Aucun moteur {famille} installé dans LM Studio (installe-le dans LM Studio → Runtime)")
+        return False
     meilleur = max(candidats, key=cle)
     if installes.get(meilleur):
-        agent.say(f"🎮 Carte graphique : {gpu} → moteur {meilleur} (déjà sélectionné)")
-        return
-    agent.say(f"🎮 Carte graphique : {gpu} → sélection du moteur {meilleur}")
+        agent.say(f"🎮 Moteur {gpu} → {meilleur} (déjà sélectionné)")
+        return True
+    agent.say(f"🎮 Moteur {gpu} → sélection de {meilleur}")
     agent._lms("runtime", "select", meilleur)
     if agent.CONFIG["modele"] in agent._lms("ps").stdout:  # recharger avec le nouveau moteur
         agent._lms("unload", agent.CONFIG["modele"])
+    return True

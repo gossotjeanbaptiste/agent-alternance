@@ -48,6 +48,14 @@ def dossier(nom):
     return BASE / nom
 
 
+def gros_fichiers(nom):
+    """Gros fichiers téléchargés (OpenVINO et son modèle, ~5 Go) : %LOCALAPPDATA%\\LMAgent\\<nom>, jamais dans le
+    profil itinérant (Roaming) ni dans le projet ; sous LMAGENT_DOSSIER quand il est forcé (tests)."""
+    if os.environ.get("LMAGENT_DOSSIER"):
+        return BASE / nom
+    return Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local") / "LMAgent" / nom
+
+
 def modeles():
     """Modèles d'exemple fournis avec l'appli (*.example.*)."""
     return RESSOURCES / "alternance" / "donnees"

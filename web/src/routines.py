@@ -98,6 +98,10 @@ def decharger_modele():
                     dechargees += 1
                 except Exception:
                     pass
+    try:
+        dechargees += int(agent.npu.arreter())   # OpenVINO (NPU) lancé par la routine
+    except Exception:
+        pass
     return dechargees
 
 

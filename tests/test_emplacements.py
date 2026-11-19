@@ -161,9 +161,10 @@ class TestUtiliserTour:
         monkeypatch.delenv("LMSTUDIO_URL", raising=False)
         essais = []
         monkeypatch.setattr(agent, "_reachable", lambda url: essais.append(url) or False)
-        monkeypatch.setattr(agent, "_serveur_local", lambda: "http://localhost:1234/v1")
+        monkeypatch.setattr(agent, "niveaux_locaux", lambda: [("carte_integree", "ce PC (carte graphique du processeur)")])
+        monkeypatch.setattr(agent, "demarrer_local", lambda niveau: "http://localhost:1234/v1")
         agent.ensure_server()
-        assert essais == [] and agent.SERVEUR == "ce PC"
+        assert essais == [] and agent.SERVEUR == "ce PC (carte graphique du processeur)"
 
     def test_page_tour_cachee_sans_tour(self, monkeypatch, client):
         monkeypatch.setitem(agent.CONFIG, "utiliser_tour", False)
