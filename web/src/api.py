@@ -130,18 +130,25 @@ def formulaire():
 @api.post("/extension_installer")
 def extension_installer():
     """Aide à l'installation de l'extension : ouvre son dossier et la page des extensions de Chrome."""
-    import os
     import subprocess
     import chrome
     import extension_lba
     dossier = extension_lba.dossier_extension()
-    os.startfile(dossier)
     exe = chrome.trouver_chrome()
-    if exe:
-        subprocess.Popen([str(exe), "chrome://extensions"], close_fds=True)
+    if not exe:
+        return jsonify(ok=False, message="Google Chrome introuvable sur ce PC."), 400
+    subprocess.Popen([str(exe), "chrome://extensions"], close_fds=True)
     return jsonify(ok=True, dossier=str(dossier),
-                   message=f"Dans Chrome : active « Mode développeur », clique « Charger l'extension non empaquetée » "
-                           f"et choisis le dossier {dossier}.")
+                   message="Page des extensions ouverte dans Chrome, chemin du dossier copié : active « Mode développeur », "
+                           "clique « Charger l'extension non empaquetée », colle le chemin (Ctrl+V) et valide.")
+
+
+@api.post("/extension_presente")
+def extension_presente():
+    """L'extension Chrome se signale (installée, Chrome démarré) : aucune donnée échangée, origine vérifiée."""
+    import extension_lba
+    ok = extension_lba.noter_presence(request.headers.get("Origin"))
+    return jsonify(ok=ok), (200 if ok else 404)
 
 
 @api.post("/extension/<jeton>")

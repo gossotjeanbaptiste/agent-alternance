@@ -2,6 +2,14 @@
 // Il n'accepte que les messages de sa propre extension venant d'une page de La Bonne Alternance, avec un jeton au
 // bon format ; aucun cookie n'est envoyé (credentials: "omit") et rien n'est gardé.
 const SITE = "https://labonnealternance.apprentissage.beta.gouv.fr/";
+const PORT_LMAGENT = 8765;   // port de l'interface de LMAgent (web/app.py)
+
+// À l'installation et au démarrage de Chrome : signale à LMAgent que l'extension est là (aucune donnée échangée),
+// pour que sa page À postuler affiche « installée ». Sans LMAgent ouvert, rien ne se passe.
+const signaler = () => fetch(`http://127.0.0.1:${PORT_LMAGENT}/api/extension_presente`,
+  { method: "POST", credentials: "omit", cache: "no-store", redirect: "error" }).catch(() => {});
+chrome.runtime.onInstalled.addListener(signaler);
+chrome.runtime.onStartup.addListener(signaler);
 
 chrome.runtime.onMessage.addListener((m, envoyeur, repondre) => {
   if (envoyeur.id !== chrome.runtime.id || !String(envoyeur.url || "").startsWith(SITE)) return false;

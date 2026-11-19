@@ -4,17 +4,26 @@
 <h1>À postuler <span class="doux" id="compte">({{ lignes|length }})</span></h1>
 <p class="doux">La Bonne Alternance : « 🧾 Ouvrir le formulaire prérempli » le remplit dans Chrome (identité, lettre, réponses, CV) ; relis, envoie-le toi-même, puis clique « Envoyée ».
 Formulaire du site de l'entreprise : ouvre la page, copie la lettre, colle-la (Ctrl+V) et envoie, puis clique « Envoyée ».</p>
-<details class="carte pli-section" id="pli-extension">
-  <summary><h2 style="display:inline">🧩 Extension Chrome LMAgent (à installer une fois)</h2></summary>
+<details class="carte pli-section" id="pli-extension"{% if not extension.vue_le %} open{% endif %}>
+  <summary><h2 style="display:inline">🧩 Extension Chrome LMAgent
+    {% if extension.vue_le %}<span class="doux" style="font-weight:400">— ✅ installée (vue le {{ extension.vue_le }})</span>
+    {% else %}<span class="doux" style="font-weight:400">— pas encore installée</span>{% endif %}</h2></summary>
   <p class="doux">Elle remplit le formulaire La Bonne Alternance dans ton Chrome habituel. Elle n'agit que sur les pages de
   La Bonne Alternance ouvertes par LMAgent, n'a accès ni à tes cookies ni à tes autres sites, et ne reçoit les données
   qu'une fois, par un code à usage unique valable 2 minutes. Elle n'envoie jamais la candidature : c'est toi qui cliques.</p>
+  <p class="doux">Chrome interdit qu'un programme installe une extension tout seul (protection contre les extensions
+  malveillantes) : c'est à toi de faire ces 3 clics, une seule fois.</p>
   <ol class="doux">
-    <li>Clique « Installer » : le dossier de l'extension et la page des extensions de Chrome s'ouvrent.</li>
-    <li>Dans Chrome, active « Mode développeur » (en haut à droite).</li>
-    <li>Clique « Charger l'extension non empaquetée » et choisis ce dossier.</li>
+    <li>Clique « 🧩 Ouvrir la page des extensions » : elle s'ouvre dans Chrome, et le chemin du dossier est copié.</li>
+    <li>En haut à droite de cette page, active <b>« Mode développeur »</b>.</li>
+    <li>Clique <b>« Charger l'extension non empaquetée »</b>, colle le chemin (Ctrl+V) dans la barre d'adresse de la fenêtre
+      qui s'ouvre, valide, puis clique « Sélectionner un dossier ».</li>
   </ol>
-  <div class="actions"><button onclick="installerExtension()">🧩 Installer</button></div>
+  {% if extension.dossier %}<p class="doux">Dossier : <code id="dossier-extension">{{ extension.dossier }}</code>
+    <button onclick="copier(document.getElementById('dossier-extension').textContent, 'Chemin copié')">📋 Copier le chemin</button></p>{% endif %}
+  <div class="actions"><button class="principal" onclick="installerExtension()">🧩 Ouvrir la page des extensions</button></div>
+  <p class="doux">Une fois installée, recharge cette page : elle doit afficher « ✅ installée ». Après une mise à jour de LMAgent,
+  clique sur ↻ (Actualiser) sous l'extension dans la page des extensions de Chrome.</p>
 </details>
 <p class="doux">
 Par mail : le brouillon t'attend dans {{ messagerie }}, relis-le et envoie-le ; l'envoi est repéré tout seul au prochain suivi, ou clique « Envoyée » si tu l'as déjà envoyé.
@@ -151,6 +160,9 @@ async function ecrireManque(bouton, ligne) {
 }
 async function installerExtension() {
   const r = await poster("/api/extension_installer", {});
+  if (r.ok && r.dossier) {
+    try { await navigator.clipboard.writeText(r.dossier); } catch (e) { /* copie refusée : le chemin reste affiché */ }
+  }
   annoncer(r.message || "Erreur", !r.ok);
 }
 async function ouvrirFormulaire(bouton, ligne) {

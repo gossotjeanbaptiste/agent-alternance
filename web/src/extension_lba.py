@@ -58,9 +58,39 @@ def dossier_extension():
     cible = emplacements.dossier("extension_chrome")
     cible.mkdir(parents=True, exist_ok=True)
     for f in SOURCE.iterdir():
-        if f.is_file() and (not (cible / f.name).exists() or (cible / f.name).read_bytes() != f.read_bytes()):
+        if f.is_file() and f.name != "vue_le.txt" and (not (cible / f.name).exists() or (cible / f.name).read_bytes() != f.read_bytes()):
             shutil.copy2(f, cible / f.name)
     return cible
+
+
+def _fichier_presence():
+    import emplacements
+    return emplacements.dossier("extension_chrome") / "vue_le.txt"
+
+
+def noter_presence(origine):
+    """L'extension se signale (installation, démarrage de Chrome) : rien n'est échangé, l'heure est seulement notée
+    pour que la page À postuler dise « installée ». Vrai si c'est bien l'extension LMAgent."""
+    if origine != ORIGINE:
+        return False
+    f = _fichier_presence()
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(time.strftime("%Y-%m-%d %H:%M"), encoding="utf-8")
+    return True
+
+
+def etat():
+    """{"dossier", "vue_le"} pour la page À postuler : dossier à charger dans Chrome (remis à jour) et dernière fois
+    que l'extension s'est signalée ("" si jamais : pas encore installée)."""
+    try:
+        dossier = str(dossier_extension())
+    except OSError:
+        dossier = ""
+    try:
+        vue = _fichier_presence().read_text(encoding="utf-8").strip()
+    except OSError:
+        vue = ""
+    return {"dossier": dossier, "vue_le": vue}
 
 
 def ouvrir_dans_chrome(lien, jeton, port):

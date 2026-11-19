@@ -29,7 +29,7 @@
   const pret = () => document.readyState !== "loading" ? Promise.resolve()
     : new Promise((r) => document.addEventListener("DOMContentLoaded", r, { once: true }));
 
-  chrome.runtime.sendMessage({ port: Number(m[1]), jeton: m[2] }, async (donnees) => {
+  chrome.runtime.sendMessage({ type: "donnees", port: Number(m[1]), jeton: m[2] }, async (donnees) => {
     await pret();
     if (chrome.runtime.lastError || !donnees) {
       annoncer("LMAgent : données introuvables (lien expiré ou déjà utilisé, ou LMAgent fermé). "

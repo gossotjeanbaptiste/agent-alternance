@@ -269,3 +269,38 @@ def test_manifest_minimal_et_identifiant():
     assert [c["matches"] for c in m["content_scripts"]] == [["https://labonnealternance.apprentissage.beta.gouv.fr/*"]]
     ident = "".join(chr(ord("a") + int(c, 16)) for c in hashlib.sha256(base64.b64decode(m["key"])).hexdigest()[:32])
     assert ident == extension_lba.ID_EXTENSION
+
+
+# --- installation de l'extension : présence signalée, état affiché -----------------------------------------
+@pytest.fixture
+def presence(monkeypatch, tmp_path):
+    import extension_lba
+    monkeypatch.setattr(extension_lba, "_fichier_presence", lambda: tmp_path / "vue_le.txt")
+    return extension_lba
+
+
+def test_presence_signalee_par_l_extension_seulement(appli, presence):
+    url, hote = "/api/extension_presente", {"Host": "127.0.0.1:8765"}
+    assert appli.test_client().post(url, headers={**hote, "Origin": "https://pirate.example"}).status_code == 404
+    assert presence.etat()["vue_le"] == ""
+    assert appli.test_client().post(url, headers={**hote, "Origin": presence.ORIGINE}).status_code == 200
+    assert presence.etat()["vue_le"] != ""
+
+
+def test_page_affiche_l_etat_de_l_extension(client, tableau, sans_outlook, presence):
+    h = client.get("/postuler").get_data(as_text=True)
+    assert "pas encore installée" in h and 'id="pli-extension" open' in h and "dossier-extension" in h
+    presence.noter_presence(presence.ORIGINE)
+    h = client.get("/postuler").get_data(as_text=True)
+    assert "✅ installée" in h and 'id="pli-extension" open' not in h
+
+
+def test_bouton_installer(client, monkeypatch, presence):
+    import subprocess
+    import chrome
+    lance = []
+    monkeypatch.setattr(chrome, "trouver_chrome", lambda: "chrome.exe")      # même sans Chrome installé
+    monkeypatch.setattr(subprocess, "Popen", lambda cmd, **k: lance.append(cmd))
+    r = client.post("/api/extension_installer", json={})
+    d = r.get_json()
+    assert d["ok"] and d["dossier"] and lance and lance[0][-1] == "chrome://extensions"
