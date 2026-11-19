@@ -29,6 +29,8 @@ def connecte():
 def proteger():
     if request.host.rsplit(":", 1)[0] not in LOCAUX:
         abort(403)
+    if request.endpoint == "api.extension":     # extension Chrome : ses propres contrôles (extension_lba.py)
+        return None
     if request.method == "POST":
         if request.headers.get("X-Jeton") != JETON:
             abort(403)

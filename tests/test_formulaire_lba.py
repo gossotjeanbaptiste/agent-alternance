@@ -3,6 +3,7 @@ Chrome (src/chrome/). Chrome n'est jamais lancé : l'onglet est simulé."""
 import pytest
 
 import formulaire_lba as f
+import formulaire_lba_chrome as fc
 
 
 @pytest.mark.parametrize("complet, attendu", [
@@ -47,27 +48,48 @@ def test_champs(cfg, monkeypatch):
     assert d["applicant_phone"] == "+33612345678" and d["applicant_email"] == "marc@exemple.fr"
     assert d["situation"] == 1 and d["reponses"] == {"motivations": "Parce que."}
     assert d["applicant_message"].startswith("Madame")
+    assert d["debut"] == [] and d["duree"] == "" and d["applicant_formation_description"] == ""
+
+
+def test_recherche_d_alternance(cfg, monkeypatch):
+    """Les réglages « Ma recherche d'alternance » passent au formulaire (école et rythme coupés à 200 caractères)."""
+    monkeypatch.setitem(cfg, "la_bonne_alternance", {**cfg.get("la_bonne_alternance", {}),
+                        "situation": "déjà inscrit(e) en formation", "debut_contrat": ["Dès que possible", " "],
+                        "duree_contrat": "12 mois", "formation": "École Exemple Grenoble, 3e année " + "x" * 300,
+                        "rythme": "1 mois en entreprise / 2 semaines à l'école"})
+    d = f.champs("", {})
+    assert d["situation"] == 0 and d["debut"] == ["Dès que possible"] and d["duree"] == "12 mois"
+    assert len(d["applicant_formation_description"]) == f.LIMITE_RECHERCHE
+    assert d["applicant_rythm_description"] == "1 mois en entreprise / 2 semaines à l'école"
+
+
+def test_cv_des_parametres(cfg, monkeypatch, tmp_path):
+    import commun
+    dossier = commun.donnees.emplacements.dossier("pieces_jointes")
+    dossier.mkdir(parents=True, exist_ok=True)
+    (dossier / "CV+Calendrier.pdf").write_bytes(b"%PDF")
+    monkeypatch.setitem(cfg, "la_bonne_alternance", {**cfg.get("la_bonne_alternance", {}), "cv": "CV+Calendrier.pdf"})
+    assert f.cv_du_formulaire() == (dossier / "CV+Calendrier.pdf", "")          # simple nom : cherché dans pieces_jointes
+    monkeypatch.setitem(cfg["la_bonne_alternance"], "cv", str(tmp_path / "absent.pdf"))
+    cv, remarque = f.cv_du_formulaire()
+    assert "introuvable" in remarque
 
 
 class FauxOnglet:
-    """Onglet Chrome simulé : la page a (ou non) le bouton « Candidature simplifiée »."""
-    def __init__(self, bouton=True, sans_contact=False):
-        self.bouton, self.sans_contact, self.js, self.joint, self.ferme = bouton, sans_contact, [], None, False
+    """Onglet Chrome simulé : lmagentRemplir (remplir.js) renvoie la réponse préparée."""
+    def __init__(self, reponse=None):
+        self.reponse = reponse or {"ok": True, "faits": ["applicant_last_name", "motivations", "cv"]}
+        self.js, self.ferme = [], False
 
     def montrer(self):
         pass
 
     def attendre(self, js, delai=20, pas=0.5):
-        return self.bouton
+        return True
 
     def evaluer(self, js):
         self.js.append(js)
-        if "pas d" in js:
-            return self.sans_contact
-        return ["applicant_last_name", "motivations"] if "saisir" in js else True
-
-    def joindre(self, selecteur, chemin):
-        self.joint = (selecteur, chemin)
+        return self.reponse if js.startswith("lmagentRemplir(") else None
 
     def fermer(self):
         self.ferme = True
@@ -81,23 +103,33 @@ def onglet(monkeypatch):
     return o
 
 
-def test_remplit_sans_jamais_envoyer(onglet, tmp_path):
-    cv = tmp_path / "cv.pdf"
-    ok, message = f.ouvrir_et_remplir("https://lba.example/fiche", {"applicant_last_name": "X", "reponses": {}}, cv)
-    assert ok and "CV joint" in message and onglet.joint == ("#applicant_attachment_name", cv) and onglet.ferme
-    tout = " ".join(onglet.js)
-    assert "J'envoie" not in tout and "submit" not in tout and "type=submit" not in tout   # jamais de clic d'envoi
+def test_remplit_sans_jamais_envoyer(onglet):
+    ok, message = fc.ouvrir_et_remplir("https://lba.example/fiche", {"reponses": {}, "cv": {"nom": "CV.pdf"}})
+    assert ok and "CV joint (CV.pdf)" in message and onglet.ferme
+    assert "lmagentRemplir" in onglet.js[0]                       # le code de remplissage partagé (remplir.js)
+    code = "\n".join(l for l in fc.REMPLIR.read_text(encoding="utf-8").splitlines() if not l.strip().startswith("//"))
+    assert "envoie" not in code.lower() and "submit" not in code.lower()  # jamais de clic d'envoi (hors commentaires)
 
 
 def test_entreprise_sans_contact(onglet):
-    onglet.bouton, onglet.sans_contact = False, True
-    ok, message = f.ouvrir_et_remplir("https://lba.example/fiche", {}, None)
+    onglet.reponse = {"ok": False, "raison": "sans_contact"}
+    ok, message = fc.ouvrir_et_remplir("https://lba.example/fiche", {})
     assert not ok and "plus de contact" in message and onglet.ferme
 
 
 def test_sans_cv(onglet):
-    ok, message = f.ouvrir_et_remplir("https://lba.example/fiche", {"reponses": {}}, None)
-    assert ok and "joins-le à la main" in message and onglet.joint is None
+    onglet.reponse = {"ok": True, "faits": ["applicant_last_name"]}
+    ok, message = fc.ouvrir_et_remplir("https://lba.example/fiche", {"reponses": {}, "cv": None})
+    assert ok and "joins-le à la main" in message
+
+
+def test_cv_pour_le_navigateur(tmp_path):
+    import base64
+    cv = tmp_path / "CV.pdf"
+    cv.write_bytes(b"%PDF-essai")
+    d = f.cv_pour_le_navigateur(cv)
+    assert d["nom"] == "CV.pdf" and d["type"] == "application/pdf" and base64.b64decode(d["contenu"]) == b"%PDF-essai"
+    assert f.cv_pour_le_navigateur(None) is None
 
 
 # --- page À postuler et point d'API -----------------------------------------------------------------
@@ -131,11 +163,12 @@ def test_api_remplit_avec_lettre_reponses_et_cv(client, tableau, cfg, sans_outlo
     cfg["pieces_jointes"] = [str(cv)]
     n = ligne_lba(tableau)
     reponses.enregistrer("https://lba.example/pixelo", {"lettre": "Lettre pour Pixelo", "motivations": "Parce que"})
+    cfg.setdefault("la_bonne_alternance", {})["ouverture"] = "Chrome à part (piloté par LMAgent)"
     vu = {}
-    monkeypatch.setattr(f, "ouvrir_et_remplir", lambda lien, d, c: vu.update(lien=lien, d=d, cv=c) or (True, "Prérempli."))
+    monkeypatch.setattr(fc, "ouvrir_et_remplir", lambda lien, d: vu.update(lien=lien, d=d) or (True, "Prérempli."))
     r = client.post("/api/formulaire", json={"ligne": n, "entreprise": "Pixelo"})
     assert r.status_code == 200 and r.get_json()["ok"]
-    assert vu["lien"] == "https://lba.example/pixelo" and vu["cv"] == cv
+    assert vu["lien"] == "https://lba.example/pixelo" and vu["d"]["cv"]["nom"] == "CV.pdf"
     assert vu["d"]["applicant_message"].startswith("Lettre pour Pixelo") and vu["d"]["reponses"] == {"motivations": "Parce que"}
 
 
@@ -147,7 +180,8 @@ def test_api_refuse_une_autre_ligne(client, tableau, sans_outlook):
 
 def test_api_signale_ce_qui_manque(client, tableau, sans_outlook, monkeypatch):
     n = ligne_lba(tableau)
-    monkeypatch.setattr(f, "ouvrir_et_remplir", lambda lien, d, c: (True, "Prérempli."))
+    import extension_lba
+    monkeypatch.setattr(extension_lba, "ouvrir_dans_chrome", lambda lien, jeton, port: None)
     m = client.post("/api/formulaire", json={"ligne": n, "entreprise": "Pixelo"}).get_json()["message"]
     assert "pas encore de la lettre ni de les réponses" in m
 
@@ -167,3 +201,71 @@ def test_websocket_trames():
         assert lecteur.recevoir() == texte
     a.close()
     b.close()
+
+
+
+# --- extension Chrome : jeton à usage unique, origine vérifiée ------------------------------------------
+@pytest.fixture
+def ouvert(monkeypatch):
+    """Ce que LMAgent ouvrirait dans le Chrome habituel (rien n'est lancé)."""
+    import extension_lba
+    vu = {}
+    monkeypatch.setattr(extension_lba, "ouvrir_dans_chrome", lambda lien, jeton, port: vu.update(lien=lien, jeton=jeton, port=port))
+    monkeypatch.setattr(extension_lba, "EN_ATTENTE", {})
+    return vu
+
+
+def test_extension_recoit_les_donnees_une_seule_fois(client, tableau, sans_outlook, ouvert, appli):
+    import extension_lba
+    n = ligne_lba(tableau)
+    r = client.post("/api/formulaire", json={"ligne": n, "entreprise": "Pixelo"})
+    assert r.get_json()["ok"] and "extension LMAgent" in r.get_json()["message"]
+    assert ouvert["lien"] == "https://lba.example/pixelo" and len(ouvert["jeton"]) >= 40
+    brut = appli.test_client()                      # l'extension : ni session, ni jeton d'interface
+    url = f"/api/extension/{ouvert['jeton']}"
+    entetes = {"Host": "127.0.0.1:8765", "Origin": extension_lba.ORIGINE}
+    r = brut.post(url, headers=entetes)
+    assert r.status_code == 200 and r.get_json()["donnees"]["applicant_last_name"] is not None
+    assert r.headers["Cache-Control"] == "no-store"
+    assert brut.post(url, headers=entetes).status_code == 404           # une seule fois
+
+
+@pytest.mark.parametrize("origine", ["https://pirate.example", "chrome-extension://autreextensionautreextension", None])
+def test_extension_refuse_une_autre_origine(client, tableau, sans_outlook, ouvert, appli, origine):
+    import extension_lba
+    ligne = ligne_lba(tableau)
+    client.post("/api/formulaire", json={"ligne": ligne, "entreprise": "Pixelo"})
+    entetes = {"Host": "127.0.0.1:8765", **({"Origin": origine} if origine else {})}
+    assert appli.test_client().post(f"/api/extension/{ouvert['jeton']}", headers=entetes).status_code == 404
+    # le jeton n'est pas consommé par la tentative : l'extension peut encore l'utiliser
+    r = appli.test_client().post(f"/api/extension/{ouvert['jeton']}",
+                                 headers={"Host": "127.0.0.1:8765", "Origin": extension_lba.ORIGINE})
+    assert r.status_code == 200
+
+
+def test_jeton_perime(monkeypatch):
+    import extension_lba
+    monkeypatch.setattr(extension_lba, "EN_ATTENTE", {})
+    jeton = extension_lba.deposer({"x": 1})
+    monkeypatch.setattr(extension_lba.time, "time", lambda: 10 ** 12)          # bien plus tard
+    assert extension_lba.retirer(jeton, extension_lba.ORIGINE) is None
+
+
+def test_extension_hote_etranger_refuse(appli):
+    import extension_lba
+    r = appli.test_client().post("/api/extension/" + "a" * 43,
+                                 headers={"Host": "pirate.example", "Origin": extension_lba.ORIGINE})
+    assert r.status_code == 403
+
+
+def test_manifest_minimal_et_identifiant():
+    """Aucune permission sur les cookies, onglets ou autres sites ; l'identifiant vient bien de la clé du manifest."""
+    import base64
+    import hashlib
+    import json
+    import extension_lba
+    m = json.loads((extension_lba.SOURCE / "manifest.json").read_text(encoding="utf-8"))
+    assert m["permissions"] == [] and m["host_permissions"] == ["http://127.0.0.1/*"]
+    assert [c["matches"] for c in m["content_scripts"]] == [["https://labonnealternance.apprentissage.beta.gouv.fr/*"]]
+    ident = "".join(chr(ord("a") + int(c, 16)) for c in hashlib.sha256(base64.b64decode(m["key"])).hexdigest()[:32])
+    assert ident == extension_lba.ID_EXTENSION

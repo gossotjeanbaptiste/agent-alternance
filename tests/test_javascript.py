@@ -12,6 +12,7 @@ import pytest
 from tableau import FORMULAIRE, LBA
 
 STATIQUES = Path(__file__).resolve().parent.parent / "web" / "static"
+EXTENSION = Path(__file__).resolve().parent.parent / "web" / "extension"
 PAGES = ["/", "/suivi", "/postuler", "/ecartees", "/routines", "/linkedin", "/journal", "/parametres", "/assistant"]
 
 
@@ -33,6 +34,11 @@ def verifier(node, code, nom, tmp_path):
 @pytest.mark.parametrize("fichier", sorted(p.name for p in STATIQUES.glob("*.js")))
 def test_fichiers_statiques(node, fichier, tmp_path):
     verifier(node, (STATIQUES / fichier).read_text(encoding="utf-8"), fichier, tmp_path)
+
+
+@pytest.mark.parametrize("fichier", sorted(p.name for p in EXTENSION.glob("*.js")))
+def test_extension_chrome(node, fichier, tmp_path):
+    verifier(node, (EXTENSION / fichier).read_text(encoding="utf-8"), fichier, tmp_path)
 
 
 @pytest.mark.parametrize("url", PAGES)

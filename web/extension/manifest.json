@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "LMAgent — formulaire La Bonne Alternance",
+  "version": "1.0.0",
+  "description": "Remplit le formulaire « Candidature simplifiée » de La Bonne Alternance avec les données de LMAgent (sur ce PC). N'envoie jamais rien, ne lit aucun cookie.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwHXTQvy3lbDkg/znratQRqc/Fm4PAG/iUEoLji92We5E30ofegD/RFy1xmOie6Iq2SiAZw4DGk1qzNEO9gn6DfFfya9KQ2JPR3nPnvpzOkgX9ju9Yg70zpo428VW4iPD/n9MSvFY4/Wm5nNFsijUBJhz2hFfhUmGypNnbnS9Th29bFhgYNlddNOVwh2g4FcDynwpeF6uenZJQ167O/7vjlcPjIEUX9SCDyH4VEaufO1ILQBlyTlhn2fl5pAXqOYsUnZH5BLLuPG3EZfHNYuIbNNG3HRE3IDhsDJy0TBvdVF3j8IAVmOu70tCVYysxiDQOG/62l/hHzukK2uzEvze7QIDAQAB",
+  "minimum_chrome_version": "116",
+  "permissions": [],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": { "service_worker": "service.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://labonnealternance.apprentissage.beta.gouv.fr/*"],
+      "js": ["remplir.js", "contenu.js"],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ],
+  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'none'" }
+}

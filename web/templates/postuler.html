@@ -3,7 +3,20 @@
 {% block contenu %}
 <h1>À postuler <span class="doux" id="compte">({{ lignes|length }})</span></h1>
 <p class="doux">La Bonne Alternance : « 🧾 Ouvrir le formulaire prérempli » le remplit dans Chrome (identité, lettre, réponses, CV) ; relis, envoie-le toi-même, puis clique « Envoyée ».
-Formulaire du site de l'entreprise : ouvre la page, copie la lettre, colle-la (Ctrl+V) et envoie, puis clique « Envoyée ».
+Formulaire du site de l'entreprise : ouvre la page, copie la lettre, colle-la (Ctrl+V) et envoie, puis clique « Envoyée ».</p>
+<details class="carte pli-section" id="pli-extension">
+  <summary><h2 style="display:inline">🧩 Extension Chrome LMAgent (à installer une fois)</h2></summary>
+  <p class="doux">Elle remplit le formulaire La Bonne Alternance dans ton Chrome habituel. Elle n'agit que sur les pages de
+  La Bonne Alternance ouvertes par LMAgent, n'a accès ni à tes cookies ni à tes autres sites, et ne reçoit les données
+  qu'une fois, par un code à usage unique valable 2 minutes. Elle n'envoie jamais la candidature : c'est toi qui cliques.</p>
+  <ol class="doux">
+    <li>Clique « Installer » : le dossier de l'extension et la page des extensions de Chrome s'ouvrent.</li>
+    <li>Dans Chrome, active « Mode développeur » (en haut à droite).</li>
+    <li>Clique « Charger l'extension non empaquetée » et choisis ce dossier.</li>
+  </ol>
+  <div class="actions"><button onclick="installerExtension()">🧩 Installer</button></div>
+</details>
+<p class="doux">
 Par mail : le brouillon t'attend dans {{ messagerie }}, relis-le et envoie-le ; l'envoi est repéré tout seul au prochain suivi, ou clique « Envoyée » si tu l'as déjà envoyé.
 Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de l'entreprise ; trouve l'adresse (site, recherche), mets-la à la place dans le champ « À », envoie, puis clique « Envoyée ».</p>
 {% if erreur %}<div class="carte erreur">{{ erreur }}</div>{% endif %}
@@ -135,6 +148,10 @@ async function ecrireManque(bouton, ligne) {
   if (r.ok) { location.reload(); return; }
   bouton.textContent = texte;
   document.querySelectorAll("button[onclick^='ecrireManque']").forEach(b => b.disabled = false);
+}
+async function installerExtension() {
+  const r = await poster("/api/extension_installer", {});
+  annoncer(r.message || "Erreur", !r.ok);
 }
 async function ouvrirFormulaire(bouton, ligne) {
   const carte = document.getElementById("c" + ligne), texte = bouton.textContent;

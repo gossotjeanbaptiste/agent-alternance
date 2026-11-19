@@ -61,7 +61,7 @@ def ouvrir(url):
     """Ouvre url dans un nouvel onglet du Chrome de LMAgent (lancé si besoin) ; renvoie l'onglet piloté."""
     if not _chrome_pret():
         _lancer()
-    cible = _json(f"/json/new?{url}", methode="PUT")
+    cible = _json(f"/json/new?{url.replace('#', '%23')}", methode="PUT")   # sinon la partie après # se perd
     return Onglet(cible["webSocketDebuggerUrl"], cible["id"])
 
 
