@@ -38,6 +38,16 @@ PLATEFORMES = {"emails.hellowork.com": "HelloWork", "hellowork.com": "HelloWork"
                "linkedin.com": "LinkedIn", "apprentissage.beta.gouv.fr": "La Bonne Alternance"}
 
 
+SUJETS_LBA = re.compile(r"(Votre candidature chez|Votre candidature n'a pas pu être envoyée à|Suite donnée à votre "
+                        r"candidature -|R[ée]ponse n[ée]gative de .+? à la candidature de) .+", re.I)
+
+
+def nomme_l_entreprise(m):
+    """Vrai pour un mail de La Bonne Alternance dont l'objet nomme l'entreprise : lu par son format (ailleurs.py),
+    plus sûr que le rattachement d'après le contenu."""
+    return _plateforme(m["de"]) == "La Bonne Alternance" and bool(SUJETS_LBA.match(m["sujet"].strip()))
+
+
 def _plateforme(adresse):
     d = domaine(adresse)
     if d.startswith("reply."):           # reply.hellowork.com : le recruteur lui-même répond via HelloWork
@@ -59,30 +69,34 @@ def lire_format_connu(m):
     """Lu, None (rien à voir avec une candidature envoyée), ou ... (format inconnu : à confier au modèle)."""
     sujet, plateforme = m["sujet"].strip(), _plateforme(m["de"])
     if plateforme == "HelloWork":
-        if r := re.match(r"Votre candidature est arrivée chez (.+)$", sujet, re.I):
+        if trouve := re.match(r"Votre candidature est arrivée chez (.+)$", sujet, re.I):
             poste = re.search(r"[\"“](.+?)[\"”] pour l'entreprise", _texte(m["corps"]))
-            return Lu(_propre(r.group(1)), "automatique", "HelloWork", poste.group(1).strip() if poste else "")
+            return Lu(_propre(trouve.group(1)), "automatique", "HelloWork", poste.group(1).strip() if poste else "")
         return None                       # « Finalisez votre candidature… », offres, conseils
     if plateforme == "Indeed":
-        if r := re.match(r"Candidatures via Indeed : (.+?)(?: \| (.+))?$", sujet, re.I):
-            return Lu(_propre(r.group(2)), "automatique", "Indeed", r.group(1).strip()) if r.group(2) else None
-        if r := re.match(r"Des nouvelles de votre candidature pour (.+)$", sujet, re.I):
-            return _classee(m, _propre(r.group(1)), "Indeed")
+        if trouve := re.match(r"Candidatures via Indeed : (.+?)(?: \| (.+))?$", sujet, re.I):
+            return Lu(_propre(trouve.group(2)), "automatique", "Indeed", trouve.group(1).strip()) if trouve.group(2) else None
+        if trouve := re.match(r"Des nouvelles de votre candidature pour (.+)$", sujet, re.I):
+            return _classee(m, _propre(trouve.group(1)), "Indeed")
         return None
     if plateforme == "LinkedIn":
-        if r := re.search(r"votre candidature a été envoyée à (.+)$", sujet, re.I):
-            return Lu(_propre(r.group(1)), "automatique", "LinkedIn")
+        if trouve := re.search(r"votre candidature a été envoyée à (.+)$", sujet, re.I):
+            return Lu(_propre(trouve.group(1)), "automatique", "LinkedIn")
         return None                       # « déposez votre candidature maintenant… », réseau, alertes
     if plateforme == "La Bonne Alternance":
-        if r := re.match(r"Votre candidature chez (.+)$", sujet, re.I):
+        if trouve := re.match(r"Votre candidature chez (.+)$", sujet, re.I):
             lieu = re.search(r"envoyée à .+?\](?:,)? (.+?)\. J", _texte(m["corps"]))
-            return Lu(_propre(r.group(1)), "automatique", "La Bonne Alternance", "Candidature spontanée",
+            return Lu(_propre(trouve.group(1)), "automatique", "La Bonne Alternance", "Candidature spontanée",
                       lieu.group(1).strip() if lieu else "")
-        if r := re.match(r"Votre candidature n'a pas pu être envoyée à (.+)$", sujet, re.I):
-            return Lu(_propre(r.group(1)), "echec", "La Bonne Alternance",
+        if trouve := re.match(r"Votre candidature n'a pas pu être envoyée à (.+)$", sujet, re.I):
+            return Lu(_propre(trouve.group(1)), "echec", "La Bonne Alternance",
                       resume="La Bonne Alternance n'a pas pu envoyer la candidature (adresse de l'entreprise erronée)")
-        if r := re.match(r"Suite donnée à votre candidature - (.+)$", sujet, re.I):
-            return _classee(m, _propre(r.group(1)), "La Bonne Alternance")
+        if trouve := re.match(r"Suite donnée à votre candidature - (.+)$", sujet, re.I):
+            return _classee(m, _propre(trouve.group(1)), "La Bonne Alternance")
+        # refus envoyé par l'entreprise depuis La Bonne Alternance : la décision est dans l'objet, pas besoin du modèle
+        if trouve := re.match(r"R[ée]ponse n[ée]gative de (.+?) à la candidature de .+$", sujet, re.I):
+            return Lu(_propre(trouve.group(1)), "refus", "La Bonne Alternance",
+                      resume="Réponse négative de l'entreprise, envoyée via La Bonne Alternance")
         return None
     if not SUJET_CANDIDATURE.search(sujet) or PAS_UNE_CANDIDATURE.search(sujet):
         return None
@@ -101,7 +115,7 @@ def lire_avec_le_modele(m):
     """Mail d'un logiciel de recrutement ou d'une entreprise : le modèle dit s'il s'agit d'une candidature
     de l'étudiant, de quelle entreprise, quel poste et ce qu'il annonce. None si ce n'en est pas une."""
     try:
-        r = modele.llm_json(
+        reponse = modele.llm_json(
             "Voici un mail reçu par un étudiant qui cherche une alternance.\n"
             f"Expéditeur : {m['de']}\nSujet : {m['sujet']}\n---\n{_texte(m['corps'])[:3000]}\n---\n"
             "Ce mail parle-t-il d'une candidature que l'étudiant a envoyée (accusé de réception, réponse, refus, "
@@ -114,8 +128,8 @@ def lire_avec_le_modele(m):
             "vide si le mail ne la nomme pas.")
     except Exception as e:
         raise ModeleInjoignable(str(e)) from e
-    if not r.get("candidature") or not str(r.get("entreprise") or "").strip():
+    if not reponse.get("candidature") or not str(reponse.get("entreprise") or "").strip():
         return None
-    typ = r.get("type") if r.get("type") in ("automatique", "entretien", "positive", "refus", "transmise") else "autre"
-    return Lu(_propre(r["entreprise"]), typ, "Site de l'entreprise", str(r.get("poste") or "").strip(),
-              resume=str(r.get("resume") or ""))
+    typ = reponse.get("type") if reponse.get("type") in ("automatique", "entretien", "positive", "refus", "transmise") else "autre"
+    return Lu(_propre(reponse["entreprise"]), typ, "Site de l'entreprise", str(reponse.get("poste") or "").strip(),
+              resume=str(reponse.get("resume") or ""))

@@ -94,6 +94,29 @@ def test_la_bonne_alternance_echec_adresse_invalide(tableau, messagerie, faux_mo
     assert l["Statut"] == "Adresse invalide" and "pas pu envoyer" in l["Notes"]
 
 
+def test_la_bonne_alternance_reponse_negative(tableau, messagerie, faux_modele):
+    """« Réponse négative de <entreprise> à la candidature de <candidat> » : refus lu dans l'objet, sans le modèle,
+    même si le texte cite le code postal de l'entreprise (pas de rattachement d'après le contenu)."""
+    from tableau import C_LBA
+    tableau.add(Entreprise="Pixelmont Software", Statut=C_LBA, Lieu="12 rue Démo 38000 Grenoble")
+    tableau.add(Entreprise="Vortalis", Statut=C_LBA, Lieu="69003 Lyon")
+    suivi.mettre_a_jour(tableau, messagerie(recus=[recu(
+        "nepasrepondre@apprentissage.beta.gouv.fr",
+        "Réponse négative de PIXELMONT SOFTWARE à la candidature de Camille DUPONT",
+        "Pixelmont Software, 12 rue Démo 38000 Grenoble, ne donne pas suite à votre candidature.")]), relancer=False)
+    l = ligne(tableau, "Pixelmont Software")
+    assert l["Statut"] == "Refus" and "[refus]" in l["Dernière réponse"] and "La Bonne Alternance" in l["Dernière réponse"]
+    assert ligne(tableau, "Vortalis")["Statut"] == C_LBA and len(lignes(tableau)) == 2
+    assert faux_modele.consignes == []                     # décision dans l'objet : pas besoin du modèle
+
+
+def test_reponse_negative_entreprise_absente_ajoutee(tableau, messagerie, faux_modele):
+    suivi.mettre_a_jour(tableau, messagerie(recus=[recu(
+        "nepasrepondre@apprentissage.beta.gouv.fr", "Réponse négative de NUVOLA à la candidature de Camille DUPONT")]),
+        relancer=False)
+    assert [(l["Entreprise"], l["Statut"], l["Source"]) for l in lignes(tableau)] == [("Nuvola", "Refus", "La Bonne Alternance")]
+
+
 def test_reponse_d_un_logiciel_de_recrutement_lue_par_le_modele(tableau, messagerie, faux_modele):
     suivi.mettre_a_jour(tableau, messagerie(recus=[hellowork("Vortalis", "Développeur Java H/F", jours=5)]),
                         relancer=False)

@@ -35,9 +35,12 @@ def reconnus_par_le_contenu(suivi, recus, ndr, statuts_actifs):
     # domaines de TOUTES les entreprises du tableau (une entreprise déjà refusée qui écrit ne compte pas pour une autre)
     domaines_tableau = {domaine(str(suivi.get(r, "Email") or "").strip().lower()) for r in suivi.rows()} \
         - set(DOMAINES_PERSO) - {""}
+    from .ailleurs_lecture import nomme_l_entreprise   # (import ici : ailleurs_lecture importe ce module)
     res = {}
     for m in recus:
         if m in ndr or not est_adresse(m["de"]) or domaine(m["de"]) in domaines_tableau:
+            continue
+        if nomme_l_entreprise(m):                # l'objet nomme l'entreprise : lu par son format (ailleurs.py)
             continue
         corps = f"{m['sujet']}\n{m['corps']}"
         trouves = [(n, p) for n, ent, mail, lieu, tel, site in lignes
