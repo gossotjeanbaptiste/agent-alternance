@@ -106,7 +106,7 @@ def ecrire_lettre(s, row):
     from candidatures import rediger_candidature
     preparer_modele()
     o = {"entreprise": s.get(row, "Entreprise"), "poste": s.get(row, "Poste"), "lieu": s.get(row, "Lieu"),
-         "contact": "", "email": "", "infos": ""}
+         "contact": "", "email": "", "infos": reponses.infos_du_tableau(s.get(row, "Notes"))}
     _, corps = rediger_candidature(o)
     lettre = nettoyer(corps)
     reponses.enregistrer_lettre((s.get(row, "Lien") or "").strip(), lettre)
@@ -126,7 +126,8 @@ def reponses_de(s, row, deja):
     if reponses.a_des_reponses(deja.get(lien)):
         return deja[lien]
     preparer_modele()
-    o = {"entreprise": s.get(row, "Entreprise"), "poste": s.get(row, "Poste"), "lieu": s.get(row, "Lieu")}
+    o = {"entreprise": s.get(row, "Entreprise"), "poste": s.get(row, "Poste"), "lieu": s.get(row, "Lieu"),
+         "infos": reponses.infos_du_tableau(s.get(row, "Notes"))}
     r = reponses.rediger_reponses(o)
     reponses.enregistrer(lien, r)
     deja.setdefault(lien, {}).update(r)

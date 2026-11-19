@@ -114,6 +114,19 @@ def ecrire():
     return jsonify(ok=ok, message=message), (200 if ok else 400)
 
 
+@api.post("/vers_lba")
+def vers_lba():
+    """« Postuler par La Bonne Alternance » : candidature « adresse à trouver » repassée par le formulaire du site."""
+    import vers_lba as module
+    d = request.get_json(force=True, silent=True) or {}
+    try:
+        ligne = int(d.get("ligne"))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, message="Ligne invalide."), 400
+    ok, message = module.passer_par_lba(ligne, str(d.get("entreprise") or ""))
+    return jsonify(ok=ok, message=message), (200 if ok else 400)
+
+
 @api.post("/formulaire")
 def formulaire():
     """« Ouvrir le formulaire prérempli » : formulaire La Bonne Alternance rempli dans Chrome (jamais envoyé)."""

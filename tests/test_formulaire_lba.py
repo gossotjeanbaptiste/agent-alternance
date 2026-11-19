@@ -304,3 +304,45 @@ def test_bouton_installer(client, monkeypatch, presence):
     r = client.post("/api/extension_installer", json={})
     d = r.get_json()
     assert d["ok"] and d["dossier"] and lance and lance[0][-1] == "chrome://extensions"
+
+
+# --- « Postuler par La Bonne Alternance » pour une adresse à trouver ---------------------------------------
+def ligne_a_trouver(tableau, lien="https://labonnealternance.apprentissage.beta.gouv.fr/emploi/recruteurs_lba/1/pixelo"):
+    from tableau import ADRESSE_A_TROUVER
+    tableau.add(**{"Entreprise": "Pixelo", "Statut": ADRESSE_A_TROUVER, "Lien": lien})
+    tableau.save()
+    return next(r[0].row for r in tableau.rows() if tableau.get(r, "Entreprise") == "Pixelo")
+
+
+def test_bouton_vers_lba_seulement_pour_une_fiche_lba(client, tableau, sans_outlook):
+    ligne_a_trouver(tableau)
+    from tableau import ADRESSE_A_TROUVER
+    tableau.add(**{"Entreprise": "Brio", "Statut": ADRESSE_A_TROUVER, "Lien": ""})
+    tableau.save()
+    assert client.get("/postuler").get_data(as_text=True).count("versLba(this") == 1
+
+
+def test_vers_lba(client, tableau, sans_outlook, monkeypatch):
+    import commun
+    import lettres
+    import redaction
+    import reponses
+    import vers_lba
+    from tableau import LBA, Suivi
+    n = ligne_a_trouver(tableau)
+    lien = tableau.get(next(tableau.rows()), "Lien")
+    monkeypatch.setattr(vers_lba, "_lettre_du_brouillon", lambda ent: "Madame, Monsieur,\n\nLettre.\n\nCordialement,")
+    corbeille, ecrit = [], []
+    monkeypatch.setattr(lettres, "supprimer_brouillons", lambda a: corbeille.append(a) or "Brouillon mis à la corbeille.")
+    monkeypatch.setattr(redaction, "ecrire_ce_qui_manque", lambda n, e: ecrit.append((n, e)) or (True, "les réponses, c'est écrit."))
+    r = client.post("/api/vers_lba", json={"ligne": n, "entreprise": "Pixelo"})
+    assert r.status_code == 200 and "repassée par La Bonne Alternance" in r.get_json()["message"]
+    s = Suivi(commun.chemin_tableau())
+    assert s.get(next(s.rows()), "Statut") == LBA
+    assert reponses.lire()[lien]["lettre"].startswith("Madame") and corbeille and ecrit == [(n, "Pixelo")]
+
+
+def test_vers_lba_refuse_sans_fiche(client, tableau, sans_outlook):
+    n = ligne_a_trouver(tableau, lien="")
+    r = client.post("/api/vers_lba", json={"ligne": n, "entreprise": "Pixelo"})
+    assert r.status_code == 400

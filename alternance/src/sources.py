@@ -160,7 +160,7 @@ def depuis_lba():
                 "lieu": loc.get("address") or v["nom"], "contact": "", "email": "",
                 "site": wp.get("website") or "", "telephone": apply.get("phone") or "",
                 "siret": str(wp.get("siret") or ""),
-                "lien": apply.get("url") or "", "lba_postulable": postulable,
+                "lien": apply.get("url") or "", "lba_postulable": postulable, "activite": naf,
                 "infos": " | ".join(i for i in infos if i),
                 "source": f"La Bonne Alternance ({v['nom']})"})
         if ecartees:
