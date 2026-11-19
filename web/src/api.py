@@ -114,6 +114,19 @@ def ecrire():
     return jsonify(ok=ok, message=message), (200 if ok else 400)
 
 
+@api.post("/formulaire")
+def formulaire():
+    """« Ouvrir le formulaire prérempli » : formulaire La Bonne Alternance rempli dans Chrome (jamais envoyé)."""
+    import formulaire_web
+    d = request.get_json(force=True, silent=True) or {}
+    try:
+        ligne = int(d.get("ligne"))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, message="Ligne invalide."), 400
+    ok, message = formulaire_web.ouvrir_formulaire(ligne, str(d.get("entreprise") or ""))
+    return jsonify(ok=ok, message=message), (200 if ok else 400)
+
+
 @api.post("/ecartee")
 def ecartee():
     """Décision sur une entreprise écartée : candidater (quand même), abandonner, remettre."""
