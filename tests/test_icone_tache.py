@@ -52,6 +52,9 @@ def test_menu_ouvrir_et_quitter(faux_pystray, monkeypatch):
     ouverts, fermes = [], []
     monkeypatch.setattr(icone_tache.webbrowser, "open", ouverts.append)
     monkeypatch.setattr(icone_tache.os, "_exit", fermes.append)
+    import veille_tour
+    veilles = []
+    monkeypatch.setattr(veille_tour, "en_quittant", lambda: veilles.append(1))
     icone = icone_tache.demarrer("http://127.0.0.1:8765", LOGO)
     assert icone is icone_tache.ICONE["objet"] and faux_pystray["run"] == 1
     assert faux_pystray["titre"] == "LMAgent"
@@ -61,6 +64,7 @@ def test_menu_ouvrir_et_quitter(faux_pystray, monkeypatch):
     assert ouverts == ["http://127.0.0.1:8765"]
     quitter.action()
     assert fermes == [0] and faux_pystray["stop"] == 1 and icone_tache.ICONE["objet"] is None
+    assert veilles == [1]                                       # « Quitter LMAgent » : tour remise en veille
     assert faux_pystray["ordre"] == ["cachée", "arrêtée"]      # retirée AVANT la fermeture du processus
     assert icone.visible is False
 
@@ -82,6 +86,7 @@ def test_arreter_sans_icone_et_deux_fois(faux_pystray):
 
 def test_quitter_depuis_l_interface_retire_l_icone(client, faux_pystray, monkeypatch):
     lances = []
-    monkeypatch.setattr("api.threading.Timer", lambda d, f: types.SimpleNamespace(start=lambda: lances.append(f)))
+    monkeypatch.setattr("api.threading.Timer", lambda d, f, kwargs=None: types.SimpleNamespace(
+        start=lambda: lances.append((f, kwargs))))
     assert client.post("/api/quitter", json={}).get_json()["ok"]
-    assert lances == [icone_tache.quitter]
+    assert lances == [(icone_tache.quitter, {"par_l_utilisateur": True})]     # bouton ⏻ : tour remise en veille

@@ -17,7 +17,7 @@ def demarrer(url, image, journal=print):
         return None
     menu = pystray.Menu(
         pystray.MenuItem("Ouvrir LMAgent", lambda: webbrowser.open(url), default=True),
-        pystray.MenuItem("Quitter LMAgent", lambda: quitter()),
+        pystray.MenuItem("Quitter LMAgent", lambda: quitter(par_l_utilisateur=True)),
     )
     icone = pystray.Icon("LMAgent", Image.open(image), "LMAgent", menu)
     threading.Thread(target=icone.run, daemon=True).start()
@@ -38,7 +38,12 @@ def arreter():
             pass
 
 
-def quitter(code=0):
-    """Ferme LMAgent (serveur web compris) ; une routine lancée continue dans son propre processus."""
+def quitter(code=0, par_l_utilisateur=False):
+    """Ferme LMAgent (serveur web compris) ; une routine lancée continue dans son propre processus.
+    par_l_utilisateur : icône ou bouton ⏻ -> la tour est remise en veille (veille_tour.py). Jamais pour une
+    fermeture automatique (mise à jour : LMAgent se relance tout de suite), d'où False par défaut."""
     arreter()
+    if par_l_utilisateur:
+        import veille_tour
+        veille_tour.en_quittant()
     os._exit(code)

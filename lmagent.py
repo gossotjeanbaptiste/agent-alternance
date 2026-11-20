@@ -164,7 +164,8 @@ def interface():
     import app
     import icone_tache
     import routines
-    mise_a_jour.surveiller(routines.en_cours, fermer=icone_tache.quitter)
+    # fermeture pour une mise à jour : la tour n'est pas mise en veille (LMAgent se relance tout de suite)
+    mise_a_jour.surveiller(routines.en_cours, fermer=lambda: icone_tache.quitter(par_l_utilisateur=False))
     app.lancer_interface()
     return 0
 
