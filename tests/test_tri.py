@@ -168,3 +168,68 @@ def test_barre_de_filtres_sur_les_pages(client, tableau):
                                        ("pas une date", ""), (None, "")])
 def test_iso(jour, iso):
     assert ecartees._iso(jour) == iso
+
+
+# --- recherche et filtres retenus d'un rechargement à l'autre, bouton Recharger ---------------------------
+def retenir(gardes, menus):
+    """Valeurs des champs après retenirChamps (faux document et faux localStorage), puis ce qui est gardé
+    après une saisie dans la recherche."""
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node.js non installé")
+    script = (
+        "const stock = {'filtres-x': " + json.dumps(json.dumps(gardes)) + "};"
+        "global.localStorage = {getItem: k => stock[k] || null, setItem: (k, v) => { stock[k] = v; }};"
+        "const els = {};"
+        "for (const [id, options] of Object.entries(" + json.dumps(menus) + ")) {"
+        "  els[id] = {id, value: '', tagName: options ? 'SELECT' : 'INPUT', options: (options || []).map(v => ({value: v})),"
+        "             ecouteurs: [], addEventListener(t, f) { this.ecouteurs.push(f); }};"
+        "}"
+        "global.document = {getElementById: id => els[id] || null};"
+        f"const f = require({json.dumps(str(FILTRES_JS))});"
+        "f.retenirChamps(Object.keys(els), 'filtres-x');"
+        "console.log(JSON.stringify(Object.fromEntries(Object.values(els).map(e => [e.id, e.value]))));"
+        "els.recherche.value = 'pixelo'; els.recherche.ecouteurs.forEach(g => g());"
+        "console.log(stock['filtres-x']);")
+    r = subprocess.run([node, "-e", script], capture_output=True, text=True, encoding="utf-8", timeout=30)
+    assert r.returncode == 0, r.stderr
+    valeurs, garde = r.stdout.strip().splitlines()
+    return json.loads(valeurs), json.loads(garde)
+
+
+def test_filtres_remis_apres_rechargement():
+    valeurs, garde = retenir({"recherche": "lyon", "f-type": "3", "f-ville": "Annecy"},
+                             {"recherche": None, "f-type": ["", "0", "3"], "f-ville": ["", "Lyon"]})
+    assert valeurs == {"recherche": "lyon", "f-type": "3", "f-ville": ""}   # ville disparue de la page : ignorée
+    assert garde["recherche"] == "pixelo" and garde["f-type"] == "3"
+
+
+def test_memoire_illisible_sans_planter():
+    valeurs, _ = retenir("pas un objet", {"recherche": None})
+    assert valeurs == {"recherche": ""}
+
+
+@pytest.fixture
+def sans_outlook(monkeypatch):
+    import lettres
+    monkeypatch.setattr(lettres, "_outlook_ferme", lambda: True)
+    monkeypatch.setitem(lettres.CACHE, "quand", 0)
+
+
+def test_boutons_recharger_et_memoire_sur_les_trois_pages(client, tableau, sans_outlook):
+    ajouter(tableau, **{"Entreprise": "Lba Co", "Statut": LBA, "Lieu": "69003 Lyon"})
+    ajouter(tableau, **{"Entreprise": "Mail Co", "Statut": "Brouillon", "Email": "rh@mailco.fr"})
+    refus.noter([{"Entreprise": n, "SIRET": s, "Activité": "Commerce", "Adresse": "38000 GRENOBLE"}
+                 for n, s in (("A", "1"), ("B", "2"))])
+    for page, cle in (("/suivi", "filtres-suivi"), ("/postuler", "filtres-postuler"), ("/ecartees", "filtres-ecartees")):
+        h = client.get(page).get_data(as_text=True)
+        assert 'onclick="recharger()"' in h and "Effacer les filtres" in h and cle in h, page
+
+
+def test_recharger_relit_les_lettres(client, tableau, sans_outlook):
+    import lettres
+    lettres.CACHE["quand"] = 10 ** 12          # cache « tout frais » : pas relu sans le bouton
+    client.get("/postuler")
+    assert lettres.CACHE["quand"] == 10 ** 12
+    client.get("/postuler?frais=1")
+    assert lettres.CACHE["quand"] != 10 ** 12

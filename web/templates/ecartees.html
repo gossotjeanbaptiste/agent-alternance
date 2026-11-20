@@ -42,8 +42,12 @@ limitées à l'informatique, réglage « Activités acceptées » dans Paramètr
       <option value="passages:desc" data-nombre>Le plus souvent écartées</option>
     </select>
   </span>
+  <button onclick="effacerChamps(['recherche', 'f-activite', 'f-ville'])" title="Vide la recherche et les filtres">✖ Effacer les filtres</button>
+  <button onclick="recharger()" title="Relit la liste des entreprises écartées ; la recherche et les filtres restent">🔄 Recharger</button>
 </div>
 <div class="carte doux" id="aucun" style="display:none">Aucune entreprise à examiner ne correspond à la recherche ou aux filtres.</div>
+{% else %}
+<div class="actions"><button onclick="recharger()" title="Relit la liste des entreprises écartées">🔄 Recharger</button></div>
 {% endif %}
 <div id="cartes">
 {% for l in g.a_examiner %}{{ carte(l) }}{% else %}
@@ -74,7 +78,7 @@ activerTri("tri", "cartes", "tri-ecartees");
 activerTri("tri", "cartes-abandonnees", "tri-ecartees");   // même menu pour les abandonnées
 // recherche et filtres : la liste à examiner et les abandonnées (le compteur suit la liste à examiner)
 const refiltrer = activerFiltres({recherche: "recherche", boites: ["cartes", "cartes-abandonnees"], compte: "compte",
-  vide: "aucun", filtres: [{id: "f-activite", champ: "activite", dynamique: true},
+  vide: "aucun", memoire: "filtres-ecartees", filtres: [{id: "f-activite", champ: "activite", dynamique: true},
                            {id: "f-ville", champ: "villenom", dynamique: true}]}) || (() => {});
 async function decider(bouton, action) {
   const carte = bouton.closest(".carte");

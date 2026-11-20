@@ -67,6 +67,8 @@ def postuler():
     ordre = {"Brouillon": 1, ADRESSE_A_TROUVER: 2}
     a_faire = [l for l in suivi_donnees.lire() if l.get("Statut") in PAGE_A_POSTULER]
     a_faire.sort(key=lambda l: ordre.get(l.get("Statut"), 0))
+    if request.args.get("frais"):       # bouton « 🔄 Recharger » : lettres relues dans la messagerie
+        lettres.CACHE["quand"] = 0
     erreur = lettres.ajouter_lettres(a_faire)
     from messagerie import nom_messagerie
     import extension_lba

@@ -99,7 +99,7 @@ où en est le projet.
 | `web/src/routines.py`, `planification.py` | lancement d'une routine en arrière-plan, bouton « Annuler » (arbre de processus, puis modèle déchargé) ; routines quotidiennes via le Planificateur de tâches (`LMAgent_<routine>`) |
 | `web/src/icone_tache.py` | icône près de l'horloge (pystray) : Ouvrir / Quitter LMAgent |
 | `web/src/assistant.py` | assistant de premier lancement (tour oui/non, messagerie, villes, profil, CV, import d'une installation existante, `perso/` compris) |
-| `web/static/tri.js`, `filtres.js` | tri, recherche et filtres des pages À postuler et Écartées (testés par Node.js) |
+| `web/static/tri.js`, `filtres.js` | tri, recherche et filtres des pages À postuler et Écartées (testés par Node.js) ; recherche et filtres **retenus** dans le navigateur pour chaque page (`retenirChamps`, Suivi compris : un rechargement ne les efface plus), bouton « Effacer les filtres » ; bouton « 🔄 Recharger » des trois pages (`recharger()` dans `app.js` : `?frais=1`, qui relit aussi les lettres de la page À postuler sans attendre la fin du cache) |
 | `config.json` | réglages de l'agent et de la tour (non versionné, dans `perso/` ou AppData ; modèle `config.example.json`) |
 
 ## Fonctionnement en bref

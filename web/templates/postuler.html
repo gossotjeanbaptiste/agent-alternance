@@ -52,8 +52,12 @@ Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de 
       <option value="ville:asc">Ville (A → Z)</option>
     </select>
   </span>
+  <button onclick="effacerChamps(['recherche', 'f-type', 'f-source', 'f-ville'])" title="Vide la recherche et les filtres">✖ Effacer les filtres</button>
+  <button onclick="recharger()" title="Relit le tableau et les lettres dans la messagerie ; la recherche et les filtres restent">🔄 Recharger</button>
 </div>
 <div class="carte doux" id="aucun" style="display:none">Aucune candidature ne correspond à la recherche ou aux filtres.</div>
+{% else %}
+<div class="actions"><button onclick="recharger()" title="Relit le tableau et les lettres dans la messagerie">🔄 Recharger</button></div>
 {% endif %}
 <div id="cartes">
 {% for l in lignes %}
@@ -103,6 +107,7 @@ Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de 
     <a href="{{ l['_recherche'] }}" target="_blank" rel="noopener"><button>🔎 Rechercher sur Google</button></a>
     {% if l['_lettre'] %}<button onclick="copier(document.getElementById('l{{ l['_ligne'] }}').textContent)">📋 Copier la lettre</button>{% endif %}
     <button class="principal" onclick="envoyeeSansAdresse({{ l['_ligne'] }})" title="J'ai trouvé l'adresse et envoyé le mail : statut « Candidaté (mail) », adresse notée pour le suivi des réponses et la relance">✅ Envoyée</button>
+    {% if l['_fiche_lba'] %}<a href="{{ l['Lien'] }}" target="_blank" rel="noopener"><button title="Page de l'entreprise sur La Bonne Alternance">🎓 Fiche La Bonne Alternance</button></a>{% endif %}
     {% if l['_vers_lba'] %}<button onclick="versLba(this, {{ l['_ligne'] }}, {{ 'false' if l['_fiche_lba'] else 'true' }})" title="Candidater par le formulaire de La Bonne Alternance plutôt que par mail{{ '' if l['_fiche_lba'] else ' (l’entreprise y est d’abord cherchée, par son SIRET ou son nom et son adresse)' }} : la lettre du brouillon est gardée, le brouillon va à la corbeille et le modèle écrit les réponses aux questions">🎓 Postuler par La Bonne Alternance</button>{% endif %}
     <button onclick="abandonnerMail({{ l['_ligne'] }})">Abandonner (brouillon à la corbeille)</button>
     {% elif l['_mail'] %}
@@ -112,7 +117,7 @@ Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de 
     <button onclick="abandonnerMail({{ l['_ligne'] }})">Abandonner (brouillon à la corbeille)</button>
     {% else %}
     {% if l['_lba'] and l['Lien'] and l['Lien'].startswith('http') %}<button class="principal" onclick="ouvrirFormulaire(this, {{ l['_ligne'] }})" title="Ouvre le formulaire de La Bonne Alternance dans Chrome et le remplit (identité, lettre, réponses, CV). Rien n'est envoyé : tu relis et tu cliques toi-même « J'envoie ma candidature ».">🧾 Ouvrir le formulaire prérempli</button>{% endif %}
-    {% if l['Lien'] and l['Lien'].startswith('http') %}<a href="{{ l['Lien'] }}" target="_blank" rel="noopener"><button>🌐 Ouvrir la page</button></a>{% endif %}
+    {% if l['Lien'] and l['Lien'].startswith('http') %}<a href="{{ l['Lien'] }}" target="_blank" rel="noopener"><button>{{ '🎓 Page La Bonne Alternance' if 'labonnealternance' in l['Lien'] else '🌐 Ouvrir la page' }}</button></a>{% endif %}
     {% if l['_formulaire'] %}<a href="{{ l['_formulaire'] }}" target="_blank" rel="noopener"><button>📝 Formulaire du site</button></a>{% endif %}
     {% if l['_manque'] %}<button onclick="ecrireManque(this, {{ l['_ligne'] }})" title="Le modèle rédige ce qui manque (la tour, sinon ce PC), puis il est déchargé">✍️ Écrire ce qui manque ({{ l['_manque']|join(' et ') }})</button>{% endif %}
     {% if l['_lettre'] %}<button onclick="copier(document.getElementById('l{{ l['_ligne'] }}').textContent)">📋 Copier la lettre</button>{% endif %}
@@ -131,7 +136,7 @@ Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de 
 <script src="{{ url_for('static', filename='filtres.js') }}"></script>
 <script>
 activerTri("tri", "cartes", "tri-postuler");
-const refiltrer = activerFiltres({recherche: "recherche", boites: ["cartes"], compte: "compte", vide: "aucun",
+const refiltrer = activerFiltres({recherche: "recherche", boites: ["cartes"], compte: "compte", vide: "aucun", memoire: "filtres-postuler",
   filtres: [{id: "f-type", champ: "type"}, {id: "f-source", champ: "source", dynamique: true},
             {id: "f-ville", champ: "villenom", dynamique: true}]}) || (() => {});
 function retirer(carte) { carte.remove(); refiltrer(); }
