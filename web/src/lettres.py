@@ -112,8 +112,9 @@ def ajouter_lettres(lignes):
             l["_formulaire"], l["_reponses"] = "", []
             l["_site"], l["_recherche"] = site_ou_recherche(l)
             l["_contact"] = recherche_contact(l)
-            from vers_lba import fiche_lba
-            l["_fiche_lba"] = fiche_lba(l.get("Lien"))   # bouton « Postuler par La Bonne Alternance »
+            import vers_lba   # bouton « Postuler par La Bonne Alternance » : fiche connue, ou cherchée au clic
+            l["_fiche_lba"] = vers_lba.fiche_lba(l.get("Lien"))
+            l["_vers_lba"] = vers_lba.possible(l)
             # brouillon adressé à « Entreprise (adresse à trouver) » <a-trouver@….invalid> ; avant : sans destinataire
             l["_a_trouver_adresse"] = adresse_a_trouver(l.get("Entreprise"))
             l["_lettre"] = (lettres.get(l["_a_trouver_adresse"])
