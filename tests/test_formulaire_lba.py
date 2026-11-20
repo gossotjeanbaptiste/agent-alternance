@@ -314,12 +314,106 @@ def ligne_a_trouver(tableau, lien="https://labonnealternance.apprentissage.beta.
     return next(r[0].row for r in tableau.rows() if tableau.get(r, "Entreprise") == "Pixelo")
 
 
-def test_bouton_vers_lba_seulement_pour_une_fiche_lba(client, tableau, sans_outlook):
+def test_bouton_vers_lba_fiche_siret_ou_adresse(client, tableau, sans_outlook):
+    """Bouton sur une fiche La Bonne Alternance, ou sur une autre source avec SIRET ou adresse ; pas sans rien."""
     ligne_a_trouver(tableau)
     from tableau import ADRESSE_A_TROUVER
-    tableau.add(**{"Entreprise": "Brio", "Statut": ADRESSE_A_TROUVER, "Lien": ""})
+    tableau.add(**{"Entreprise": "Brio", "Statut": ADRESSE_A_TROUVER, "Lien": "", "Source": "Liste perso"})
+    tableau.add(**{"Entreprise": "Comptanova", "Statut": ADRESSE_A_TROUVER, "Source": "Liste perso",
+                   "Notes": "SIRET 12345678900011 | Site : https://comptanova.example"})
+    tableau.add(**{"Entreprise": "Vortalis", "Statut": ADRESSE_A_TROUVER, "Lieu": "3 rue Exemple 38000 Grenoble"})
     tableau.save()
-    assert client.get("/postuler").get_data(as_text=True).count("versLba(this") == 1
+    h = client.get("/postuler").get_data(as_text=True)
+    assert h.count("versLba(this") == 3
+    assert h.count(", false)\" title=\"Candidater") == 1      # fiche connue : pas de recherche
+    assert "d’abord cherchée" in h
+
+
+def test_siret_lu_dans_les_notes():
+    import lba_recherche
+    assert lba_recherche.siret_de("SIRET 12345678900011 | Site : x") == "12345678900011"
+    assert lba_recherche.siret_de("", None, "SIRET : 98765432100022") == "98765432100022"
+    assert lba_recherche.siret_de("Site : x") == ""
+
+
+@pytest.fixture
+def api_lba(monkeypatch):
+    """Base Adresse Nationale et API La Bonne Alternance simulées."""
+    import commun
+    import lba_recherche
+    vu = {"items": [], "recherches": []}
+    monkeypatch.setitem(commun.CFG["la_bonne_alternance"], "jeton_api", "jeton-de-test")
+    monkeypatch.setitem(commun.CFG["la_bonne_alternance"], "codes_rome", ["M1805"])
+    monkeypatch.setattr(lba_recherche, "coordonnees", lambda adresse: (45.19, 5.72))
+
+    def recruteurs(lat, lon, romes):
+        vu["recherches"].append(romes)
+        return vu["items"] if not romes or vu.get("avec_romes", True) else []
+    monkeypatch.setattr(lba_recherche, "_recruteurs", recruteurs)
+    return vu
+
+
+def recruteur(siret="12345678900011", nom="COMPTANOVA", recipient=True):
+    return {"workplace": {"siret": siret, "name": nom, "domain": {"naf": {"label": "Programmation informatique"}}},
+            "apply": {"recipient_id": "r1" if recipient else None,
+                      "url": f"https://labonnealternance.apprentissage.beta.gouv.fr/emploi/recruteurs_lba/{siret}/x"}}
+
+
+def test_trouvee_par_siret(api_lba):
+    import lba_recherche
+    api_lba["items"] = [recruteur(siret="99999999900099", nom="Comptanova"), recruteur()]
+    fiche, _ = lba_recherche.trouver("Comptanova", "12345678900011", "3 rue Exemple 38000 Grenoble")
+    assert fiche["lien"].endswith("/12345678900011/x") and fiche["activite"] == "Programmation informatique"
+
+
+def test_trouvee_par_nom_sans_siret_et_parmi_tous_les_metiers(api_lba):
+    import lba_recherche
+    api_lba["items"], api_lba["avec_romes"] = [recruteur(nom="COMPTANOVA SAS")], False
+    fiche, _ = lba_recherche.trouver("Comptanova", "", "3 rue Exemple 38000 Grenoble")
+    assert fiche and api_lba["recherches"] == [["M1805"], []]
+
+
+@pytest.mark.parametrize("items, raison", [([], "introuvable"), ([recruteur(recipient=False)], "sans formulaire")])
+def test_pas_de_formulaire(api_lba, items, raison):
+    import lba_recherche
+    api_lba["items"] = items
+    fiche, pourquoi = lba_recherche.trouver("Comptanova", "12345678900011", "3 rue Exemple 38000 Grenoble")
+    assert fiche is None and raison in pourquoi
+
+
+def test_vers_lba_depuis_la_liste_perso(client, tableau, sans_outlook, monkeypatch, api_lba):
+    """Liste perso : fiche trouvée par le SIRET, lien et activité notés, statut La Bonne Alternance."""
+    import commun
+    import lettres
+    import redaction
+    import vers_lba
+    from tableau import ADRESSE_A_TROUVER, LBA, Suivi
+    tableau.add(**{"Entreprise": "Comptanova", "Statut": ADRESSE_A_TROUVER, "Source": "Liste perso",
+                   "Lieu": "3 rue Exemple 38000 Grenoble", "Notes": "SIRET 12345678900011"})
+    tableau.save()
+    n = next(r[0].row for r in tableau.rows() if tableau.get(r, "Entreprise") == "Comptanova")
+    api_lba["items"] = [recruteur()]
+    monkeypatch.setattr(vers_lba, "_lettre_du_brouillon", lambda ent: "")
+    monkeypatch.setattr(lettres, "supprimer_brouillons", lambda a: "")
+    monkeypatch.setattr(redaction, "ecrire_ce_qui_manque", lambda n, e: (True, "c'est écrit."))
+    r = client.post("/api/vers_lba", json={"ligne": n, "entreprise": "Comptanova"})
+    assert r.status_code == 200
+    s = Suivi(commun.chemin_tableau())
+    row = next(x for x in s.rows() if s.get(x, "Entreprise") == "Comptanova")
+    assert s.get(row, "Statut") == LBA and s.get(row, "Lien").endswith("/12345678900011/x")
+    assert s.get(row, "Notes") == "SIRET 12345678900011 | Activité : Programmation informatique"
+
+
+def test_vers_lba_introuvable_rien_ne_change(client, tableau, sans_outlook, api_lba):
+    import commun
+    from tableau import ADRESSE_A_TROUVER, Suivi
+    tableau.add(**{"Entreprise": "Comptanova", "Statut": ADRESSE_A_TROUVER, "Lieu": "3 rue Exemple 38000 Grenoble"})
+    tableau.save()
+    n = next(r[0].row for r in tableau.rows() if tableau.get(r, "Entreprise") == "Comptanova")
+    r = client.post("/api/vers_lba", json={"ligne": n, "entreprise": "Comptanova"})
+    assert r.status_code == 400 and "introuvable sur La Bonne Alternance" in r.get_json()["message"]
+    s = Suivi(commun.chemin_tableau())
+    assert s.get(next(x for x in s.rows() if s.get(x, "Entreprise") == "Comptanova"), "Statut") == ADRESSE_A_TROUVER
 
 
 def test_vers_lba(client, tableau, sans_outlook, monkeypatch):

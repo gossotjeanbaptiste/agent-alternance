@@ -103,7 +103,7 @@ Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de 
     <a href="{{ l['_recherche'] }}" target="_blank" rel="noopener"><button>🔎 Rechercher sur Google</button></a>
     {% if l['_lettre'] %}<button onclick="copier(document.getElementById('l{{ l['_ligne'] }}').textContent)">📋 Copier la lettre</button>{% endif %}
     <button class="principal" onclick="envoyeeSansAdresse({{ l['_ligne'] }})" title="J'ai trouvé l'adresse et envoyé le mail : statut « Candidaté (mail) », adresse notée pour le suivi des réponses et la relance">✅ Envoyée</button>
-    {% if l['_fiche_lba'] %}<button onclick="versLba(this, {{ l['_ligne'] }})" title="Candidater par le formulaire de La Bonne Alternance plutôt que par mail : la lettre du brouillon est gardée, le brouillon va à la corbeille et le modèle écrit les réponses aux questions">🎓 Postuler par La Bonne Alternance</button>{% endif %}
+    {% if l['_vers_lba'] %}<button onclick="versLba(this, {{ l['_ligne'] }}, {{ 'false' if l['_fiche_lba'] else 'true' }})" title="Candidater par le formulaire de La Bonne Alternance plutôt que par mail{{ '' if l['_fiche_lba'] else ' (l’entreprise y est d’abord cherchée, par son SIRET ou son nom et son adresse)' }} : la lettre du brouillon est gardée, le brouillon va à la corbeille et le modèle écrit les réponses aux questions">🎓 Postuler par La Bonne Alternance</button>{% endif %}
     <button onclick="abandonnerMail({{ l['_ligne'] }})">Abandonner (brouillon à la corbeille)</button>
     {% elif l['_mail'] %}
     <button class="principal" onclick="fait({{ l['_ligne'] }}, 'Candidaté (mail)', true)" title="J'ai envoyé ce mail : statut « Candidaté (mail) », date d'envoi aujourd'hui, relance prévue. Le script n'envoie rien lui-même.">✅ Envoyée</button>
@@ -159,12 +159,13 @@ async function ecrireManque(bouton, ligne) {
   bouton.textContent = texte;
   document.querySelectorAll("button[onclick^='ecrireManque']").forEach(b => b.disabled = false);
 }
-async function versLba(bouton, ligne) {
+async function versLba(bouton, ligne, chercher) {
   const carte = document.getElementById("c" + ligne);
   if (!confirm("Postuler chez " + carte.dataset.entreprise + " par le formulaire de La Bonne Alternance ? "
+               + (chercher ? "L'entreprise y est d'abord cherchée (SIRET, sinon nom et adresse). " : "")
                + "La lettre est gardée, le brouillon sans adresse va à la corbeille et le modèle écrit les réponses aux questions.")) return;
   document.querySelectorAll("button[onclick^='versLba'], button[onclick^='ecrireManque']").forEach(b => b.disabled = true);
-  bouton.textContent = "🎓 En cours… (environ une minute)";
+  bouton.textContent = chercher ? "🎓 Recherche sur La Bonne Alternance…" : "🎓 En cours… (environ une minute)";
   const r = await poster("/api/vers_lba", { ligne, entreprise: carte.dataset.entreprise });
   annoncer(r.message || (r.ok ? "C'est fait." : "Erreur"), !r.ok);
   if (r.ok) { location.reload(); return; }

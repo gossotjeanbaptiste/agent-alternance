@@ -1,7 +1,8 @@
-"""Bouton « 🎓 Postuler par La Bonne Alternance » des candidatures « adresse à trouver » de la page À postuler (quand
-l'entreprise vient de La Bonne Alternance) : la lettre du brouillon est gardée pour le formulaire, la candidature
-repasse en « À postuler (La Bonne Alternance) », le brouillon sans adresse va à la corbeille, puis le modèle écrit les
-réponses aux questions du formulaire (et la lettre s'il n'y en avait pas)."""
+"""Bouton « 🎓 Postuler par La Bonne Alternance » des candidatures « adresse à trouver » de la page À postuler :
+l'entreprise vient de La Bonne Alternance (lien de sa fiche), ou elle y est cherchée au clic (SIRET, sinon nom autour
+de son adresse : lba_recherche.py). La lettre du brouillon est gardée pour le formulaire, la candidature repasse en
+« À postuler (La Bonne Alternance) », le brouillon sans adresse va à la corbeille, puis le modèle écrit les réponses
+aux questions du formulaire (et la lettre s'il n'y en avait pas)."""
 import chemins  # noqa: F401  (rend les modules d'alternance importables)
 import commun
 from tableau import ADRESSE_A_TROUVER, LBA, Suivi
@@ -11,6 +12,27 @@ def fiche_lba(lien):
     """Vrai si le lien est une fiche La Bonne Alternance (là où se trouve le formulaire)."""
     lien = str(lien or "").strip()
     return lien.startswith("https://") and "labonnealternance" in lien
+
+
+def possible(ligne):
+    """Le bouton a-t-il un sens ? Fiche La Bonne Alternance connue, ou de quoi l'y chercher (SIRET, adresse)."""
+    import lba_recherche
+    return (fiche_lba(ligne.get("Lien")) or bool(lba_recherche.siret_de(ligne.get("Notes")))
+            or bool(str(ligne.get("Lieu") or "").strip()))
+
+
+def _chercher_fiche(s, row, entreprise):
+    """Fiche La Bonne Alternance d'une candidature venue d'ailleurs : (lien, champs à noter) ou (None, raison)."""
+    import lba_recherche
+    notes = str(s.get(row, "Notes") or "")
+    siret = lba_recherche.siret_de(notes)
+    fiche, raison = lba_recherche.trouver(entreprise, siret, str(s.get(row, "Lieu") or "").strip())
+    if not fiche:
+        return None, raison
+    champs = {"Lien": fiche["lien"]}
+    if fiche["activite"] and "Activité :" not in notes:   # activité officielle : redonnée au modèle (NE_PAS_INVENTER)
+        champs["Notes"] = " | ".join(x for x in (notes, f"Activité : {fiche['activite']}") if x)
+    return fiche["lien"], champs
 
 
 def _lettre_du_brouillon(entreprise):
@@ -38,13 +60,17 @@ def passer_par_lba(n_ligne, entreprise):
     row = next((r for r in s.rows() if r[0].row == n_ligne), None)
     if not row or str(s.get(row, "Entreprise")) != entreprise:
         return False, "Ligne introuvable (le tableau a changé) : recharge la page."
-    lien = str(s.get(row, "Lien") or "").strip()
-    if s.get(row, "Statut") != ADRESSE_A_TROUVER or not fiche_lba(lien):
-        return False, "Seules les candidatures « adresse à trouver » venues de La Bonne Alternance sont concernées."
+    if s.get(row, "Statut") != ADRESSE_A_TROUVER:
+        return False, "Seules les candidatures « adresse à trouver » sont concernées."
+    lien, champs = str(s.get(row, "Lien") or "").strip(), {}
+    if not fiche_lba(lien):
+        lien, champs = _chercher_fiche(s, row, entreprise)
+        if not lien:
+            return False, f"{entreprise} : {champs}. Cherche plutôt son adresse de contact."
     lettre = _lettre_du_brouillon(entreprise)
     if lettre:
         reponses.enregistrer_lettre(lien, lettre)
-    ok, message = suivi_donnees.modifier(n_ligne, entreprise, {"Statut": LBA})
+    ok, message = suivi_donnees.modifier(n_ligne, entreprise, {**champs, "Statut": LBA})
     if not ok:
         return False, message
     morceaux = [f"{entreprise} : repassée par La Bonne Alternance"
