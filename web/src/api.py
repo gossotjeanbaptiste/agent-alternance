@@ -241,9 +241,18 @@ def mise_a_jour_maintenant():
 def quitter():
     """Arrête l'interface (le serveur web). Une routine lancée continue jusqu'au bout."""
     continue_routine = routines.en_cours()
+    import veille_tour
+    veille_tour.ARRET.update(lignes=[], fini=False)      # nouveau journal de fermeture, lu par la page
     # laisse le temps d'envoyer la réponse ; quitté par l'utilisateur : la tour est remise en veille
     threading.Timer(0.5, icone_tache.quitter, kwargs={"par_l_utilisateur": True}).start()
     return jsonify(ok=True, routine=continue_routine)
+
+
+@api.get("/arret")
+def arret():
+    """Journal de la fermeture en cours (LM Studio fermé sur la tour, mise en veille), affiché par la page."""
+    import veille_tour
+    return jsonify(lignes=veille_tour.ARRET["lignes"], fini=veille_tour.ARRET["fini"])
 
 
 @api.post("/annuler_routine")

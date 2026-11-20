@@ -55,6 +55,8 @@ def test_menu_ouvrir_et_quitter(faux_pystray, monkeypatch):
     import veille_tour
     veilles = []
     monkeypatch.setattr(veille_tour, "en_quittant", lambda: veilles.append(1))
+    monkeypatch.setattr(veille_tour, "ARRET", {"lignes": [], "fini": False})
+    monkeypatch.setattr("time.sleep", lambda s: None)
     icone = icone_tache.demarrer("http://127.0.0.1:8765", LOGO)
     assert icone is icone_tache.ICONE["objet"] and faux_pystray["run"] == 1
     assert faux_pystray["titre"] == "LMAgent"

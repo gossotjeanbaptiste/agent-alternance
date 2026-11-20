@@ -46,19 +46,29 @@ async function quitter() {
     document.body.innerHTML = '<main><div class="carte" style="margin-top:40px; text-align:center">' +
       "<h1>" + titre + '</h1><p class="doux">' + texte + "</p></div></main>";
   };
+  // Journal de la fermeture affiché en direct (LM Studio fermé sur la tour, mise en veille…), jusqu'à ce que
+  // l'interface ne réponde plus. Une copie qui répond sans jamais finir : une autre interface tourne en parallèle.
+  const echapper = s => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  let lignes = [], repondEncore = true;
+  const montrer = (titre, texte) => afficher(titre, (texte ? texte + "<br><br>" : "") +
+    lignes.map(l => '<span style="display:block; text-align:left">' + echapper(l) + "</span>").join(""));
   afficher("Arrêt en cours…", "");
-  // On vérifie que le serveur ne répond vraiment plus.
-  await new Promise(r => setTimeout(r, 1500));
-  let repondEncore = false;
-  try { await fetch("/api/routine", { cache: "no-store" }); repondEncore = true; } catch (e) {}
+  for (let i = 0; i < 120; i++) {           // 90 s au plus
+    await new Promise(r => setTimeout(r, 750));
+    let etat;
+    try { etat = await (await fetch("/api/arret", { cache: "no-store" })).json(); }
+    catch (e) { repondEncore = false; break; }
+    lignes = etat.lignes || [];
+    montrer("Arrêt en cours…", "");
+  }
   if (repondEncore) {
     afficher("L'interface répond encore",
       "Une autre copie de l'interface tourne sans doute en parallèle : quitte-la par son icône près de " +
       "l'horloge (ou Ctrl+C dans le terminal), puis relance LMAgent une seule fois.");
   } else {
-    afficher("Interface arrêtée",
+    montrer("Interface arrêtée",
       "Tu peux fermer cet onglet. Pour la relancer : raccourci LMAgent (menu Démarrer ou bureau).");
-    window.close();  // ne marche que si le navigateur l'autorise ; sinon le message reste affiché
+    if (!lignes.length) window.close();  // journal à lire : la page reste ouverte (sinon seulement si autorisé)
   }
 }
 
