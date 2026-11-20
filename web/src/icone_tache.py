@@ -44,6 +44,9 @@ def quitter(code=0, par_l_utilisateur=False):
     fermeture automatique (mise à jour : LMAgent se relance tout de suite), d'où False par défaut."""
     arreter()
     if par_l_utilisateur:
+        import time
         import veille_tour
         veille_tour.en_quittant()
+        veille_tour.ARRET["fini"] = True
+        time.sleep(2)            # la page de fermeture lit la fin du journal avant que l'interface s'arrête
     os._exit(code)
