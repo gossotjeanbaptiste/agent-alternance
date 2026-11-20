@@ -78,6 +78,10 @@ def lancer_interface():
     threading.Timer(1.2, lambda: webbrowser.open(url)).start()
     try:
         creer_app().run(host=HOTE, port=PORT, debug=False, use_reloader=False)
+    except KeyboardInterrupt:            # Ctrl+C dans le terminal : quitté par l'utilisateur
+        icone_tache.arreter()
+        import veille_tour
+        veille_tour.en_quittant()
     finally:
         icone_tache.arreter()
 

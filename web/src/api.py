@@ -241,7 +241,8 @@ def mise_a_jour_maintenant():
 def quitter():
     """Arrête l'interface (le serveur web). Une routine lancée continue jusqu'au bout."""
     continue_routine = routines.en_cours()
-    threading.Timer(0.5, icone_tache.quitter).start()  # laisse le temps d'envoyer la réponse
+    # laisse le temps d'envoyer la réponse ; quitté par l'utilisateur : la tour est remise en veille
+    threading.Timer(0.5, icone_tache.quitter, kwargs={"par_l_utilisateur": True}).start()
     return jsonify(ok=True, routine=continue_routine)
 
 

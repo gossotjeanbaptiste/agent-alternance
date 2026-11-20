@@ -199,6 +199,9 @@ REGLAGES = [
         ("ssh_lan", "Accès SSH par le réseau local (secours)", "texte", "", ""),
         ("attente_reveil_s", "Attente max du réveil (secondes)", "entier", 150, ""),
         ("veille_apres", "Remettre la tour en veille à la fin", "oui_non", False, "Seulement si c'est le script qui l'a réveillée."),
+        ("veille_en_quittant", "Mettre la tour en veille quand je quitte LMAgent", "oui_non", True,
+         "Icône près de l'horloge, bouton ⏻ ou Ctrl+C. Pas lors d'une mise à jour automatique, ni pendant une routine, "
+         "ni si la carte graphique de la tour est occupée."),
         ("port_serveur", "Port du serveur LM Studio sur la tour", "entier", 1235, ""),
         ("lms_tour", "Chemin de lms.exe sur la tour", "texte", "", ""),
         ("tailscale_tour", "Chemin de tailscale.exe sur la tour", "texte", r"C:\Program Files\Tailscale\tailscale.exe", ""),
