@@ -66,3 +66,12 @@ async function copier(texte, quoi = "Lettre copiée") {
   try { await navigator.clipboard.writeText(texte); annoncer(quoi + " : colle-la avec Ctrl+V."); }
   catch (e) { annoncer("Copie impossible : sélectionne le texte à la main.", true); }
 }
+
+// bouton « 🔄 Recharger » (Suivi, À postuler, Écartées) : données relues tout de suite (À postuler : lettres relues
+// dans la messagerie, sans attendre la fin du cache) ; recherche et filtres restent (retenus par filtres.js)
+function recharger() {
+  location.href = location.pathname + "?frais=1";
+}
+if (new URLSearchParams(location.search).has("frais")) {
+  history.replaceState(null, "", location.pathname);   // un F5 ensuite ne relit pas la messagerie pour rien
+}

@@ -1,4 +1,5 @@
-// Barre de recherche et filtres des pages À postuler et Écartées (comme sur la page Suivi).
+// Barre de recherche et filtres des pages À postuler et Écartées (retenus d'un rechargement à l'autre, comme sur
+// la page Suivi, qui utilise retenirChamps / effacerChamps).
 // Chaque carte porte data-texte (ce que cherche la barre) et un attribut data-<champ> par filtre.
 // Les menus marqués « dynamique » se remplissent avec les valeurs présentes sur la page.
 
@@ -18,8 +19,38 @@ function valeursDistinctes(cartes, champ) {
   return vals.sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
 }
 
+function valeurGardee(el, v) {
+  // une valeur gardée n'est remise que si elle existe encore (option d'un menu)
+  return typeof v === "string" && (el.tagName !== "SELECT" || [...el.options].some(o => o.value === v));
+}
+
+function retenirChamps(ids, memoire) {
+  // Recherche et filtres retenus dans le navigateur (localStorage), pour chaque page : un rechargement ne les
+  // efface plus. Les valeurs sont remises tout de suite, puis gardées à chaque saisie.
+  let gardes = {};
+  try { gardes = JSON.parse(localStorage.getItem(memoire) || "{}") || {}; } catch (e) {}
+  if (typeof gardes !== "object" || Array.isArray(gardes)) gardes = {};
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (valeurGardee(el, gardes[id])) el.value = gardes[id];
+    el.addEventListener("input", () => {
+      gardes[id] = el.value;
+      try { localStorage.setItem(memoire, JSON.stringify(gardes)); } catch (e) {}
+    });
+  }
+}
+
+function effacerChamps(ids) {
+  // bouton « Effacer les filtres » : tout est vidé (et oublié, par l'événement input)
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el) { el.value = ""; el.dispatchEvent(new Event("input")); }
+  }
+}
+
 function activerFiltres(o) {
-  // o = {recherche: id, filtres: [{id, champ, dynamique}], boites: [id…], compte: id, vide: id}
+  // o = {recherche: id, filtres: [{id, champ, dynamique}], boites: [id…], compte: id, vide: id, memoire: clé}
   const boites = o.boites.map(id => document.getElementById(id)).filter(Boolean);
   if (!boites.length) return;
   const cartes = () => boites.flatMap(b => [...b.children].filter(c => c.classList.contains("carte") && c.dataset.entreprise !== undefined));
@@ -27,6 +58,7 @@ function activerFiltres(o) {
     const menu = document.getElementById(f.id);
     if (menu && f.dynamique) valeursDistinctes(cartes(), f.champ).forEach(v => menu.add(new Option(v, v)));
   }
+  if (o.memoire) retenirChamps([o.recherche, ...o.filtres.map(f => f.id)], o.memoire);
   const champ = document.getElementById(o.recherche);
   const appliquer = () => {
     const filtres = o.filtres.map(f => ({ champ: f.champ, valeur: (document.getElementById(f.id) || {}).value || "" }));
@@ -49,4 +81,4 @@ function activerFiltres(o) {
   return appliquer;      // à rappeler quand une carte est retirée de la page
 }
 
-if (typeof module !== "undefined") module.exports = { normaliser, carteCorrespond, valeursDistinctes };
+if (typeof module !== "undefined") module.exports = { normaliser, carteCorrespond, valeursDistinctes, valeurGardee, retenirChamps };

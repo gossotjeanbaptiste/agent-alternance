@@ -327,6 +327,7 @@ def test_bouton_vers_lba_fiche_siret_ou_adresse(client, tableau, sans_outlook):
     assert h.count("versLba(this") == 3
     assert h.count(", false)\" title=\"Candidater") == 1      # fiche connue : pas de recherche
     assert "d’abord cherchée" in h
+    assert h.count("🎓 Fiche La Bonne Alternance") == 1        # lien vers la fiche, seulement si elle est connue
 
 
 def test_siret_lu_dans_les_notes():
