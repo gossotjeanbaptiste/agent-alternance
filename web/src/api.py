@@ -101,6 +101,19 @@ def ajouter_au_suivi():
     return jsonify(ok=ok, message=message, doublon=doublon), (200 if ok else 400)
 
 
+@api.post("/suivi/fiche")
+def fiche_entreprise():
+    """Fiche d'une entreprise modifiée depuis la page Suivi (bouton ✏️)."""
+    import fiche
+    d = request.get_json(force=True, silent=True) or {}
+    try:
+        n = int(d.get("ligne"))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, message="Ligne invalide."), 400
+    ok, message = fiche.modifier(n, str(d.get("entreprise") or ""), d.get("champs") or {})
+    return jsonify(ok=ok, message=message), (200 if ok else 400)
+
+
 @api.post("/ecrire")
 def ecrire():
     """« Écrire ce qui manque » : lettre et réponses d'une candidature par formulaire, rédigées par le modèle."""
@@ -230,7 +243,10 @@ def enregistrer_reglages():
 @api.post("/mise_a_jour")
 def mise_a_jour_maintenant():
     """Vérifie tout de suite ; si une version plus récente s'installe, l'interface se ferme puis redémarre."""
+    import emplacements
     import mise_a_jour
+    if not emplacements.INSTALLEE and routines.en_cours():     # git pull sous une routine en cours : non
+        return jsonify(ok=False, message="Une routine est en cours : attends qu'elle se termine pour mettre à jour.")
     lancee, message = mise_a_jour.verifier()
     if lancee:
         threading.Timer(1.0, icone_tache.quitter).start()

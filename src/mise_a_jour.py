@@ -7,8 +7,9 @@ Au lancement de l'interface (et toutes les 6 heures ensuite, si aucune routine n
    MyCMS ; installation par utilisateur : pas de demande d'autorisation Windows)
    après la fermeture de LMAgent, puis relance LMAgent.
 
-Rien ne se passe quand LMAgent tourne depuis le code (mise à jour par git), ni si le réglage
-« mises_a_jour_auto » est décoché dans Paramètres.
+Rien de tout cela quand LMAgent tourne depuis le code, ni si le réglage « mises_a_jour_auto » est décoché
+dans Paramètres. Depuis le code, seul le bouton « Vérifier maintenant » met à jour : par git (maj_code.py),
+puis l'interface se relance d'elle-même.
 """
 import hashlib
 import json
@@ -125,11 +126,15 @@ def commande_installation(msi, pid=None, exe=None):
 
 
 def lancer_installation(msi):
-    """Lance la commande d'installation dans un PowerShell sans fenêtre qui survit à la fermeture de LMAgent.
+    """Lance la commande d'installation (PowerShell sans fenêtre qui survit à la fermeture de LMAgent)."""
+    lancer_detache(commande_installation(msi))
+
+
+def lancer_detache(cmd):
+    """Lance cmd dans un processus sans fenêtre qui survit à la fermeture de LMAgent.
     Pas de DETACHED_PROCESS : sans console, PowerShell se ferme aussitôt sans rien faire (bug de la 1.0.0 à 1.0.3)."""
     sans_fenetre = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
     hors_job = getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0)
-    cmd = commande_installation(msi)
     try:
         subprocess.Popen(cmd, creationflags=sans_fenetre | hors_job, close_fds=True)
     except OSError:   # le processus n'a pas le droit de sortir de son groupe (job) : sans cette option
@@ -138,8 +143,13 @@ def lancer_installation(msi):
 
 def verifier(appliquer=True, journal=print):
     """Cherche une mise à jour et l'installe si besoin. Renvoie (installation_lancée, message)."""
-    if not emplacements.INSTALLEE:
-        return False, "Version lancée depuis le code : mise à jour par git (git pull)."
+    if not emplacements.INSTALLEE:      # lancé depuis le code : git pull, puis l'interface se relance
+        import maj_code
+        lancee, message = maj_code.mettre_a_jour(appliquer)
+        if lancee:
+            journal(f"⬆️ {message}")
+            maj_code.lancer_relance()
+        return lancee, message
     auto, depot = reglages()
     try:
         info = derniere_version(depot)

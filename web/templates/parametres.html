@@ -5,7 +5,7 @@
 <p class="doux">LMAgent <span id="version-courante">v{{ version }}</span> · Ouvre une section pour la modifier. <a href="/assistant">Revoir l'assistant de premier lancement</a></p>
 <details class="carte pli-section" id="pli-version">
   <summary><h2 style="display:inline">Version et mises à jour</h2> <span class="doux">— v{{ version }}</span></summary>
-  <p>LMAgent version <b>{{ version }}</b>{% if not installee %} (lancé depuis le code : mise à jour par git){% endif %}.</p>
+  <p>LMAgent version <b>{{ version }}</b>{% if not installee %} (lancé depuis le code : « Vérifier maintenant » récupère les nouveautés par git puis relance l'interface){% endif %}.</p>
   <p class="doux">Les mises à jour s'installent toutes seules (réglage dans « Tous les réglages » → Mises à jour).</p>
   <div class="actions"><button onclick="verifierMaj()">🔄 Vérifier maintenant</button></div>
 </details>
@@ -125,6 +125,15 @@ async function enregistrer() {
 async function verifierMaj() {
   const r = await poster("/api/mise_a_jour", {});
   annoncer(r.message || "Erreur", !r.ok);
+  if (r.redemarrage) attendreRedemarrage(Date.now());
+}
+async function attendreRedemarrage(debut) {   // la page se recharge quand l'interface relancée répond
+  await new Promise(ok => setTimeout(ok, 4000));
+  while (Date.now() - debut < 180000) {
+    try { if ((await fetch("/parametres", {cache: "no-store"})).ok) { location.reload(); return; } } catch (e) {}
+    await new Promise(ok => setTimeout(ok, 1500));
+  }
+  annoncer("L'interface ne répond pas : relance LMAgent toi-même.", true);
 }
 async function enregistrerProfil() {
   const r = await poster("/api/profil", {texte: document.getElementById("profil").value});

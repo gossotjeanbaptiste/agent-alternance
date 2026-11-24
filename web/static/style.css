@@ -76,3 +76,6 @@ nav .deconnexion + .quitter { margin-left: 6px; }
 .assistant { width: 100%; max-width: 560px; }
 .assistant h1 { display: flex; justify-content: center; margin: 4px 0 4px; }
 .etapes { text-align: center; margin-top: 0; }
+dialog.fiche { width: min(860px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; color: var(--texte); }
+dialog.fiche::backdrop { background: rgba(0, 0, 0, .45); }
+button.petit { padding: 1px 6px; font-size: .85em; }

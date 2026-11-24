@@ -75,6 +75,13 @@ def sans_reseau(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def sans_git(monkeypatch):
+    """Jamais de vrai git (fetch, pull du dépôt) : un test simule les réponses de maj_code._git."""
+    import maj_code
+    monkeypatch.setattr(maj_code, "_git", lambda *a, **k: (1, "git bloqué pendant les tests"))
+
+
+@pytest.fixture(autouse=True)
 def config_propre():
     """Config remise à l'identique et fichiers de données de test vidés après chaque test."""
     commun.CFG.clear()
