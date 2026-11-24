@@ -157,6 +157,8 @@ REGLAGES = [
     _r("Alertes LinkedIn", A, "alertes_linkedin.expediteurs", "Expéditeurs des alertes", "liste", []),
     _r("Alertes LinkedIn", A, "alertes_linkedin.jours", "Alertes des N derniers jours", "entier", 3),
     # --- interface
+    _r("Interface", A, "interface.theme", "Thème de l'interface", "choix", "système",
+       "Système : suit le thème clair ou sombre de Windows.", choix=["système", "clair", "sombre"]),
     _r("Interface", A, "interface.cache_lettres_minutes", "Relecture des lettres de la page À postuler (minutes)", "entier", 5),
     _r("Interface", A, "interface.passages_max", "Passages max d'une routine", "entier", 50),
     # --- agent et modèle (config.json)

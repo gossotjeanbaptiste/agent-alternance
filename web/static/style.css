@@ -1,11 +1,14 @@
 :root {
   --fond: #f6f5f1; --carte: #ffffff; --texte: #22211f; --doux: #6b6a65; --bord: #e2e0d8;
-  --accent: #534ab7; --accent-fond: #eeedfe; --ok: #3b6d11; --erreur: #a32d2d; --code: #f1efe8;
+  --accent: #534ab7; --accent-fond: #eeedfe; --ok: #3b6d11; --erreur: #a32d2d; --code: #f1efe8; color-scheme: light;
 }
+/* Thème : réglage « Thème de l'interface » (data-theme sur <html>), sinon celui du système */
 @media (prefers-color-scheme: dark) {
-  :root { --fond: #1c1c1a; --carte: #262624; --texte: #ecebe6; --doux: #a8a69e; --bord: #3a3936;
-          --accent: #afa9ec; --accent-fond: #2e2a55; --ok: #97c459; --erreur: #f09595; --code: #2c2c2a; }
+  :root:not([data-theme="clair"]) { --fond: #1c1c1a; --carte: #262624; --texte: #ecebe6; --doux: #a8a69e; --bord: #3a3936;
+      --accent: #afa9ec; --accent-fond: #2e2a55; --ok: #97c459; --erreur: #f09595; --code: #2c2c2a; color-scheme: dark; }
 }
+:root[data-theme="sombre"] { --fond: #1c1c1a; --carte: #262624; --texte: #ecebe6; --doux: #a8a69e; --bord: #3a3936;
+  --accent: #afa9ec; --accent-fond: #2e2a55; --ok: #97c459; --erreur: #f09595; --code: #2c2c2a; color-scheme: dark; }
 * { box-sizing: border-box; }
 body { margin: 0; font-family: system-ui, "Segoe UI", sans-serif; background: var(--fond); color: var(--texte); line-height: 1.5; }
 nav { display: flex; gap: 4px; flex-wrap: wrap; padding: 12px 20px; background: var(--carte); border-bottom: 1px solid var(--bord); position: sticky; top: 0; z-index: 2; }
