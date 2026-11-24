@@ -144,6 +144,11 @@ async function enregistrerReglages() {
   const r = await poster("/api/reglages", {valeurs});
   annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
   if (r.ok) for (const el of document.querySelectorAll('[data-type="secret"]')) el.value = "";
+  const theme = document.querySelector('[data-cle$="interface.theme"]');   // thème appliqué tout de suite
+  if (r.ok && theme) {
+    if (theme.value === "clair" || theme.value === "sombre") document.documentElement.dataset.theme = theme.value;
+    else delete document.documentElement.dataset.theme;
+  }
 }
 async function enregistrerInterdits() {
   const r = await poster("/api/interdits", {texte: document.getElementById("interdits").value});

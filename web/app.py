@@ -16,6 +16,7 @@ Organisation (modules dans web/src/) :
     parametres.py     page Paramètres : signature des candidatures par formulaire
     auth.py           compte de l'interface (identifiant + mot de passe haché), frein aux essais répétés
     relations.py      relations LinkedIn dans les entreprises du tableau
+    theme.py          thème clair, sombre ou du système (réglage « interface.theme »)
     templates/        le HTML des pages        static/  style et JavaScript
 """
 import socket
@@ -32,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))  # modules de l
 import auth  # noqa: E402
 import chemins  # noqa: E402,F401
 import securite  # noqa: E402
+import theme  # noqa: E402
 import tour_web  # noqa: E402
 from api import api  # noqa: E402
 from pages import pages  # noqa: E402
@@ -49,7 +51,7 @@ def creer_app():
                       PERMANENT_SESSION_LIFETIME=timedelta(days=30))
     app.before_request(securite.proteger)
     app.context_processor(lambda: {"jeton": securite.JETON, "avec_tour": tour_web.disponible(), "statuts": STATUTS,
-                                   "connecte": session.get("connecte")})
+                                   "connecte": session.get("connecte"), "theme": theme.attribut()})
     app.register_blueprint(pages)
     app.register_blueprint(api)
     return app
