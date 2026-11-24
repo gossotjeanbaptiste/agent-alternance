@@ -94,3 +94,16 @@ def test_formulaire_dans_la_page(client):
     h = client.get("/suivi").get_data(as_text=True)
     assert 'id="pli-ajouter"' in h and 'id="a-Entreprise"' in h and "ajouter()" in h
     assert "<option selected>Candidaté (autre canal)</option>" in h and "<option>Ajout manuel</option>" in h
+
+
+def test_derniere_reponse_affichee_en_entier(client, tableau):
+    """La page Suivi montre toute la dernière réponse, pas seulement ses 120 premiers caractères."""
+    tableau.save()
+    longue = "2026-11-03 15:15 [positive] " + "Demande une lettre de motivation supplémentaire. " * 5 + "FIN"
+    client.post("/api/suivi/ajouter", json={"Entreprise": "Comptanova", "Statut": "Candidaté (autre canal)"})
+    s = Suivi(tableau.path)
+    row = next(r for r in s.rows() if s.get(r, "Entreprise") == "Comptanova")
+    s.set(row, "Dernière réponse", longue)
+    s.enregistrer_sur(tableau.path)
+    h = client.get("/suivi").get_data(as_text=True)
+    assert "supplémentaire. FIN" in h
