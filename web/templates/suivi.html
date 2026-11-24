@@ -54,7 +54,7 @@
     <td>{{ l['Date envoi'].strftime('%d/%m/%y') if l['Date envoi'] else '' }}</td>
     <td>{{ l['Relance prévue'].strftime('%d/%m/%y') if l['Relance prévue'] else '' }}</td>
     <td>{{ l['Contact'] or '' }}{% if l['Email'] %}<br><span class="doux">{{ l['Email'] }}</span>{% endif %}</td>
-    <td class="doux">{{ (l['Dernière réponse'] or '')[:120] }}</td>
+    <td class="doux">{{ l['Dernière réponse'] or '' }}</td>
   </tr>
   {% endfor %}
 </table>
