@@ -30,6 +30,28 @@
   <label class="champ">Notes <textarea id="a-Notes" class="zone" rows="2"></textarea></label>
   <div class="actions"><button class="principal" onclick="ajouter()">➕ Ajouter au suivi</button></div>
 </details>
+<dialog id="fiche" class="carte fiche">
+  <h2>✏️ Fiche de <span id="f-titre"></span></h2>
+  <p class="doux">Une seule adresse mail : celle du suivi des réponses et des relances. Les autres contacts vont dans
+    « Contact » ou « Notes ».</p>
+  <div class="deux">
+    <div>
+      <label class="champ">Entreprise * <input type="text" id="f-Entreprise"></label>
+      <label class="champ">Poste <input type="text" id="f-Poste"></label>
+      <label class="champ">Adresse / lieu <input type="text" id="f-Lieu" placeholder="12 rue de la République, 69002 Lyon"></label>
+      <label class="champ">Source <input type="text" id="f-Source" list="sources"></label>
+    </div>
+    <div>
+      <label class="champ">Contact(s) <input type="text" id="f-Contact" placeholder="Prénom Nom (RH), Prénom Nom (tuteur)"></label>
+      <label class="champ">Adresse mail <input type="text" id="f-Email" placeholder="rh@entreprise.fr"></label>
+      <label class="champ">Téléphone <input type="text" id="f-Téléphone"></label>
+      <label class="champ">Lien (site, offre, formulaire…) <input type="text" id="f-Lien" placeholder="https://…"></label>
+    </div>
+  </div>
+  <label class="champ">Notes <textarea id="f-Notes" class="zone" rows="4"></textarea></label>
+  <div class="actions"><button class="principal" onclick="enregistrerFiche()">💾 Enregistrer</button>
+    <button onclick="document.getElementById('fiche').close()">Annuler</button></div>
+</dialog>
 <div class="filtres">
   <input type="search" id="recherche" placeholder="Rechercher (entreprise, poste, contact…)" size="36">
   <select id="f-statut"><option value="">Tous les statuts</option>{% for st in statuts %}<option>{{ st }}</option>{% endfor %}</select>
@@ -42,7 +64,9 @@
   <tr><th>Entreprise</th><th>Poste</th><th>Lieu</th><th>Statut</th><th>Envoi</th><th>Relance prévue</th><th>Contact</th><th>Dernière réponse</th></tr>
   {% for l in lignes %}
   <tr data-statut="{{ l['Statut'] or '' }}" data-source="{{ l['Source'] or '' }}">
-    <td><b>{{ l['Entreprise'] }}</b>{% if l['Lien'] and l['Lien'].startswith('http') %} <a href="{{ l['Lien'] }}" target="_blank" rel="noopener">↗</a>{% endif %}</td>
+    <td><button class="petit" title="Modifier la fiche (adresse, contacts, lien, notes…)" data-ligne="{{ l['_ligne'] }}"
+      data-fiche='{{ dict(_0=l['Entreprise'] or '', _1=l['Poste'] or '', _2=l['Lieu'] or '', _3=l['Contact'] or '', _4=l['Email'] or '', _5=l['Téléphone'] or '', _6=l['Lien'] or '', _7=l['Source'] or '', _8=l['Notes'] or '')|tojson }}' onclick="ouvrirFiche(this)">✏️</button>
+      <b>{{ l['Entreprise'] }}</b>{% if l['Lien'] and l['Lien'].startswith('http') %} <a href="{{ l['Lien'] }}" target="_blank" rel="noopener">↗</a>{% endif %}</td>
     <td>{{ l['Poste'] or '' }}</td>
     <td>{{ l['Lieu'] or '' }}</td>
     <td>
@@ -68,6 +92,22 @@ async function changer(sel, ligne, entreprise) {
   const ok = await changerStatut(ligne, entreprise, sel.value);
   if (ok) { sel.style.background = "#" + (couleurs[sel.value] || "EDEDED"); sel.closest("tr").dataset.statut = sel.value; }
   else { location.reload(); }
+}
+const CHAMPS_FICHE = ["Entreprise", "Poste", "Lieu", "Contact", "Email", "Téléphone", "Lien", "Source", "Notes"];
+let ficheOuverte = null;
+function ouvrirFiche(bouton) {
+  const v = JSON.parse(bouton.dataset.fiche);
+  ficheOuverte = {ligne: Number(bouton.dataset.ligne), entreprise: v._0};
+  CHAMPS_FICHE.forEach((c, i) => { document.getElementById("f-" + c).value = v["_" + i]; });
+  document.getElementById("f-titre").textContent = v._0;
+  document.getElementById("fiche").showModal();
+}
+async function enregistrerFiche() {
+  const champs = {};
+  for (const c of CHAMPS_FICHE) champs[c] = document.getElementById("f-" + c).value;
+  const r = await poster("/api/suivi/fiche", {...ficheOuverte, champs});
+  annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
+  if (r.ok) { document.getElementById("fiche").close(); location.reload(); }
 }
 document.getElementById("a-Date-envoi").value = new Date().toISOString().slice(0, 10);
 async function ajouter(forcer) {

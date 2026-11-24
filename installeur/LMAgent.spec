@@ -15,9 +15,9 @@ MODULES = [
     "alternance", "postuler", "maj_tableau", "reponses_lba",
     # web/src et web/app.py
     "api", "assistant", "auth", "chemins", "ecartees", "lettres", "pages", "parametres", "planification", "redaction", "reglages_web", "formulaire_web", "extension_lba", "vers_lba",
-    "relations", "routines", "securite", "suivi_donnees", "tour_web", "icone_tache", "veille_tour", "theme", "app",
+    "relations", "routines", "securite", "suivi_donnees", "tour_web", "icone_tache", "veille_tour", "theme", "fiche", "app",
     # src/ (modules de la racine du projet)
-    "agent", "tour", "emplacements", "version", "mise_a_jour", "boucle", "sans_fenetre",
+    "agent", "tour", "emplacements", "version", "mise_a_jour", "maj_code", "boucle", "sans_fenetre",
     # dépendances chargées dynamiquement
     "win32com", "win32com.client", "pythoncom", "pywintypes", "win32timezone",
     # icône de la zone de notification

@@ -77,7 +77,9 @@ def lancer_interface():
     import icone_tache
     print(f"Interface : {url}  (accessible uniquement depuis ce PC — bouton Quitter ou icône près de l'horloge)")
     icone_tache.demarrer(url, emplacements.RESSOURCES / "web" / "static" / "logo.png")
-    threading.Timer(1.2, lambda: webbrowser.open(url)).start()
+    import os
+    if not os.environ.pop("LMAGENT_SANS_NAVIGATEUR", None):   # relancée après une mise à jour par git : page déjà ouverte
+        threading.Timer(1.2, lambda: webbrowser.open(url)).start()
     try:
         creer_app().run(host=HOTE, port=PORT, debug=False, use_reloader=False)
     except KeyboardInterrupt:            # Ctrl+C dans le terminal : quitté par l'utilisateur
