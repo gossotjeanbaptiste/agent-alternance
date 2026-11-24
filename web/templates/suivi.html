@@ -13,7 +13,7 @@
       <label class="champ">Poste <input type="text" id="a-Poste" placeholder="Développeur web en alternance"></label>
       <label class="champ">Lieu <input type="text" id="a-Lieu" placeholder="69003 Lyon"></label>
       <label class="champ">Statut
-        <select id="a-Statut">{% for st in statuts %}<option {{ 'selected' if st == 'Candidaté (autre canal)' }}>{{ st }}</option>{% endfor %}</select>
+        <select id="a-Statut">{% for st in statuts_tries %}<option {{ 'selected' if st == 'Candidaté (autre canal)' }}>{{ st }}</option>{% endfor %}</select>
       </label>
       <label class="champ">Date d'envoi <input type="date" id="a-Date-envoi"></label>
     </div>
@@ -23,8 +23,8 @@
       <label class="champ">Téléphone <input type="text" id="a-Téléphone"></label>
       <label class="champ">Lien (offre, formulaire…) <input type="text" id="a-Lien" placeholder="https://…"></label>
       <label class="champ">Source <input type="text" id="a-Source" list="sources" placeholder="Ajout manuel"></label>
-      <datalist id="sources"><option>Ajout manuel</option><option>LinkedIn</option><option>Site de l'entreprise</option>
-        <option>Salon / forum</option><option>Indeed</option><option>Welcome to the Jungle</option></datalist>
+      <datalist id="sources"><option>Ajout manuel</option><option>Indeed</option><option>LinkedIn</option>
+        <option>Salon / forum</option><option>Site de l'entreprise</option><option>Welcome to the Jungle</option></datalist>
     </div>
   </div>
   <label class="champ">Notes <textarea id="a-Notes" class="zone" rows="2"></textarea></label>
@@ -54,8 +54,8 @@
 </dialog>
 <div class="filtres">
   <input type="search" id="recherche" placeholder="Rechercher (entreprise, poste, contact…)" size="36">
-  <select id="f-statut"><option value="">Tous les statuts</option>{% for st in statuts %}<option>{{ st }}</option>{% endfor %}</select>
-  <select id="f-source"><option value="">Toutes les sources</option><option>La Bonne Alternance</option><option>LinkedIn</option><option>Liste perso</option><option>Ajout manuel</option><option>Ancien tableau</option></select>
+  <select id="f-statut"><option value="">Tous les statuts</option>{% for st in statuts_tries %}<option>{{ st }}</option>{% endfor %}</select>
+  <select id="f-source"><option value="">Toutes les sources</option><option>Ajout manuel</option><option>Ancien tableau</option><option>La Bonne Alternance</option><option>LinkedIn</option><option>Liste perso</option></select>
   <button onclick="effacerChamps(['recherche', 'f-statut', 'f-source'])" title="Vide la recherche et les filtres">✖ Effacer les filtres</button>
   <button onclick="recharger()" title="Relit le tableau ; la recherche et les filtres restent">🔄 Recharger</button>
 </div>
@@ -71,7 +71,7 @@
     <td>{{ l['Lieu'] or '' }}</td>
     <td>
       <select data-entreprise="{{ l['Entreprise'] }}" onchange="changer(this, {{ l['_ligne'] }}, this.dataset.entreprise)" style="background:#{{ statuts.get(l['Statut'], 'EDEDED') }}; color:#222">
-        {% for st in statuts %}<option {{ 'selected' if st == l['Statut'] }}>{{ st }}</option>{% endfor %}
+        {% for st in statuts_tries %}<option {{ 'selected' if st == l['Statut'] }}>{{ st }}</option>{% endfor %}
         {% if l['Statut'] not in statuts %}<option selected>{{ l['Statut'] }}</option>{% endif %}
       </select>
     </td>
