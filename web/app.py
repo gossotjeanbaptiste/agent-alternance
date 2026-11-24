@@ -39,6 +39,15 @@ from api import api  # noqa: E402
 from pages import pages  # noqa: E402
 from tableau import STATUTS  # noqa: E402
 
+def alphabetique(liste):
+    """Tri alphabétique à la française : sans tenir compte des accents ni des majuscules (« À postuler » avec les A)."""
+    import unicodedata
+
+    def cle(t):
+        return "".join(c for c in unicodedata.normalize("NFD", str(t)) if unicodedata.category(c) != "Mn").casefold()
+    return sorted(liste, key=cle)
+
+
 HOTE, PORT = "127.0.0.1", 8765   # 127.0.0.1 = joignable uniquement depuis ce PC
 
 
@@ -50,7 +59,7 @@ def creer_app():
     app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Strict",
                       PERMANENT_SESSION_LIFETIME=timedelta(days=30))
     app.before_request(securite.proteger)
-    app.context_processor(lambda: {"jeton": securite.JETON, "avec_tour": tour_web.disponible(), "statuts": STATUTS,
+    app.context_processor(lambda: {"jeton": securite.JETON, "avec_tour": tour_web.disponible(), "statuts": STATUTS, "statuts_tries": alphabetique(STATUTS),
                                    "connecte": session.get("connecte"), "theme": theme.attribut()})
     app.register_blueprint(pages)
     app.register_blueprint(api)
