@@ -40,11 +40,12 @@ def _chrome_pret():
         return False
 
 
-def _lancer():
-    exe = trouver_chrome()
+def _lancer(exe=None, profil="chrome"):
+    """exe : un autre navigateur bâti sur Chromium (Edge, Brave…), piloté de la même façon, avec son propre profil."""
+    exe = exe or trouver_chrome()
     if not exe:
         raise ChromeIntrouvable("Google Chrome introuvable sur ce PC : installe-le, ou remplis le formulaire à la main.")
-    profil = emplacements.dossier("chrome")
+    profil = emplacements.dossier(profil)
     profil.mkdir(parents=True, exist_ok=True)
     # fenêtre normale (pas de CREATE_NO_WINDOW pour une appli à fenêtre), qui survit à LMAgent
     subprocess.Popen([str(exe), f"--remote-debugging-port={PORT}", "--remote-allow-origins=*",
@@ -54,13 +55,14 @@ def _lancer():
         if _chrome_pret():
             return
         time.sleep(0.5)
-    raise ChromeIntrouvable("Chrome ne répond pas sur son port de pilotage : ferme les fenêtres Chrome de LMAgent et réessaie.")
+    raise ChromeIntrouvable("Le navigateur ne répond pas sur son port de pilotage : ferme ses fenêtres ouvertes par LMAgent et réessaie.")
 
 
-def ouvrir(url):
-    """Ouvre url dans un nouvel onglet du Chrome de LMAgent (lancé si besoin) ; renvoie l'onglet piloté."""
+def ouvrir(url, exe=None, profil="chrome"):
+    """Ouvre url dans un nouvel onglet du Chrome de LMAgent (lancé si besoin) ; renvoie l'onglet piloté.
+    exe, profil : un autre navigateur bâti sur Chromium (Chrome absent du PC)."""
     if not _chrome_pret():
-        _lancer()
+        _lancer(exe, profil)
     cible = _json(f"/json/new?{url.replace('#', '%23')}", methode="PUT")   # sinon la partie après # se perd
     return Onglet(cible["webSocketDebuggerUrl"], cible["id"])
 

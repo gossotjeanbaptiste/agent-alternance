@@ -6,6 +6,13 @@ import formulaire_lba as f
 import formulaire_lba_chrome as fc
 
 
+@pytest.fixture(autouse=True)
+def chrome_installe(monkeypatch):
+    """Chrome « installé » quel que soit le PC des tests (rien n'est lancé) ; les tests sans Chrome le retirent."""
+    import chrome
+    monkeypatch.setattr(chrome, "trouver_chrome", lambda: "chrome.exe")
+
+
 @pytest.mark.parametrize("complet, attendu", [
     ("Marc FORGEVAL", ("FORGEVAL", "Marc")),
     ("Marc-Antoine DE LA FORGE", ("DE LA FORGE", "Marc-Antoine")),
@@ -99,7 +106,10 @@ class FauxOnglet:
 def onglet(monkeypatch):
     import chrome
     o = FauxOnglet()
-    monkeypatch.setattr(chrome, "ouvrir", lambda url: o)
+    def ouvrir(url, exe=None, profil="chrome"):
+        o.ouvert = (url, exe, profil)
+        return o
+    monkeypatch.setattr(chrome, "ouvrir", ouvrir)
     return o
 
 
@@ -165,7 +175,7 @@ def test_api_remplit_avec_lettre_reponses_et_cv(client, tableau, cfg, sans_outlo
     reponses.enregistrer("https://lba.example/pixelo", {"lettre": "Lettre pour Pixelo", "motivations": "Parce que"})
     cfg.setdefault("la_bonne_alternance", {})["ouverture"] = "Chrome à part (piloté par LMAgent)"
     vu = {}
-    monkeypatch.setattr(fc, "ouvrir_et_remplir", lambda lien, d: vu.update(lien=lien, d=d) or (True, "Prérempli."))
+    monkeypatch.setattr(fc, "ouvrir_et_remplir", lambda lien, d, navigateur=None: vu.update(lien=lien, d=d) or (True, "Prérempli."))
     r = client.post("/api/formulaire", json={"ligne": n, "entreprise": "Pixelo"})
     assert r.status_code == 200 and r.get_json()["ok"]
     assert vu["lien"] == "https://lba.example/pixelo" and vu["d"]["cv"]["nom"] == "CV.pdf"
@@ -441,3 +451,124 @@ def test_vers_lba_refuse_sans_fiche(client, tableau, sans_outlook):
     n = ligne_a_trouver(tableau, lien="")
     r = client.post("/api/vers_lba", json={"ligne": n, "entreprise": "Pixelo"})
     assert r.status_code == 400
+
+
+# --- Chrome absent : choix d'un autre navigateur ---------------------------------------------------------
+@pytest.fixture
+def sans_chrome(monkeypatch, tmp_path):
+    """Ni Chrome ni autre navigateur, sauf ceux qu'un test crée dans le faux Program Files ; rien n'est lancé."""
+    import chrome
+    from chrome import navigateurs
+    monkeypatch.setattr(chrome, "trouver_chrome", lambda: None)
+    monkeypatch.setattr(navigateurs, "par_defaut", lambda: None)      # le registre de ce PC n'entre pas en jeu
+    for v in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA"):
+        monkeypatch.delenv(v, raising=False)
+    monkeypatch.setenv("PROGRAMFILES", str(tmp_path))
+    ouvert = []
+    monkeypatch.setattr(navigateurs.subprocess, "Popen", lambda cmd, **k: ouvert.append(cmd))
+    monkeypatch.setattr(navigateurs.webbrowser, "open", lambda url: ouvert.append(["defaut", url]))
+    return tmp_path, ouvert
+
+
+def installer(base, relatif):
+    exe = base / relatif
+    exe.parent.mkdir(parents=True, exist_ok=True)
+    exe.write_bytes(b"")
+    return exe
+
+
+def test_navigateurs_installes(sans_chrome):
+    from chrome import navigateurs
+    base, _ = sans_chrome
+    assert [n["cle"] for n in navigateurs.installes()] == ["defaut"]          # toujours le navigateur par défaut
+    installer(base, "Microsoft/Edge/Application/msedge.exe")
+    installer(base, "Mozilla Firefox/firefox.exe")
+    n = {x["cle"]: x["prerempli"] for x in navigateurs.installes()}
+    assert n == {"edge": True, "firefox": False, "defaut": False}
+
+
+def test_sans_chrome_la_page_demande_le_navigateur(client, tableau, sans_outlook, sans_chrome):
+    base, ouvert = sans_chrome
+    installer(base, "Microsoft/Edge/Application/msedge.exe")
+    n = ligne_lba(tableau)
+    r = client.post("/api/formulaire", json={"ligne": n, "entreprise": "Pixelo"})
+    d = r.get_json()
+    assert r.status_code == 200 and not d["ok"] and "Chrome introuvable" in d["message"]
+    assert [x["cle"] for x in d["navigateurs"]] == ["edge", "defaut"] and not ouvert
+
+
+def test_edge_est_prerempli_comme_chrome(client, tableau, cfg, sans_outlook, sans_chrome, onglet):
+    base, _ = sans_chrome
+    cfg.setdefault("la_bonne_alternance", {})["ouverture"] = "Chrome à part (piloté par LMAgent)"
+    exe = installer(base, "Microsoft/Edge/Application/msedge.exe")
+    onglet.reponse = {"ok": True, "faits": ["applicant_last_name"]}      # pas de CV dans les pièces jointes du test
+    n = ligne_lba(tableau)
+    d = client.post("/api/formulaire", json={"ligne": n, "entreprise": "Pixelo", "navigateur": "edge"}).get_json()
+    assert d["ok"] and "prérempli dans Microsoft Edge" in d["message"], d
+    assert onglet.ouvert == ("https://lba.example/pixelo", exe, "navigateur_edge")   # profil à part, pas celui de Chrome
+
+
+def test_firefox_ouvre_la_page_et_donne_la_lettre(client, tableau, sans_outlook, sans_chrome):
+    import reponses
+    base, ouvert = sans_chrome
+    exe = installer(base, "Mozilla Firefox/firefox.exe")
+    n = ligne_lba(tableau)
+    reponses.enregistrer("https://lba.example/pixelo", {"lettre": "Lettre pour Pixelo"})
+    d = client.post("/api/formulaire", json={"ligne": n, "entreprise": "Pixelo", "navigateur": "firefox"}).get_json()
+    assert d["ok"] and "Mozilla Firefox" in d["message"] and "lettre copiée" in d["message"]
+    assert d["lettre"].startswith("Lettre pour Pixelo") and ouvert == [[str(exe), "https://lba.example/pixelo"]]
+
+
+def test_navigateur_par_defaut(client, tableau, sans_outlook, sans_chrome):
+    _, ouvert = sans_chrome
+    n = ligne_lba(tableau)
+    d = client.post("/api/formulaire", json={"ligne": n, "entreprise": "Pixelo", "navigateur": "defaut"}).get_json()
+    assert d["ok"] and ouvert == [["defaut", "https://lba.example/pixelo"]]
+
+
+def test_navigateur_inconnu_refuse(client, tableau, sans_outlook, sans_chrome):
+    _, ouvert = sans_chrome
+    n = ligne_lba(tableau)
+    r = client.post("/api/formulaire", json={"ligne": n, "entreprise": "Pixelo", "navigateur": "calc.exe"})
+    assert r.status_code == 400 and not ouvert
+
+
+def test_opera_gx_par_defaut_avec_l_extension(client, tableau, sans_outlook, sans_chrome, ouvert_gx, monkeypatch):
+    """Réglage « mon Chrome (extension LMAgent) », Chrome absent : la fiche s'ouvre avec le jeton dans Opera GX,
+    navigateur par défaut, où l'extension est installée (« Navigateur par défaut » choisi revient au même)."""
+    from chrome import navigateurs
+    base, ouvert = sans_chrome
+    exe = installer(base, "Programs/Opera GX/opera.exe")
+    monkeypatch.setattr(navigateurs, "par_defaut", lambda: "operagx")
+    assert [n["cle"] for n in navigateurs.installes()] == ["operagx", "defaut"]
+    assert navigateurs.installes()[1]["prerempli"]                     # par défaut = Opera GX : prérempli aussi
+    n = ligne_lba(tableau)
+    for choix in ("operagx", "defaut"):
+        ouvert.clear()
+        d = client.post("/api/formulaire", json={"ligne": n, "entreprise": "Pixelo", "navigateur": choix}).get_json()
+        assert d["ok"] and "ouverte dans Opera GX" in d["message"] and "extension LMAgent" in d["message"]
+        assert ouvert[0][0] == str(exe) and ouvert[0][1].startswith("https://lba.example/pixelo#lmagent=")
+        jeton = ouvert[0][1].split(".", 2)[-1]
+        assert jeton in ouvert_gx                                       # données déposées pour l'extension
+
+
+@pytest.fixture
+def ouvert_gx(monkeypatch):
+    import extension_lba
+    attente = {}
+    monkeypatch.setattr(extension_lba, "EN_ATTENTE", attente)
+    return attente
+
+
+def test_installer_l_extension_sans_chrome(client, monkeypatch, presence, sans_chrome):
+    from chrome import navigateurs
+    base, ouvert = sans_chrome
+    exe = installer(base, "Programs/Opera GX/opera.exe")
+    monkeypatch.setattr(navigateurs, "par_defaut", lambda: "operagx")
+    d = client.post("/api/extension_installer", json={}).get_json()
+    assert d["ok"] and "Opera GX" in d["message"] and ouvert == [[str(exe), "opera://extensions"]]
+
+
+def test_installer_l_extension_sans_aucun_navigateur(client, presence, sans_chrome):
+    r = client.post("/api/extension_installer", json={})
+    assert r.status_code == 400 and "Ni Chrome" in r.get_json()["message"]

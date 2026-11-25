@@ -15,11 +15,16 @@ RAISONS = {"sans_contact": "La Bonne Alternance n'a plus de contact pour cette e
            "sans_formulaire": "Le formulaire ne s'est pas ouvert : la page est dans Chrome, remplis-la à la main."}
 
 
-def ouvrir_et_remplir(lien, donnees):
+def ouvrir_et_remplir(lien, donnees, navigateur=None):
     """Ouvre la fiche dans le Chrome de LMAgent et remplit le formulaire (CV compris s'il est dans donnees["cv"]).
+    navigateur : clé d'un autre navigateur bâti sur Chromium (Edge, Brave…) quand Chrome est absent.
     Renvoie (ok, message)."""
     import chrome
-    onglet = chrome.ouvrir(lien)
+    if navigateur:
+        from chrome import navigateurs
+        onglet = chrome.ouvrir(lien, navigateurs.chemin(navigateur), f"navigateur_{navigateur}")
+    else:
+        onglet = chrome.ouvrir(lien)
     try:
         onglet.montrer()
         r = {}
@@ -36,7 +41,7 @@ def ouvrir_et_remplir(lien, donnees):
         if not r.get("ok"):
             return False, RAISONS.get(r.get("raison"), "Remplissage impossible : remplis le formulaire à la main.")
         faits = r.get("faits") or []
-        message = f"Formulaire prérempli dans Chrome ({len(faits)} champs)"
+        message = f"Formulaire prérempli dans {navigateurs.nom(navigateur) if navigateur else 'Chrome'} ({len(faits)} champs)"
         message += (f", CV joint ({donnees['cv']['nom']})" if "cv" in faits else
                     " ; aucun CV (PDF ou Word de moins de 3 Mo) : joins-le à la main")
         return True, message + ". Relis puis clique « J'envoie ma candidature spontanée », et enfin « ✅ Envoyée » ici."

@@ -142,30 +142,44 @@ def vers_lba():
 
 @api.post("/formulaire")
 def formulaire():
-    """« Ouvrir le formulaire prérempli » : formulaire La Bonne Alternance rempli dans Chrome (jamais envoyé)."""
+    """« Ouvrir le formulaire prérempli » : formulaire La Bonne Alternance rempli dans Chrome (jamais envoyé) ;
+    Chrome absent : renvoie les navigateurs installés, la page redemande avec celui choisi."""
     import formulaire_web
     d = request.get_json(force=True, silent=True) or {}
     try:
         ligne = int(d.get("ligne"))
     except (TypeError, ValueError):
         return jsonify(ok=False, message="Ligne invalide."), 400
-    ok, message = formulaire_web.ouvrir_formulaire(ligne, str(d.get("entreprise") or ""), request.host)
-    return jsonify(ok=ok, message=message), (200 if ok else 400)
+    from chrome import navigateurs
+    navigateur = str(d.get("navigateur") or "") or None   # choisi dans la page quand Chrome est absent
+    if navigateur and navigateur != navigateurs.DEFAUT and navigateur not in navigateurs.NAVIGATEURS:
+        return jsonify(ok=False, message="Navigateur inconnu."), 400
+    ok, message, extra = formulaire_web.ouvrir_formulaire(ligne, str(d.get("entreprise") or ""), request.host,
+                                                          navigateur)
+    if extra.get("navigateurs"):                            # Chrome absent : la page demande lequel
+        return jsonify(ok=False, message=message, **extra)
+    return jsonify(ok=ok, message=message, **extra), (200 if ok else 400)
 
 
 @api.post("/extension_installer")
 def extension_installer():
-    """Aide à l'installation de l'extension : ouvre son dossier et la page des extensions de Chrome."""
+    """Aide à l'installation de l'extension : ouvre son dossier et la page des extensions de Chrome
+    (Chrome absent : du navigateur par défaut s'il est bâti sur Chromium, Opera GX, Edge…)."""
     import subprocess
     import chrome
     import extension_lba
+    from chrome import navigateurs
     dossier = extension_lba.dossier_extension()
-    exe = chrome.trouver_chrome()
+    exe, nom, page = chrome.trouver_chrome(), "Chrome", "chrome://extensions"
     if not exe:
-        return jsonify(ok=False, message="Google Chrome introuvable sur ce PC."), 400
-    subprocess.Popen([str(exe), "chrome://extensions"], close_fds=True)
+        cle = navigateurs.pour_extension()
+        if not cle:
+            return jsonify(ok=False, message="Ni Chrome ni Edge, Brave, Opera… sur ce PC : l'extension ne peut pas "
+                                             "être installée."), 400
+        exe, nom, page = navigateurs.chemin(cle), navigateurs.nom(cle), navigateurs.page_extensions(cle)
+    subprocess.Popen([str(exe), page], close_fds=True)
     return jsonify(ok=True, dossier=str(dossier),
-                   message="Page des extensions ouverte dans Chrome, chemin du dossier copié : active « Mode développeur », "
+                   message=f"Page des extensions ouverte dans {nom}, chemin du dossier copié : active « Mode développeur », "
                            "clique « Charger l'extension non empaquetée », colle le chemin (Ctrl+V) et valide.")
 
 
