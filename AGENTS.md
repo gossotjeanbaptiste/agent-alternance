@@ -110,7 +110,7 @@ où en est le projet.
 - **Statuts** : « Brouillon », « Brouillon (adresse à trouver) », « À postuler (La Bonne Alternance) »,
   « À postuler (formulaire du site) », puis « Candidaté (mail) » (suivi et relances automatiques),
   « Candidaté (La Bonne Alternance / formulaire du site / LinkedIn / autre canal) » (réponses suivies, sans relance),
-  « Relance en brouillon », « Relance programmée », « Relancé », réponses (« Entretien », « Réponse positive »,
+  « Relance en brouillon », « Relance programmée », « Relancé », réponses (« Demande de disponibilités » : l'entreprise demande quand tu es disponible, sans date fixée, plus de relance ; « Entretien », « Réponse positive »,
   « Refus », « Candidature transmise » : suivie sans relance, « Réponse à lire »)… Liste dans `tableau/statuts.py` ; Excel la
   lit dans une feuille cachée « Statuts » (limite de 255 caractères d'une liste écrite en dur).
 - **Candidature** : adresse mail trouvée (site en France) → brouillon de mail ; sinon formulaire La Bonne Alternance

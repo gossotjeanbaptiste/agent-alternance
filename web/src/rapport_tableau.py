@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from suivi_donnees import EN_ATTENTE, REPONDU
 from tableau import PAGE_A_POSTULER
 
-ENTRETIENS = {"Entretien", "Accepté", "Réponse positive"}
+ENTRETIENS = {"Entretien", "Demande de disponibilités", "Accepté", "Réponse positive"}
 JOURS_RELANCES = 14
 
 

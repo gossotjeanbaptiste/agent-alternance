@@ -10,11 +10,14 @@ STATUTS = {  # statut -> couleur de fond
     "Candidaté (mail)": "DDEBF7", "Relance en brouillon": "FFF2CC", "Relance programmée": "DDEBF7", "Relancé": "BDD7EE",
     "Candidaté (La Bonne Alternance)": "DDEBF7", "Candidaté (formulaire du site)": "DDEBF7",
     "Candidaté (LinkedIn)": "DDEBF7", "Candidaté (autre canal)": "EDEDED",
-    "Réponse à lire": "FFE699", "Candidature transmise": "E4DFEC", "Réponse positive": "C6EFCE", "Entretien": "A9D08E",
+    "Réponse à lire": "FFE699", "Candidature transmise": "E4DFEC", "Réponse positive": "C6EFCE",
+    "Demande de disponibilités": "D6ECC0", "Entretien": "A9D08E",
     "Accepté": "70AD47", "Refus": "F4B6B6", "Adresse invalide": "FF9999", "Sans réponse": "D9D9D9",
     "Abandonné": "BFBFBF",
 }
 TRANSMISE = "Candidature transmise"   # réponse « j'ai fait suivre aux RH / au service » : suivie, plus relancée
+# l'entreprise demande quand l'étudiant est disponible (appel, entretien à caler) : à lui de répondre, plus de relance
+DISPONIBILITES = "Demande de disponibilités"
 LBA = "À postuler (La Bonne Alternance)"
 FORMULAIRE = "À postuler (formulaire du site)"
 A_POSTULER = (LBA, FORMULAIRE)

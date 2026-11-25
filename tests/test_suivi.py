@@ -126,6 +126,7 @@ class TestReponses:
 
     @pytest.mark.parametrize("typ, statut", [("entretien", "Entretien"), ("positive", "Réponse positive"),
                                              ("refus", "Refus"), ("transmise", "Candidature transmise"),
+                                             ("disponibilites", "Demande de disponibilités"),
                                              ("autre", "Réponse à lire")])
     def test_reponse_classee(self, tableau, messagerie, faux_modele, typ, statut):
         self.base(tableau)
@@ -206,6 +207,15 @@ class TestReponses:
         suivi.mettre_a_jour(tableau, messagerie(recus=[transfert, rh]))
         l = ligne(tableau)
         assert l["Statut"] == "Entretien" and len(faux_modele.consignes) == 1
+
+    def test_demande_de_disponibilites_sans_relance(self, tableau, messagerie, faux_modele):
+        # l'entreprise demande quand on est disponible : statut à part, plus de relance, consigne donnée au modèle
+        self.base(tableau, **{"Relance prévue": AUJ - timedelta(days=1)})
+        faux_modele.reponses_json = [{"type": "disponibilites", "resume": "Demande vos disponibilités pour un appel"}]
+        suivi.mettre_a_jour(tableau, messagerie(recus=[recu("jean@exemple.fr", jours=1)]))
+        l = ligne(tableau)
+        assert l["Statut"] == "Demande de disponibilités" and l["Relance prévue"] is None
+        assert any('"disponibilites"' in c for c in map(str, faux_modele.consignes))
 
     def test_avis_de_non_remise(self, tableau, messagerie, faux_modele):
         self.base(tableau)

@@ -5,10 +5,11 @@ import re
 from commun import CFG, say
 from mails import DOMAINES_PERSO, domaine, est_adresse
 from rapprochement import correspond
-from tableau import TRANSMISE, norm
+from tableau import DISPONIBILITES, TRANSMISE, norm
 from . import classement
 
-STATUT_DU_TYPE = {"entretien": "Entretien", "positive": "Réponse positive", "refus": "Refus", "transmise": TRANSMISE}
+STATUT_DU_TYPE = {"entretien": "Entretien", "positive": "Réponse positive", "refus": "Refus", "transmise": TRANSMISE,
+                  "disponibilites": DISPONIBILITES}
 
 
 def adresse_invalide(p, l):

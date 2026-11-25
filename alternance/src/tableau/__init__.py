@@ -7,7 +7,7 @@
     doublons.py      entreprise déjà dans le tableau ? (plusieurs établissements du même nom permis)
 """
 from .statuts import (A_POSTULER, ADRESSE_A_TROUVER, C_AUTRE, C_FORMULAIRE, C_LBA, C_LINKEDIN, COLS,  # noqa: F401
-                      COLS_A_CONTACTER, FORMULAIRE, HORS_MAIL, LBA, MAIL, PAGE_A_POSTULER, STATUTS, TRANSMISE,
+                      COLS_A_CONTACTER, FORMULAIRE, HORS_MAIL, LBA, MAIL, PAGE_A_POSTULER, STATUTS, TRANSMISE, DISPONIBILITES,
                       ancien_statut, statut_par_canal)
 from .texte import as_date, cle_lieu, norm, ville  # noqa: F401
 from .doublons import deja_contactee, retenir  # noqa: F401

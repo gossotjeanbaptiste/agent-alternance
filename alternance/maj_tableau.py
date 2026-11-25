@@ -187,13 +187,13 @@ def main():
             titre(s, row)
             print(f"   Réponse : {s.get(row, 'Dernière réponse') or '(pas de résumé)'}")
             r = demander("C'était quoi, cette réponse ?", {
-                "1": "Entretien proposé", "2": "Réponse positive", "3": "Refus",
-                "4": "Accepté !", "5": "Rien de décisif : continuer le suivi (relances)"})
-            nouveaux = {"1": "Entretien", "2": "Réponse positive", "3": "Refus", "4": "Accepté"}
+                "1": "Entretien proposé", "2": "Demande de disponibilités", "3": "Réponse positive", "4": "Refus",
+                "5": "Accepté !", "6": "Rien de décisif : continuer le suivi (relances)"})
+            nouveaux = {"1": "Entretien", "2": "Demande de disponibilités", "3": "Réponse positive", "4": "Refus", "5": "Accepté"}
             if r in nouveaux:
                 s.set(row, "Statut", nouveaux[r])
                 s.set(row, "Relance prévue", None)
-            elif r == "5":
+            elif r == "6":
                 s.set(row, "Statut", MAIL if not int(s.get(row, "Nb relances") or 0) else "Relancé")
                 base = as_date(s.get(row, "Dernière action")) or date.today()
                 s.set(row, "Relance prévue", date_relance(max(base, date.today())))
