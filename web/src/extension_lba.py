@@ -93,10 +93,20 @@ def etat():
     return {"dossier": dossier, "vue_le": vue}
 
 
-def ouvrir_dans_chrome(lien, jeton, port):
-    """Ouvre la fiche dans un nouvel onglet du Chrome habituel ; l'extension remplit le formulaire."""
+def adresse(lien, jeton, port):
+    """Adresse de la fiche avec le jeton que l'extension lit (puis efface)."""
+    return f"{lien.split('#')[0]}#lmagent={port}.{jeton}"
+
+
+def ouvrir_dans_chrome(lien, jeton, port, navigateur=None):
+    """Ouvre la fiche dans un nouvel onglet du Chrome habituel (ou, Chrome absent, du navigateur choisi : Opera GX,
+    Edge… où l'extension est installée) ; l'extension remplit le formulaire."""
     import chrome
+    if navigateur:
+        from chrome import navigateurs
+        navigateurs.ouvrir_page(navigateur, adresse(lien, jeton, port))
+        return
     exe = chrome.trouver_chrome()
     if not exe:
         raise chrome.ChromeIntrouvable("Google Chrome introuvable sur ce PC.")
-    subprocess.Popen([str(exe), f"{lien.split('#')[0]}#lmagent={port}.{jeton}"], close_fds=True)
+    subprocess.Popen([str(exe), adresse(lien, jeton, port)], close_fds=True)

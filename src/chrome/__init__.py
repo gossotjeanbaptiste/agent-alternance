@@ -6,5 +6,6 @@ habituel, et la fenêtre reste ouverte quand LMAgent a fini (c'est l'utilisateur
 
     websocket.py   client WebSocket minimal (bibliothèque standard)
     session.py     lancement de Chrome, onglet piloté (evaluer, attendre, joindre un fichier)
+    navigateurs.py autres navigateurs installés (Edge, Brave, Firefox…), proposés quand Chrome est absent
 """
 from .session import ChromeIntrouvable, Onglet, ouvrir, trouver_chrome  # noqa: F401

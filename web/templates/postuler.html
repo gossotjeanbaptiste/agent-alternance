@@ -116,7 +116,7 @@ Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de 
     <a href="{{ l['_recherche'] }}" target="_blank" rel="noopener"><button>🔎 Rechercher sur Google</button></a>
     <button onclick="abandonnerMail({{ l['_ligne'] }})">Abandonner (brouillon à la corbeille)</button>
     {% else %}
-    {% if l['_lba'] and l['Lien'] and l['Lien'].startswith('http') %}<button class="principal" onclick="ouvrirFormulaire(this, {{ l['_ligne'] }})" title="Ouvre le formulaire de La Bonne Alternance dans Chrome et le remplit (identité, lettre, réponses, CV). Rien n'est envoyé : tu relis et tu cliques toi-même « J'envoie ma candidature ».">🧾 Ouvrir le formulaire prérempli</button>{% endif %}
+    {% if l['_lba'] and l['Lien'] and l['Lien'].startswith('http') %}<button class="principal" onclick="ouvrirFormulaire(this, {{ l['_ligne'] }})" title="Ouvre le formulaire de La Bonne Alternance dans Chrome (absent : le navigateur de ton choix) et le remplit (identité, lettre, réponses, CV). Rien n'est envoyé : tu relis et tu cliques toi-même « J'envoie ma candidature ».">🧾 Ouvrir le formulaire prérempli</button>{% endif %}
     {% if l['Lien'] and l['Lien'].startswith('http') %}<a href="{{ l['Lien'] }}" target="_blank" rel="noopener"><button>{{ '🎓 Page La Bonne Alternance' if 'labonnealternance' in l['Lien'] else '🌐 Ouvrir la page' }}</button></a>{% endif %}
     {% if l['_formulaire'] %}<a href="{{ l['_formulaire'] }}" target="_blank" rel="noopener"><button>📝 Formulaire du site</button></a>{% endif %}
     {% if l['_manque'] %}<button onclick="ecrireManque(this, {{ l['_ligne'] }})" title="Le modèle rédige ce qui manque (la tour, sinon ce PC), puis il est déchargé">✍️ Écrire ce qui manque ({{ l['_manque']|join(' et ') }})</button>{% endif %}
@@ -130,6 +130,15 @@ Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de 
 <div class="carte">Rien à postuler pour l'instant. 👍</div>
 {% endfor %}
 </div>
+<dialog id="choix-navigateur" class="carte fiche" style="width:min(520px, calc(100vw - 32px))">
+  <h2>Dans quel navigateur ouvrir le formulaire ?</h2>
+  <p class="doux">Google Chrome n'est pas installé sur ce PC. Edge, Brave, Vivaldi, Opera et Opera GX remplissent le
+    formulaire comme Chrome (avec l'extension LMAgent installée dans ce navigateur, voir l'aide en haut de la page) ;
+    les autres ouvrent seulement la page, avec la lettre copiée pour la coller à la main.
+    Rien n'est jamais envoyé : tu relis et tu envoies toi-même.</p>
+  <div class="actions" id="navigateurs" style="flex-direction:column; align-items:stretch"></div>
+  <div class="actions"><button onclick="document.getElementById('choix-navigateur').close()">Annuler</button></div>
+</dialog>
 {% endblock %}
 {% block script %}
 <script src="{{ url_for('static', filename='tri.js') }}"></script>
@@ -184,14 +193,35 @@ async function installerExtension() {
   }
   annoncer(r.message || "Erreur", !r.ok);
 }
-async function ouvrirFormulaire(bouton, ligne) {
+async function ouvrirFormulaire(bouton, ligne, navigateur) {
   const carte = document.getElementById("c" + ligne), texte = bouton.textContent;
   bouton.disabled = true;
-  bouton.textContent = "🧾 Ouverture dans Chrome…";
-  const r = await poster("/api/formulaire", { ligne, entreprise: carte.dataset.entreprise });
-  annoncer(r.message || (r.ok ? "Formulaire prérempli." : "Erreur"), !r.ok);
+  bouton.textContent = "🧾 Ouverture…";
+  const r = await poster("/api/formulaire", { ligne, entreprise: carte.dataset.entreprise, navigateur });
   bouton.textContent = texte;
   bouton.disabled = false;
+  if (r.navigateurs) return choisirNavigateur(bouton, ligne, r.navigateurs);   // Chrome absent : lequel ?
+  if (r.lettre) { try { await navigator.clipboard.writeText(r.lettre); } catch (e) {} }   // à coller à la main
+  annoncer(r.message || (r.ok ? "Formulaire prérempli." : "Erreur"), !r.ok);
+}
+// Chrome absent du PC : choix du navigateur (le dernier choisi est proposé en premier)
+function choisirNavigateur(bouton, ligne, liste) {
+  const d = document.getElementById("choix-navigateur"), zone = document.getElementById("navigateurs");
+  let dernier = null;
+  try { dernier = localStorage.getItem("navigateur-lba"); } catch (e) {}
+  liste.sort((a, b) => (b.cle === dernier) - (a.cle === dernier));
+  zone.replaceChildren(...liste.map(n => {
+    const b = document.createElement("button");
+    b.textContent = n.nom + (n.prerempli ? " (prérempli)" : " (page seulement, lettre copiée)");
+    if (n.cle === dernier) b.className = "principal";
+    b.onclick = () => {
+      d.close();
+      try { localStorage.setItem("navigateur-lba", n.cle); } catch (e) {}
+      ouvrirFormulaire(bouton, ligne, n.cle);
+    };
+    return b;
+  }));
+  d.showModal();
 }
 async function abandonnerMail(ligne) {
   const carte = document.getElementById("c" + ligne);
