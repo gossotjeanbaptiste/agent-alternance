@@ -48,6 +48,13 @@ def suivi():
     return render_template("suivi.html", page="suivi", lignes=lignes)
 
 
+@pages.route("/rapport")
+def page_rapport():
+    import rapport
+    r = rapport.generer(request.args)
+    return render_template("rapport.html", page="rapport", r=r, periodes=rapport.PERIODES, texte=rapport.texte(r))
+
+
 @pages.route("/parametres")
 def page_parametres():
     import parametres

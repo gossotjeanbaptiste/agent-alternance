@@ -50,7 +50,7 @@ def main(mode=None):
     commun.DEPUIS = a.depuis
     mode = mode or ("relances" if a.relances else "recherche" if a.recherche else "tout")
 
-    agent.log(f"===== ROUTINE ALTERNANCE ({mode}) =====")
+    agent.log(f"===== ROUTINE ALTERNANCE ({mode}{', essai' if a.essai else ''}) =====")   # essai : pas compté dans le Rapport
     t0 = datetime.now()
     suivi = Suivi(commun.chemin_tableau())
 
