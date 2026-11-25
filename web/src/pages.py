@@ -51,8 +51,15 @@ def suivi():
 @pages.route("/rapport")
 def page_rapport():
     import rapport
+    import rapport_ia
+    import rapport_md
     r = rapport.generer(request.args)
-    return render_template("rapport.html", page="rapport", r=r, periodes=rapport.PERIODES, texte=rapport.texte(r))
+    enregistres = rapport_ia.enregistres()
+    ia = request.args.get("ia") or (enregistres[0] if enregistres else "")
+    ia_texte = rapport_ia.lire(ia)
+    return render_template("rapport.html", page="rapport", r=r, periodes=rapport.PERIODES, texte=rapport.texte(r),
+                           enregistres=enregistres, ia=ia if ia_texte else "", ia_texte=ia_texte,
+                           ia_html=rapport_md.en_html(ia_texte), ia_etat=rapport_ia.ETAT)
 
 
 @pages.route("/parametres")

@@ -79,6 +79,9 @@ nav .deconnexion + .quitter { margin-left: 6px; }
 dialog.fiche { width: min(860px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; color: var(--texte); }
 dialog.fiche::backdrop { background: rgba(0, 0, 0, .45); }
 button.petit { padding: 1px 6px; font-size: .85em; }
+.rapport-ia { line-height: 1.55; font-size: 15px; }
+.rapport-ia h2 { font-size: 19px; margin: 8px 0 10px; } .rapport-ia h3 { font-size: 16px; margin: 18px 0 6px; }
+.rapport-ia h4 { font-size: 15px; margin: 14px 0 4px; } .rapport-ia p { margin: 6px 0; } .rapport-ia ul { margin: 4px 0 8px; padding-left: 22px; }
 .rapport-texte { width: 100%; box-sizing: border-box; min-height: 220px; }
 @media print {   /* page Rapport imprimée ou enregistrée en PDF : sans menu ni boutons */
   nav, .non-imprime, .message { display: none !important; }

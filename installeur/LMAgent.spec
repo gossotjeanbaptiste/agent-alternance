@@ -15,7 +15,7 @@ MODULES = [
     "alternance", "postuler", "maj_tableau", "reponses_lba",
     # web/src et web/app.py
     "api", "assistant", "auth", "chemins", "ecartees", "lettres", "pages", "parametres", "planification", "redaction", "reglages_web", "formulaire_web", "extension_lba", "vers_lba",
-    "relations", "routines", "securite", "suivi_donnees", "tour_web", "icone_tache", "veille_tour", "theme", "fiche", "rapport", "rapport_journal", "rapport_tableau", "app",
+    "relations", "routines", "securite", "suivi_donnees", "tour_web", "icone_tache", "veille_tour", "theme", "fiche", "rapport", "rapport_journal", "rapport_tableau", "rapport_ia", "rapport_contexte", "rapport_md", "api_rapport", "app",
     # src/ (modules de la racine du projet)
     "agent", "tour", "emplacements", "version", "mise_a_jour", "maj_code", "boucle", "sans_fenetre",
     # dépendances chargées dynamiquement
