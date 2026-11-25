@@ -131,7 +131,7 @@ def faux_modele(monkeypatch):
                 raise r
             return r
 
-        def llm(self, prompt, system=None):
+        def llm(self, prompt, system=None, **reglages):
             self.consignes.append(prompt)
             return self.reponses_texte.pop(0) if self.reponses_texte else "Bonjour,\n\nTexte du modèle.\n\nCordialement,"
 

@@ -76,7 +76,7 @@ def texte(r):
               f"- Relances : {j['relances_brouillon']} préparée(s), {j['relances_vues']} envoyée(s) repérée(s)",
               f"- Entreprises écartées (hors informatique) : {r['ecartees']}",
               f"- Routines automatiques terminées : {sum(j['routines'].values())}", "",
-              f"Aujourd'hui : {t['total']} entreprises suivies, {t['en_attente']} candidatures en attente de réponse, "
+              f"Tout le tableau (pas seulement la période) : {t['total']} entreprises suivies, {t['en_attente']} candidatures en attente de réponse, "
               f"{t['a_postuler']} à postuler, {t['total_entretiens']} entretien(s) ou réponse(s) positive(s)."]
     if t["liste_envoyees"]:
         lignes += ["", "Candidatures envoyées :"]

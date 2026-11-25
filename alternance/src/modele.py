@@ -8,8 +8,9 @@ from commun import CFG, agent
 ESSAIS_JSON = 2   # une réponse au JSON illisible est redemandée une fois
 
 
-def llm(prompt, system="Tu es un assistant qui aide un étudiant dans sa recherche d'alternance. Réponds en français."):
-    req_body = {"model": agent.CONFIG["modele"], "temperature": 0.7, "messages": [
+def llm(prompt, system="Tu es un assistant qui aide un étudiant dans sa recherche d'alternance. Réponds en français.",
+        temperature=0.7):
+    req_body = {"model": agent.CONFIG["modele"], "temperature": temperature, "messages": [
         {"role": "system", "content": system}, {"role": "user", "content": prompt}]}
     if not CFG.get("reflexion", False):
         # Qwen3.5 « réfléchit » des milliers de mots avant chaque réponse : x10 sur le temps.
