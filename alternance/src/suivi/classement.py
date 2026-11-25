@@ -12,8 +12,10 @@ def classer_reponse(entreprise, sujet, corps):
         r = llm_json(
             f"Un étudiant a candidaté pour une alternance chez « {entreprise} ». Voici une réponse reçue.\n"
             f"Sujet : {sujet}\n---\n{corps[:3000]}\n---\n"
-            'Classe-la : {"type": "entretien" | "positive" | "refus" | "transmise" | "automatique" | "autre", '
+            'Classe-la : {"type": "entretien" | "disponibilites" | "positive" | "refus" | "transmise" | "automatique" | "autre", '
             '"resume": "une phrase"}. "automatique" = accusé de réception automatique sans décision. '
+            '"disponibilites" = on demande ses disponibilités ou de convenir d\'un créneau (appel, entretien) '
+            'sans date fixée ; "entretien" = entretien avec une date fixée. '
             '"transmise" = la personne dit avoir transmis / transféré / fait suivre la candidature à un autre '
             'service, aux RH ou à un collègue, sans décision pour l\'instant.')
         return r.get("type", "autre"), r.get("resume", "")

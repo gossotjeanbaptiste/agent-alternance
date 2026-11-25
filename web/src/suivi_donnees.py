@@ -8,7 +8,7 @@ import routines
 from commun import CFG, P
 from tableau import PAGE_A_POSTULER, Suivi, as_date
 
-REPONDU = {"Réponse positive", "Entretien", "Accepté", "Refus", "Réponse à lire", "Candidature transmise"}
+REPONDU = {"Réponse positive", "Demande de disponibilités", "Entretien", "Accepté", "Refus", "Réponse à lire", "Candidature transmise"}
 EN_ATTENTE = {"Candidaté (mail)", "Relancé", "Relance en brouillon", "Relance programmée",
               "Candidaté (La Bonne Alternance)", "Candidaté (formulaire du site)", "Candidaté (LinkedIn)",
               "Candidaté (autre canal)"}
@@ -46,7 +46,7 @@ def statistiques(lignes):
         "semaine": sum(1 for l in envoyees if l["Date envoi"] >= aujourd_hui - timedelta(days=7)),
         "reponses": len(reponses),
         "taux": round(100 * len(reponses) / len(envoyees)) if envoyees else 0,
-        "entretiens": st.get("Entretien", 0) + st.get("Accepté", 0),
+        "entretiens": st.get("Entretien", 0) + st.get("Demande de disponibilités", 0) + st.get("Accepté", 0),
         "en_cours": sum(st.get(k, 0) for k in EN_ATTENTE),
         "a_postuler": sum(st.get(k, 0) for k in PAGE_A_POSTULER),   # même chose que la page « À postuler »
         "par_statut": sorted(st.items(), key=lambda x: -x[1]),

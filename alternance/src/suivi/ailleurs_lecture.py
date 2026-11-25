@@ -15,7 +15,7 @@ from . import classement
 
 @dataclass
 class Lu:
-    """Ce qu'on a tiré d'un mail. type : automatique (accusé de réception) | entretien | positive | refus |
+    """Ce qu'on a tiré d'un mail. type : automatique (accusé de réception) | entretien | disponibilites | positive | refus |
     transmise | autre | echec (candidature pas partie) ; plateforme : par où la candidature a été faite."""
     entreprise: str
     type: str
@@ -122,14 +122,16 @@ def lire_avec_le_modele(m):
             "entretien…) ? Réponds en JSON : "
             '{"candidature": true | false, "entreprise": "entreprise ou cabinet qui recrute (pas le logiciel ni le '
             'site d\'emploi)", "poste": "intitulé du poste, vide si inconnu", '
-            '"type": "automatique" | "entretien" | "positive" | "refus" | "transmise" | "autre", '
+            '"type": "automatique" | "entretien" | "disponibilites" | "positive" | "refus" | "transmise" | "autre", '
             '"resume": "une phrase"}. "automatique" = accusé de réception sans décision ; "transmise" = '
-            "candidature transmise à un autre service ou aux RH, sans décision. Ne devine pas l'entreprise : "
+            "candidature transmise à un autre service ou aux RH, sans décision ; "
+            '"disponibilites" = on demande ses disponibilités ou de convenir d\'un créneau (appel, entretien) '
+            'sans date fixée ; "entretien" = entretien avec une date fixée. Ne devine pas l\'entreprise : '
             "vide si le mail ne la nomme pas.")
     except Exception as e:
         raise ModeleInjoignable(str(e)) from e
     if not reponse.get("candidature") or not str(reponse.get("entreprise") or "").strip():
         return None
-    typ = reponse.get("type") if reponse.get("type") in ("automatique", "entretien", "positive", "refus", "transmise") else "autre"
+    typ = reponse.get("type") if reponse.get("type") in ("automatique", "entretien", "disponibilites", "positive", "refus", "transmise") else "autre"
     return Lu(_propre(reponse["entreprise"]), typ, "Site de l'entreprise", str(reponse.get("poste") or "").strip(),
               resume=str(reponse.get("resume") or ""))
