@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block titre %}Rapport{% endblock %}
+{% block contenu %}
+{% set t, j = r.t, r.j %}
+<h1>Rapport de recherche <span class="doux">du {{ r.debut.strftime('%d/%m/%Y') }} au {{ r.fin.strftime('%d/%m/%Y') }}</span></h1>
+<form class="filtres non-imprime" method="get" action="/rapport">
+  {% for cle, libelle in periodes %}
+  <button type="submit" name="jours" value="{{ cle }}" class="{{ 'principal' if r.cle == cle }}">{{ libelle }}</button>
+  {% endfor %}
+  <span class="doux" style="align-self:center">ou du</span>
+  <input type="date" name="du" value="{{ r.debut.isoformat() if r.cle == 'dates' }}">
+  <span class="doux" style="align-self:center">au</span>
+  <input type="date" name="au" value="{{ r.fin.isoformat() if r.cle == 'dates' }}">
+  <button type="submit" class="{{ 'principal' if r.cle == 'dates' }}">Afficher</button>
+  <span style="margin-left:auto"></span>
+  <button type="button" onclick="window.print()" title="Imprimer, ou choisir « Enregistrer au format PDF »">🖨️ Imprimer / PDF</button>
+  <button type="button" onclick="copierTexte()" title="Le rapport en texte simple, à coller dans un mail ou un document">📋 Copier le texte</button>
+</form>
+<p class="doux">D'après le tableau de suivi et les journaux des routines (logs). Généré le {{ r.genere.strftime('%d/%m/%Y') }}.</p>
+
+<div class="grille">
+  <div class="carte"><div class="chiffre">{{ t.envoyees }}</div><div class="libelle">candidatures envoyées</div></div>
+  <div class="carte"><div class="chiffre">{{ t.reponses }}</div><div class="libelle">réponses reçues</div></div>
+  <div class="carte"><div class="chiffre">{{ t.entretiens }}</div><div class="libelle">entretiens / réponses positives</div></div>
+  <div class="carte"><div class="chiffre">{{ t.refus }}</div><div class="libelle">refus</div></div>
+  <div class="carte"><div class="chiffre">{{ t.taux }} %</div><div class="libelle">taux de réponse (candidatures de la période)</div></div>
+  <div class="carte"><div class="chiffre">{{ t.ajoutees }}</div><div class="libelle">entreprises ajoutées au suivi</div></div>
+</div>
+
+<div class="deux">
+  <div class="carte">
+    <h2>Candidatures envoyées</h2>
+    <table>
+      <tr><th>Par canal</th><th></th></tr>
+      {% for k, n in t.par_canal %}<tr><td>{{ k }}</td><td>{{ n }}</td></tr>{% else %}<tr><td class="doux">aucune</td><td></td></tr>{% endfor %}
+      <tr><th>Par source</th><th></th></tr>
+      {% for k, n in t.par_source %}<tr><td>{{ k }}</td><td>{{ n }}</td></tr>{% else %}<tr><td class="doux">aucune</td><td></td></tr>{% endfor %}
+    </table>
+  </div>
+  <div class="carte">
+    <h2>Réponses reçues</h2>
+    <table>
+      {% for st, n in t.par_reponse %}
+      <tr><td><span class="badge" style="background:#{{ statuts.get(st, 'EDEDED') }}; color:#222">{{ st }}</span></td><td>{{ n }}</td></tr>
+      {% else %}<tr><td class="doux">Aucune réponse sur la période.</td></tr>{% endfor %}
+    </table>
+    <p class="doux">Aujourd'hui : {{ t.total }} entreprises suivies, {{ t.en_attente }} en attente de réponse,
+      {{ t.a_postuler }} à postuler, {{ t.total_entretiens }} entretien(s) ou réponse(s) positive(s) en tout.</p>
+  </div>
+</div>
+
+<div class="carte">
+  <h2>Activité des routines <span class="doux">(journaux de {{ j.jours }} jour(s))</span></h2>
+  {% if j.jours %}
+  <div class="deux">
+    <table>
+      <tr><td>Routines terminées</td><td>{{ j.routines.values()|sum }}{% if j.routines %} <span class="doux">({% for k, n in j.routines.most_common() %}{{ k }} : {{ n }}{{ ', ' if not loop.last }}{% endfor %})</span>{% endif %}</td></tr>
+      <tr><td>Temps de travail des routines</td><td>{{ j.minutes // 60 }} h {{ '%02d'|format(j.minutes % 60) }}</td></tr>
+      <tr><td>Candidatures préparées en brouillon</td><td>{{ j.candidatures }}</td></tr>
+      <tr><td>Lettres prêtes pour un formulaire</td><td>{{ j.lettres }}</td></tr>
+      <tr><td>Relances préparées</td><td>{{ j.relances_brouillon }}</td></tr>
+    </table>
+    <table>
+      <tr><td>Envois repérés dans la messagerie</td><td>{{ j.envois_vus }}</td></tr>
+      <tr><td>Relances envoyées repérées</td><td>{{ j.relances_vues }}</td></tr>
+      <tr><td>Réponses lues et classées</td><td>{{ j.reponses.values()|sum }}{% if j.reponses %} <span class="doux">({% for k, n in j.reponses.most_common() %}{{ k }} : {{ n }}{{ ', ' if not loop.last }}{% endfor %})</span>{% endif %}</td></tr>
+      <tr><td>Nouvelles entreprises écartées (hors informatique)</td><td>{{ r.ecartees }}</td></tr>
+      <tr><td>Modèle utilisé</td><td>{% for k, n in j.machines.most_common() %}{{ k }} : {{ n }}{{ ', ' if not loop.last }}{% else %}<span class="doux">—</span>{% endfor %}</td></tr>
+    </table>
+  </div>
+  {% if j.essais %}<p class="doux">{{ j.essais }} routine(s) en essai non comptée(s) (elles n'ont rien écrit).</p>{% endif %}
+  {% if j.problemes %}
+  <details class="pli"><summary>⚠️ {{ j.problemes|length }} problème(s) noté(s) dans les journaux</summary>
+    <ul>{% for p in j.problemes %}<li>{{ p }}</li>{% endfor %}</ul></details>
+  {% endif %}
+  {% else %}<p class="doux">Aucun journal sur cette période.</p>{% endif %}
+</div>
+
+<div class="carte">
+  <h2>Détail des candidatures envoyées</h2>
+  {% if t.liste_envoyees %}
+  <table>
+    <tr><th>Envoi</th><th>Entreprise</th><th>Poste</th><th>Lieu</th><th>Statut</th></tr>
+    {% for l in t.liste_envoyees %}
+    <tr><td>{{ l['Date envoi'].strftime('%d/%m') }}</td><td><b>{{ l['Entreprise'] }}</b></td><td>{{ l['Poste'] or '' }}</td>
+      <td>{{ l['Lieu'] or '' }}</td><td>{{ l['Statut'] or '' }}</td></tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="doux">Aucune candidature envoyée sur la période.</p>{% endif %}
+</div>
+
+<div class="carte">
+  <h2>Relances prévues dans les 14 prochains jours</h2>
+  {% if t.relances %}
+  <table>
+    <tr><th>Date</th><th>Entreprise</th><th>Poste</th></tr>
+    {% for l in t.relances %}<tr><td>{{ l['Relance prévue'].strftime('%d/%m') }}</td><td>{{ l['Entreprise'] }}</td><td>{{ l['Poste'] or '' }}</td></tr>{% endfor %}
+  </table>
+  {% else %}<p class="doux">Aucune relance prévue.</p>{% endif %}
+</div>
+
+<details class="carte pli-section non-imprime">
+  <summary><h2 style="display:inline">Texte du rapport</h2> <span class="doux">— à copier dans un mail ou un document</span></summary>
+  <textarea id="texte" class="zone rapport-texte" rows="14" readonly>{{ texte }}</textarea>
+</details>
+{% endblock %}
+{% block script %}
+<script>
+async function copierTexte() {
+  const zone = document.getElementById("texte");
+  try { await navigator.clipboard.writeText(zone.value); annoncer("Rapport copié."); }
+  catch (e) { zone.closest("details").open = true; zone.select(); annoncer("Copie refusée : le texte est sélectionné, fais Ctrl+C.", true); }
+}
+</script>
+{% endblock %}

@@ -19,6 +19,7 @@
   <a href="/routines" class="{{ 'actif' if page == 'routines' }}">Routines</a>
   {% if avec_tour %}<a href="/tour" class="{{ 'actif' if page == 'tour' }}">Tour</a>{% endif %}
   <a href="/linkedin" class="{{ 'actif' if page == 'linkedin' }}">LinkedIn</a>
+  <a href="/rapport" class="{{ 'actif' if page == 'rapport' }}" title="Bilan de tes recherches sur une période">Rapport</a>
   <a href="/journal" class="{{ 'actif' if page == 'journal' }}">Journal</a>
   <a href="/parametres" class="{{ 'actif' if page == 'parametres' }}">Paramètres</a>
   {% if connecte %}<span class="utilisateur" title="Compte connecté">👤 {{ connecte }}</span><button class="deconnexion" onclick="deconnecter()" title="Se déconnecter ({{ connecte }})">Se déconnecter</button>{% endif %}

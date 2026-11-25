@@ -79,3 +79,11 @@ nav .deconnexion + .quitter { margin-left: 6px; }
 dialog.fiche { width: min(860px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; color: var(--texte); }
 dialog.fiche::backdrop { background: rgba(0, 0, 0, .45); }
 button.petit { padding: 1px 6px; font-size: .85em; }
+.rapport-texte { width: 100%; box-sizing: border-box; min-height: 220px; }
+@media print {   /* page Rapport imprimée ou enregistrée en PDF : sans menu ni boutons */
+  nav, .non-imprime, .message { display: none !important; }
+  :root, :root[data-theme] { --fond: #fff; --carte: #fff; --texte: #000; --doux: #555; --bord: #bbb;
+      --accent: #333; --accent-fond: #eee; color-scheme: light; }
+  .carte { break-inside: avoid; }
+  main { padding: 0; }
+}
