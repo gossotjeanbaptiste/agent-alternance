@@ -79,6 +79,20 @@ def test_refus_pendant_une_routine_ou_une_redaction(modele_local, monkeypatch):
         assert not rapport_ia.lancer({}, LIGNES)[0]
 
 
+def test_titres_sans_consigne_recopiee(modele_local):
+    modele_local["faux"].reponses_texte = ["# Rapport de recherche d'alternance (du 01/11 au 25/11)\n"
+                                           "## Synthèse — 4 à 6 phrases : où en est la recherche.\nTexte\n"
+                                           "## Conseils — 3 à 5 conseils concrets\n1. Un\n"
+                                           "## Ce qui fonctionne / ce qui bloque — d'après les chiffres (canaux)\nA"]
+    rapport_ia.lancer({}, LIGNES)
+    texte = rapport_ia.lire(rapport_ia.ETAT["fichier"])
+    assert "## Synthèse\nTexte" in texte and "## Conseils\n1. Un" in texte and "phrases" not in texte
+    assert "# Rapport de recherche d'alternance (du 01/11 au 25/11)" in texte      # titre principal gardé
+    assert "## Ce qui fonctionne / ce qui bloque\nA" in texte
+    consignes = modele_local["faux"].consignes[0]
+    assert "à ne JAMAIS recopier" in consignes and "## Synthèse\n## Activité" in consignes
+
+
 def test_lire_refuse_les_chemins_hors_du_dossier():
     assert rapport_ia.lire("../config.json") == "" and rapport_ia.lire("rapport_x.txt") == ""
 

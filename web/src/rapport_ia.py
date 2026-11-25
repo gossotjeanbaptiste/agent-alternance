@@ -3,6 +3,7 @@
 Rédigé en arrière-plan (la page suit l'avancement par /api/rapport/etat), enregistré dans le dossier
 personnel « rapports » (rapport_AAAA-MM-JJ_HHMM.md), puis le modèle est déchargé.
 """
+import re
 import threading
 from datetime import datetime
 
@@ -13,17 +14,27 @@ import routines
 ETAT = {"etat": "inactif", "message": "", "fichier": ""}   # inactif | en cours | fini | erreur
 SYSTEME = ("Tu es un conseiller qui aide un étudiant à faire le point sur sa recherche d'alternance. "
            "Tu écris en français, de façon claire, concrète et bienveillante, sans flatterie.")
-CONSIGNES = """À partir UNIQUEMENT des données ci-dessous, rédige le rapport de recherche d'alternance de l'étudiant
-pour la période indiquée, en Markdown, avec ces parties :
-# Rapport de recherche d'alternance (période)
-## Synthèse — 4 à 6 phrases : où en est la recherche.
-## Activité — candidatures envoyées, canaux, sources, rythme, travail des routines automatiques.
-## Réponses et retours — réponses reçues, ce qu'elles disent (refus, entretiens, demandes de disponibilités…), taux.
-## Ce qui fonctionne / ce qui bloque — d'après les chiffres et les réponses (canaux qui répondent, problèmes notés).
-## Prochaines étapes — relances prévues, candidatures à finaliser, réponses à donner (avec les noms d'entreprises).
-## Conseils — 3 à 5 conseils concrets adaptés à ces données et au profil.
-Règles : reprends les chiffres EXACTS des données, n'invente aucune entreprise, aucun chiffre, aucune réponse ;
-si une information manque, dis-le simplement. Pas de tableau Markdown, des listes à puces au besoin."""
+TITRES = ["Synthèse", "Activité", "Réponses et retours", "Ce qui fonctionne, ce qui bloque", "Prochaines étapes",
+          "Conseils"]
+CONSIGNES = """Rédige le rapport de recherche d'alternance de l'étudiant pour la période indiquée, en Markdown,
+à partir UNIQUEMENT des données ci-dessous.
+
+Structure : un titre « # Rapport de recherche d'alternance » suivi des dates, puis exactement ces parties,
+avec ces titres mot pour mot et rien d'autre sur la ligne du titre :
+""" + "\n".join(f"## {t}" for t in TITRES) + """
+
+Contenu attendu (consignes pour toi, à ne JAMAIS recopier dans le rapport) :
+- Synthèse : un court paragraphe sur où en est la recherche.
+- Activité : candidatures envoyées pendant la période, canaux, sources, travail des routines automatiques.
+- Réponses et retours : réponses reçues et ce qu'elles disent (refus, demandes de disponibilités, entretiens…), taux.
+- Ce qui fonctionne, ce qui bloque : d'après les chiffres et les réponses.
+- Prochaines étapes : relances prévues, candidatures à finaliser, réponses à donner, avec les noms d'entreprises.
+- Conseils : quelques conseils concrets adaptés à ces données et au profil.
+
+Règles :
+- reprends les chiffres EXACTS ; ne confonds pas les chiffres de la période avec ceux de tout le tableau ;
+- n'invente aucune entreprise, aucun chiffre, aucune réponse, aucun entretien ;
+- si une information manque, dis-le simplement ; pas de tableau Markdown, des listes à puces au besoin."""
 
 
 def dossier():
@@ -44,7 +55,13 @@ def lire(nom):
     f = (dossier() / nom).resolve()
     if f.parent != dossier().resolve() or not f.name.startswith("rapport_") or f.suffix != ".md" or not f.is_file():
         return ""
-    return f.read_text(encoding="utf-8", errors="replace")
+    return nettoyer(f.read_text(encoding="utf-8", errors="replace"))   # rapports d'avant aussi
+
+
+def nettoyer(texte):
+    """Titres de parties sans la consigne recopiée par le modèle (« ## Synthèse — 4 à 6 phrases : … » -> « ## Synthèse ») :
+    coupés au premier tiret long ; le titre principal (« # … », avec les dates) est gardé tel quel."""
+    return re.sub(r"^(#{2,4}\s.*?)\s+[—–]\s.*$", r"\1", (texte or "").strip(), flags=re.M)
 
 
 def rediger(r):
@@ -53,7 +70,8 @@ def rediger(r):
     import chemins  # noqa: F401
     import modele
     agent.ensure_server()
-    texte = modele.llm(CONSIGNES + "\n\n=== DONNÉES ===\n" + rapport_contexte.contexte(r), system=SYSTEME)
+    texte = nettoyer(modele.llm(CONSIGNES + "\n\n=== DONNÉES ===\n" + rapport_contexte.contexte(r),
+                                system=SYSTEME, temperature=0.4))
     if not texte:
         raise RuntimeError("le modèle n'a rien écrit")
     nom = f"rapport_{datetime.now():%Y-%m-%d_%H%M}.md"
