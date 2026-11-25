@@ -17,6 +17,25 @@
   <button type="button" onclick="copierTexte()" title="Le rapport en texte simple, à coller dans un mail ou un document">📋 Copier le texte</button>
 </form>
 <p class="doux">D'après le tableau de suivi et les journaux des routines (logs). Généré le {{ r.genere.strftime('%d/%m/%Y') }}.</p>
+<div class="carte" id="carte-ia">
+  <h2>🧠 Rapport rédigé par ton modèle</h2>
+  <p class="doux non-imprime">Le modèle local (la tour, sinon ce PC) écrit un vrai rapport à partir de cette période :
+    chiffres, contenu des réponses, candidatures sans réponse, relances, candidatures à finaliser, activité des routines
+    et ton profil. Tout reste chez toi ; le modèle est déchargé ensuite.</p>
+  <div class="actions non-imprime">
+    <button class="principal" id="bouton-ia" onclick="redigerIA()">🧠 Rédiger le rapport de cette période</button>
+    {% if enregistres %}
+    <select onchange="choisirIA(this.value)" title="Rapports déjà rédigés">
+      {% for n in enregistres %}<option value="{{ n }}" {{ 'selected' if n == ia }}>Rapport du {{ n[16:18] }}/{{ n[13:15] }}/{{ n[8:12] }} à {{ n[19:21] }}h{{ n[21:23] }}</option>{% endfor %}
+    </select>
+    {% endif %}
+    {% if ia %}<button onclick="copierIA()" title="Le texte du rapport (Markdown), à coller dans un mail ou un document">📋 Copier ce rapport</button>{% endif %}
+  </div>
+  <p id="etat-ia" class="doux non-imprime"></p>
+  {% if ia %}<div class="rapport-ia">{{ ia_html }}</div><textarea id="texte-ia" hidden>{{ ia_texte }}</textarea>
+  {% else %}<p class="doux">Aucun rapport rédigé pour l'instant.</p>{% endif %}
+</div>
+<h2 style="margin-top:24px">Bilan chiffré</h2>
 
 <div class="grille">
   <div class="carte"><div class="chiffre">{{ t.envoyees }}</div><div class="libelle">candidatures envoyées</div></div>
@@ -106,6 +125,33 @@
 {% endblock %}
 {% block script %}
 <script>
+const ETAT_IA = {{ ia_etat|tojson }};
+function choisirIA(nom) { const p = new URLSearchParams(location.search); p.set("ia", nom); location.search = p.toString(); }
+async function copierIA() {
+  try { await navigator.clipboard.writeText(document.getElementById("texte-ia").value); annoncer("Rapport copié."); }
+  catch (e) { annoncer("Copie refusée par le navigateur.", true); }
+}
+async function redigerIA() {
+  const p = new URLSearchParams(location.search), d = {};
+  for (const k of ["jours", "du", "au"]) if (p.get(k)) d[k] = p.get(k);
+  const r = await poster("/api/rapport/rediger", d);
+  annoncer(r.message || "Erreur", !r.ok);
+  if (r.ok) suivreIA();
+}
+async function suivreIA() {   // la page se recharge sur le nouveau rapport quand le modèle a fini
+  const bouton = document.getElementById("bouton-ia"), etat = document.getElementById("etat-ia");
+  bouton.disabled = true;
+  while (true) {
+    let e;
+    try { e = await (await fetch("/api/rapport/etat", {cache: "no-store"})).json(); } catch (x) { e = {etat: "en cours", message: "…"}; }
+    etat.textContent = e.etat === "en cours" ? "⏳ " + e.message : "";
+    if (e.etat === "fini") { choisirIA(e.fichier); return; }
+    if (e.etat === "erreur") { annoncer(e.message, true); bouton.disabled = false; return; }
+    if (e.etat !== "en cours") { bouton.disabled = false; return; }
+    await new Promise(ok => setTimeout(ok, 3000));
+  }
+}
+if (ETAT_IA.etat === "en cours") suivreIA();
 async function copierTexte() {
   const zone = document.getElementById("texte");
   try { await navigator.clipboard.writeText(zone.value); annoncer("Rapport copié."); }

@@ -57,7 +57,7 @@ def generer(args, lignes=None):
         debut = min(dates) if dates else fin
     return {"debut": debut, "fin": fin, "cle": cle, "genere": date.today(),
             "t": rapport_tableau.resumer(lignes, debut, fin), "j": rapport_journal.resumer(debut, fin),
-            "ecartees": ecartees(debut, fin)}
+            "ecartees": ecartees(debut, fin), "lignes": lignes}
 
 
 def _liste(paires):

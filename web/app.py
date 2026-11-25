@@ -17,6 +17,7 @@ Organisation (modules dans web/src/) :
     auth.py           compte de l'interface (identifiant + mot de passe haché), frein aux essais répétés
     relations.py      relations LinkedIn dans les entreprises du tableau
     theme.py          thème clair, sombre ou du système (réglage « interface.theme »)
+    rapport*.py       page Rapport : bilan chiffré, rapport rédigé par le modèle (api_rapport.py)
     templates/        le HTML des pages        static/  style et JavaScript
 """
 import socket
@@ -36,6 +37,7 @@ import securite  # noqa: E402
 import theme  # noqa: E402
 import tour_web  # noqa: E402
 from api import api  # noqa: E402
+from api_rapport import api_rapport  # noqa: E402
 from pages import pages  # noqa: E402
 from tableau import STATUTS  # noqa: E402
 
@@ -63,6 +65,7 @@ def creer_app():
                                    "connecte": session.get("connecte"), "theme": theme.attribut()})
     app.register_blueprint(pages)
     app.register_blueprint(api)
+    app.register_blueprint(api_rapport)
     return app
 
 
