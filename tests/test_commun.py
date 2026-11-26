@@ -69,6 +69,21 @@ class TestSignatureMail:
         f.write_text("<p>Ma signature HTML</p>", encoding="utf-8")
         assert commun.signature_mail(str(f)) == "<p>Ma signature HTML</p>"
 
+    def test_fichier_outlook_sans_balise_charset(self, cfg, tmp_path):
+        """La balise charset de la signature Outlook cassait les accents de tout le mail."""
+        cfg["ajouter_signature"] = True
+        f = tmp_path / "sig.htm"
+        f.write_text('<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />'
+                     "<p>Étudiant à Lyon</p>", encoding="utf-8")
+        assert commun.signature_mail(str(f)) == "<p>Étudiant à Lyon</p>"
+
+    def test_fichier_windows_1252_page_complete(self, cfg, tmp_path):
+        cfg["ajouter_signature"] = True
+        f = tmp_path / "sig.htm"
+        f.write_bytes("<html><head><meta charset=windows-1252><style>p{}</style></head>"
+                      "<body lang=FR><p>Camille Test, 3ème année</p></body></html>".encode("cp1252"))
+        assert commun.signature_mail(str(f)) == "<p>Camille Test, 3ème année</p>"
+
     def test_fichier_introuvable_signature_construite(self, cfg, tmp_path):
         cfg["ajouter_signature"] = True
         assert "Camille Test" in commun.signature_mail(str(tmp_path / "absent.htm"))
