@@ -30,14 +30,16 @@
 </div>
 <details class="carte pli-section" id="pli-planification">
   <summary><h2 style="display:inline">Tous les jours automatiquement</h2></summary>
-  <p class="doux">Le Planificateur de tâches Windows lance la routine chaque jour à l'heure choisie
-    (PC allumé, session ouverte). Laisse l'heure vide puis « Enregistrer » pour arrêter.</p>
+  <p class="doux">Le Planificateur de tâches Windows lance la routine chaque jour aux heures choisies
+    (PC allumé, session ouverte). Une routine peut être programmée plusieurs fois par jour, chaque heure avec son
+    nombre de passages ; ✕ supprime une heure.</p>
   {% for nom, libelle in (("relances", "Relances"), ("recherche", "Recherche"), ("tout", "Les deux"),
                            ("mails", "Mails reçus"), ("reponses", "Réponses LBA")) %}
-  <div class="actions" style="align-items:center">
+  <div class="actions" style="align-items:center; flex-wrap:wrap">
     <span style="width:7em">{{ libelle }}</span>
     <input type="time" id="heure-{{ nom }}">
-    <button onclick="planifier('{{ nom }}')">Enregistrer</button>
+    <label>passages <input type="number" id="fois-{{ nom }}" value="1" min="1" max="50" style="width:4em"></label>
+    <button onclick="planifier('{{ nom }}')">➕ Ajouter</button>
     <span class="doux" id="etat-{{ nom }}"></span>
   </div>
   {% endfor %}
@@ -53,15 +55,39 @@
 <script>
 let suivi = null;
 async function chargerPlanification() {
-  const t = await (await fetch("/api/planification")).json();
+  const liste = await (await fetch("/api/planification")).json();
   for (const nom of ["relances", "recherche", "tout", "mails", "reponses"]) {
-    const e = document.getElementById("etat-" + nom);
-    e.textContent = t[nom] ? `planifiée — prochaine : ${t[nom].prochaine}` : "non planifiée";
+    const e = document.getElementById("etat-" + nom), siennes = liste.filter(t => t.routine === nom);
+    e.replaceChildren();
+    if (!siennes.length) { e.textContent = "non planifiée"; continue; }
+    for (const t of siennes) {
+      const puce = document.createElement("span");
+      puce.className = "puce";
+      puce.style.cssText = "display:inline-flex; gap:.3em; align-items:center; margin-right:.6em";
+      puce.title = "Prochaine : " + t.prochaine + " (" + t.etat + ")";
+      puce.textContent = "⏰ " + t.heure + (t.fois > 1 ? " ×" + t.fois : "");
+      const x = document.createElement("button");
+      x.textContent = "✕";
+      x.title = "Supprimer ce passage programmé";
+      x.style.cssText = "padding:0 .4em";
+      x.onclick = () => supprimerPlanification(t.id, t.heure);
+      puce.append(x);
+      e.append(puce);
+    }
   }
 }
 async function planifier(nom) {
-  const r = await poster("/api/planification", {nom, heure: document.getElementById("heure-" + nom).value});
+  const heure = document.getElementById("heure-" + nom).value;
+  if (!heure) { annoncer("Choisis une heure.", true); return; }
+  const fois = parseInt(document.getElementById("fois-" + nom).value, 10) || 1;
+  const r = await poster("/api/planification", {nom, heure, fois});
   annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
+  chargerPlanification();
+}
+async function supprimerPlanification(id, heure) {
+  if (!confirm("Supprimer le passage programmé de " + heure + " ?")) return;
+  const r = await poster("/api/planification", {supprimer: id});
+  annoncer(r.message || (r.ok ? "Supprimé." : "Erreur"), !r.ok);
   chargerPlanification();
 }
 chargerPlanification();

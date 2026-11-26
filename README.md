@@ -143,7 +143,7 @@ n'utilisent ni le modèle, ni ta messagerie, ni la tour (tout est simulé).
 .\outils\planifier.ps1 -Tache recherche -Heure 10:15
 ```
 `-Lister` affiche les tâches, `-Supprimer` en retire une, `-Maintenant` la lance tout de suite.
-Plus simple : page **Routines** → « Tous les jours automatiquement » (tâches `LMAgent_<routine>`, marche aussi avec la version installée).
+Plus simple : page **Routines** → « Tous les jours automatiquement » : une routine peut être programmée **à plusieurs heures**, chacune avec son **nombre de passages** (tâches `LMAgent_<routine>_<HHMM>`, ✕ pour en supprimer une ; marche aussi avec la version installée).
 Le PC doit être allumé, session ouverte.
 
 ### Avant de lancer

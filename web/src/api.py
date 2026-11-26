@@ -319,11 +319,15 @@ def liste_planification():
 
 @api.post("/planification")
 def planifier():
-    """{"nom": "relances", "heure": "10:00"} planifie ; heure vide supprime la tâche."""
+    """{"nom": "relances", "heure": "10:00", "fois": 2} ajoute un passage programmé (même routine et même heure :
+    remplacé) ; {"supprimer": "LMAgent_relances_1000"} en supprime un."""
     import planification
     d = request.get_json(force=True, silent=True) or {}
-    nom, heure = str(d.get("nom") or ""), str(d.get("heure") or "").strip()
-    ok, message = planification.planifier(nom, heure) if heure else planification.supprimer(nom)
+    if d.get("supprimer"):
+        ok, message = planification.supprimer(str(d["supprimer"]))
+    else:
+        ok, message = planification.planifier(str(d.get("nom") or ""), str(d.get("heure") or "").strip(),
+                                              d.get("fois") or 1)
     return jsonify(ok=ok, message=message), (200 if ok else 400)
 
 

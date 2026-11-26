@@ -236,9 +236,22 @@ class TestPlanification:
         ok, msg = planification.planifier("relances", "10:00")
         assert ok and "10:00" in msg
         cmd = schtasks.appels[0]
-        assert cmd[:4] == ["schtasks", "/Create", "/TN", "LMAgent_relances"]
+        assert cmd[:4] == ["schtasks", "/Create", "/TN", "LMAgent_relances_1000"]
         assert cmd[cmd.index("/SC") + 1] == "DAILY" and cmd[cmd.index("/ST") + 1] == "10:00" and "/F" in cmd
-        assert cmd[cmd.index("/TR") + 1].endswith("--routine relances")
+        assert cmd[cmd.index("/TR") + 1].endswith("--routine relances --fois 1")
+
+    def test_plusieurs_heures_et_passages(self, schtasks):
+        assert planification.planifier("recherche", "08:30", 3)[0]
+        ok, msg = planification.planifier("recherche", "14:00", "2")
+        assert ok and "2 passages" in msg
+        noms = [c[3] for c in schtasks.appels]
+        assert noms == ["LMAgent_recherche_0830", "LMAgent_recherche_1400"]       # deux tâches, pas une remplacée
+        assert schtasks.appels[0][schtasks.appels[0].index("/TR") + 1].endswith("--fois 3")
+
+    @pytest.mark.parametrize("fois", [0, 51, "beaucoup"])
+    def test_passages_invalides(self, schtasks, fois):
+        assert not planification.planifier("recherche", "10:00", fois)[0]
+        assert schtasks.appels == []
 
     @pytest.mark.parametrize("heure", ["25:00", "10h", "", "9:5"])
     def test_heure_invalide(self, schtasks, heure):
@@ -247,27 +260,47 @@ class TestPlanification:
 
     def test_routine_inconnue(self, schtasks):
         assert not planification.planifier("formatage", "10:00")[0]
-        assert not planification.supprimer("formatage")[0]
+        assert not planification.supprimer("LMAgent_formatage_1000")[0]
+        assert not planification.supprimer("Autre tâche")[0]                 # jamais une tâche hors LMAgent
+        assert schtasks.appels == []
 
     def test_echec_de_schtasks(self, schtasks):
-        schtasks.reponses[("/Create", "LMAgent_relances")] = ("", 1)
+        schtasks.reponses[("/Create", "LMAgent_relances_1000")] = ("", 1)
         ok, msg = planification.planifier("relances", "10:00")
         assert not ok and "impossible" in msg
 
     def test_supprimer(self, schtasks):
-        assert planification.supprimer("recherche")[0]
-        assert schtasks.appels[0][:4] == ["schtasks", "/Delete", "/TN", "LMAgent_recherche"]
+        assert planification.supprimer("LMAgent_recherche_1000")[0]
+        assert planification.supprimer("LMAgent_recherche")[0]              # tâche d'une version précédente
+        assert [c[:4] for c in schtasks.appels] == [["schtasks", "/Delete", "/TN", "LMAgent_recherche_1000"],
+                                                     ["schtasks", "/Delete", "/TN", "LMAgent_recherche"]]
 
     def test_liste(self, schtasks):
-        schtasks.reponses[("/Query", "LMAgent_relances")] = ('"\\LMAgent_relances","14/11/2026 10:00:00","Prêt"\n', 0)
-        assert planification.taches() == {"relances": {"prochaine": "14/11/2026 10:00:00", "etat": "Prêt"}}
+        schtasks.reponses[("/Query", "CSV")] = (
+            '"\\LMAgent_relances","27/11/2026 09:45:00","Prêt"\n'
+            '"\\LMAgent_recherche_1400","26/11/2026 14:00:00","Prêt"\n'
+            '"\\LMAgent_recherche_0830","27/11/2026 08:30:00","Prêt"\n'
+            '"\\Autre","26/11/2026 10:00:00","Prêt"\n', 0)
+
+        def verbeux(nom, prochaine, cmd):
+            schtasks.reponses[("/Query", nom)] = (f'"PC","\\{nom}","{prochaine}","Prêt","Interactif","","0","moi",'
+                                                  f'"{cmd}","N/A"\n', 0)
+        verbeux("LMAgent_relances", "27/11/2026 09:45:00", "lmagent.exe --routine relances")
+        verbeux("LMAgent_recherche_1400", "26/11/2026 14:00:00", "lmagent.exe --routine recherche --fois 2")
+        verbeux("LMAgent_recherche_0830", "27/11/2026 08:30:00", "lmagent.exe --routine recherche --fois 1")
+        assert [(t["id"], t["routine"], t["heure"], t["fois"]) for t in planification.taches()] == [
+            ("LMAgent_relances", "relances", "09:45", 1),
+            ("LMAgent_recherche_0830", "recherche", "08:30", 1),
+            ("LMAgent_recherche_1400", "recherche", "14:00", 2)]
 
     def test_api(self, client, schtasks):
-        assert client.post("/api/planification", json={"nom": "relances", "heure": "09:30"}).get_json()["ok"]
-        assert client.post("/api/planification", json={"nom": "relances", "heure": ""}).get_json()["ok"]
+        assert client.post("/api/planification", json={"nom": "relances", "heure": "09:30", "fois": 2}).get_json()["ok"]
+        assert schtasks.appels[-1][3] == "LMAgent_relances_0930"
+        assert client.post("/api/planification", json={"supprimer": "LMAgent_relances_0930"}).get_json()["ok"]
         assert schtasks.appels[-1][1] == "/Delete"
         assert client.post("/api/planification", json={"nom": "relances", "heure": "midi"}).status_code == 400
-        assert client.get("/api/planification").get_json() == {}
+        assert client.post("/api/planification", json={"supprimer": "Windows Update"}).status_code == 400
+        assert client.get("/api/planification").get_json() == []
 
     def test_section_dans_la_page(self, client):
         assert 'id="pli-planification"' in client.get("/routines").get_data(as_text=True)
