@@ -77,6 +77,25 @@ def say(msg):
     agent.say(msg)
 
 
+def lire_signature_html(f):
+    """Contenu d'un fichier de signature (Outlook l'écrit en UTF-8 ou en windows-1252), sans ses balises de page.
+
+    Une balise « <meta … charset=…> » collée au milieu d'un mail fait relire TOUT le mail dans le mauvais
+    encodage par Outlook (lettre comprise : « �tudiant ») : on garde seulement le contenu de la signature.
+    """
+    import re
+    b = f.read_bytes()
+    try:
+        texte = b.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        texte = b.decode("cp1252", errors="replace")
+    corps = re.search(r"<body[^>]*>(.*?)(?:</body>|$)", texte, flags=re.S | re.I)
+    if corps:
+        texte = corps.group(1)
+    texte = re.sub(r"<head\b.*?</head>|<title\b.*?</title>", "", texte, flags=re.S | re.I)
+    return re.sub(r"<!doctype[^>]*>|<meta\b[^>]*>|</?(?:html|head|body)\b[^>]*>", "", texte, flags=re.I).strip()
+
+
 def signature_mail(fichier=None):
     """Signature HTML à mettre sous les mails, ou "" si "ajouter_signature" est à false.
 
@@ -87,7 +106,7 @@ def signature_mail(fichier=None):
     if not CFG.get("ajouter_signature", False):
         return ""
     if fichier and P(fichier).is_file():
-        return P(fichier).read_text(encoding="utf-8", errors="replace")
+        return lire_signature_html(P(fichier))
     from html import escape
     s = CFG.get("signature_formulaire") or {}
     lignes = [f"<b>{escape(s['nom'])}</b>" if s.get("nom") else ""]
