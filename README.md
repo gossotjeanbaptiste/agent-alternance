@@ -6,6 +6,8 @@ Agent IA local (LM Studio + Qwen3.5 9B) et routine automatique de recherche d'al
 candidatures et relances écrites par le modèle, déposées en **brouillon** dans **Outlook ou Gmail** (au choix),
 suivi dans un tableau Excel, et une interface web locale pour tout piloter. Rien n'est jamais envoyé automatiquement.
 
+**Première installation ?** Suis le [guide de démarrage](GUIDE.md) : prérequis et configuration pas à pas.
+
 1. [Installation](#1-installation)
 2. [Utilisation](#2-utilisation)
 3. [Réglages de l'agent : `config.json`](#3-réglages-de-lagent--configjson)
