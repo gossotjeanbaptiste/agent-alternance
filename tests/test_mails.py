@@ -108,3 +108,12 @@ class TestTexteVersHtml:
 
     def test_texte_vide(self):
         assert mails.texte_vers_html("").count("<p ") == 1
+
+
+
+def test_etiquette_a_trouver(cfg):
+    assert mails.etiquette_a_trouver() == "Adresse à trouver"
+    cfg["messagerie"] = {"etiquette_a_trouver": "  À compléter  "}
+    assert mails.etiquette_a_trouver() == "À compléter"
+    cfg["messagerie"] = {"etiquette_a_trouver": ""}
+    assert mails.etiquette_a_trouver() == ""

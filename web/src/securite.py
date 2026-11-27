@@ -29,7 +29,7 @@ def connecte():
 def proteger():
     if request.host.rsplit(":", 1)[0] not in LOCAUX:
         abort(403)
-    if request.endpoint in ("api.extension", "api.extension_presente"):   # extension Chrome : ses propres contrôles
+    if request.endpoint in ("api.extension", "api.extension_presente", "api.extension_fiche"):   # extension Chrome : ses propres contrôles
         return None
     if request.method == "POST":
         if request.headers.get("X-Jeton") != JETON:

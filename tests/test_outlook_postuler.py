@@ -174,3 +174,19 @@ class TestPostuler:
         out = capsys.readouterr().out
         assert "1 entreprise(s) sans réponses" in out and "B" in out
         assert reponses.lire()["https://lba/a"]["motivations"] == "déjà"
+
+
+
+# --- outlook.categories_modifiees (catégorie « Adresse à trouver ») -----------------------------------
+class TestCategories:
+    def test_ajout(self):
+        assert outlook.categories_modifiees("", "Adresse à trouver", True) == "Adresse à trouver"
+        assert outlook.categories_modifiees("Perso", "Adresse à trouver", True, ";") == "Perso; Adresse à trouver"
+
+    def test_retrait_garde_les_autres(self):
+        assert outlook.categories_modifiees("Perso; Adresse à trouver", "Adresse à trouver", False) == "Perso"
+        assert outlook.categories_modifiees("Adresse à trouver, Perso", "Adresse à trouver", False, ",") == "Perso"
+
+    def test_rien_a_changer(self):
+        assert outlook.categories_modifiees("Adresse à trouver", "Adresse à trouver", True) is None
+        assert outlook.categories_modifiees(None, "Adresse à trouver", False) is None

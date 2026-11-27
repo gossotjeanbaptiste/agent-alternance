@@ -70,6 +70,24 @@ def cle_question(intitule):
     return next((cle for cle, mots in MOTS_QUESTIONS.items() if any(m in t for m in mots)), None)
 
 
+def cle_fiche(url):
+    """Identifiant d'une fiche La Bonne Alternance : (« recruteurs_lba », SIRET) pour …/emploi/recruteurs_lba/<SIRET>/<nom>,
+    ou (type, identifiant) d'une offre ; None si l'adresse n'est pas une fiche."""
+    m = re.search(r"labonnealternance\.apprentissage\.beta\.gouv\.fr/emploi/([\w-]+)/([\w-]+)", str(url or ""))
+    return (m.group(1), m.group(2)) if m else None
+
+
+def lien_connu(url, liens):
+    """Le lien enregistré (parmi liens) qui désigne la même fiche que url ; None si aucun ou si plusieurs différents."""
+    cle = cle_fiche(url)
+    trouves = {l for l in liens if cle and cle_fiche(l) == cle}
+    return trouves.pop() if len(trouves) == 1 else None
+
+
+def reponses_presentes(reponses):
+    return any(str(t or "").strip() for cle, t in (reponses or {}).items() if cle != "lettre")
+
+
 def champs(lettre, reponses):
     """Ce que le formulaire recevra (dictionnaire passé tel quel au JavaScript de remplissage)."""
     s = commun.CFG.get("signature_formulaire") or {}

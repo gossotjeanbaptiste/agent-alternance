@@ -7,7 +7,7 @@ from datetime import date, datetime
 import commun
 from commun import CFG, say
 from jours import date_relance, prochain_ouvrable
-from mails import domaine, est_adresse
+from mails import domaine, est_adresse, etiquette_a_trouver
 from messagerie import nom_messagerie
 from rapprochement import mots_distinctifs
 from tableau import HORS_MAIL, MAIL, TRANSMISE, as_date
@@ -148,3 +148,18 @@ def mettre_a_jour(suivi, ol, relancer=True):
         say(f"   {len(p.a_relancer)} relances dues : {maxi} aujourd'hui, les autres les jours suivants")
     for row, (t, sujet, item) in p.a_relancer[:maxi]:
         preparer_relance(suivi, ol, row, t, sujet, item)
+    etiqueter(ol)
+
+
+def etiqueter(ol):
+    """Étiquette « Adresse à trouver » remise d'aplomb sur les brouillons (posée / retirée selon le destinataire)."""
+    if not hasattr(ol, "etiqueter_brouillons"):
+        return
+    try:   # simple confort : ne doit jamais empêcher la suite de la routine (recherche…)
+        ajoutes, retires = ol.etiqueter_brouillons()
+    except Exception as e:
+        say(f"   ⚠️ Étiquettes « {etiquette_a_trouver()} » non mises à jour ({e})")
+        return
+    if ajoutes or retires:
+        say(f"   🏷️ Étiquette « {etiquette_a_trouver()} » : posée sur {ajoutes} brouillon(s), "
+            f"retirée de {retires} (adresse renseignée)")
