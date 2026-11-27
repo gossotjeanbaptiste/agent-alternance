@@ -9,18 +9,19 @@ from email.utils import formatdate, make_msgid
 
 import commun
 from commun import P, say
-from mails import est_a_trouver
+from mails import adresses, est_a_trouver
 from .texte import _adresses, _decoder, _texte_en_html
 
 
 class Brouillons:
     def supprimer_brouillons(self, adresse):
         """Met à la corbeille les brouillons adressés à cette adresse. Renvoie leur nombre."""
-        adresse = (adresse or "").strip().lower()
-        if not adresse or commun.ESSAI:
+        cibles = set(adresses(adresse))          # une ou plusieurs adresses (« a@x.fr; b@x.fr »)
+        if not cibles or commun.ESSAI:
             return 0
         d = self.dossiers["brouillons"]
-        uids = [uid for uid, h in self._entetes(d, "ALL", ["TO", "CC"]) if adresse in _adresses(h.get("To"), h.get("Cc"))]
+        uids = [uid for uid, h in self._entetes(d, "ALL", ["TO", "CC"])
+                if cibles & set(_adresses(h.get("To"), h.get("Cc")))]
         if not uids:
             return 0
         self._choisir(d, lecture_seule=False)
@@ -58,7 +59,7 @@ class Brouillons:
         msg = EmailMessage()
         msg["From"] = self.adresse
         if a:
-            msg["To"] = a
+            msg["To"] = ", ".join(x.strip() for x in a.split(";") if x.strip())   # « a; b » -> « a, b » (RFC 5322)
         msg["Subject"] = sujet
         msg["Date"] = formatdate(localtime=True)
         msg["Message-ID"] = make_msgid()

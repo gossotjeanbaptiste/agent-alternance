@@ -1,11 +1,32 @@
 {% extends "base.html" %}
 {% block titre %}Journal{% endblock %}
 {% block contenu %}
-<h1>Journal</h1>
-<div class="filtres">
-  <select onchange="location.href='/journal?f=' + encodeURIComponent(this.value)">
+<div class="barre-outils">
+  <h1 style="margin:0 8px 0 0; font-size:20px">Journal</h1>
+  <select onchange="location.href='/journal?f=' + encodeURIComponent(this.value)" title="Jour du journal">
     {% for f in fichiers %}<option {{ 'selected' if f == choisi }}>{{ f }}</option>{% endfor %}
   </select>
+  <input type="search" id="filtre-journal" placeholder="🔎 Filtrer les lignes (ex. ⚠️, Pixelo, relance…)">
+  <button onclick="location.reload()" title="Relire le journal">🔄</button>
 </div>
-<div class="carte"><pre>{{ contenu or 'Journal vide.' }}</pre></div>
+<pre id="journal" class="journal-page">{{ contenu or 'Journal vide.' }}</pre>
+{% endblock %}
+{% block script %}
+<script>
+// le journal s'ouvre sur la fin (les lignes les plus récentes) ; le filtre ne garde que les lignes qui contiennent le texte
+const pre = document.getElementById("journal"), brut = pre.textContent;
+// hauteur exacte jusqu'au bas de la fenêtre : seul le journal défile, pas la page
+function ajusterJournal() {
+  const bas = parseFloat(getComputedStyle(document.querySelector("main")).paddingBottom) || 0;
+  pre.style.height = Math.max(300, window.innerHeight - pre.getBoundingClientRect().top - bas - 2) + "px";
+}
+ajusterJournal();
+window.addEventListener("resize", ajusterJournal);
+pre.scrollTop = pre.scrollHeight;
+document.getElementById("filtre-journal").addEventListener("input", e => {
+  const q = e.target.value.trim().toLowerCase();
+  pre.textContent = q ? brut.split("\n").filter(l => l.toLowerCase().includes(q)).join("\n") || "Aucune ligne ne contient ce texte." : brut;
+  pre.scrollTop = q ? 0 : pre.scrollHeight;
+});
+</script>
 {% endblock %}

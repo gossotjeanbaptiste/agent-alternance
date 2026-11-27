@@ -1,25 +1,86 @@
 {% extends "base.html" %}
 {% block titre %}LinkedIn{% endblock %}
 {% block contenu %}
-<h1>Tes relations dans les entreprises de ton tableau</h1>
-{% if total is none %}
-<div class="carte">Export LinkedIn introuvable : mets <code>Connections.csv</code> dans le dossier <code>linkedin/</code>.</div>
-{% else %}
-<p class="doux">{{ trouves|length }} relation(s) trouvée(s) parmi tes {{ total }} relations LinkedIn. Une recommandation interne augmente beaucoup les chances de réponse.</p>
+<div class="titre-page">
+  <h1>Tes relations dans les entreprises de ton tableau</h1>
+  <span class="doux">{% if total is none %}aucun export importé{% else %}{{ trouves|length }} trouvée(s) parmi tes {{ total }} relations{% if maj %} · fichier mis à jour le {{ maj }}{% endif %}{% endif %}</span>
+</div>
+<div class="deux">
+  <div class="carte">
+    <h2>📥 Importer ton export LinkedIn</h2>
+    <ol class="doux" style="margin-top:0">
+      <li>Sur LinkedIn : <b>Paramètres → Confidentialité des données → Obtenir une copie de vos données</b>, coche « Relations ».</li>
+      <li>LinkedIn t'envoie un lien par mail (quelques minutes) : télécharge l'archive <code>.zip</code>.</li>
+      <li>Dépose ici l'archive ou le fichier <code>Connections.csv</code> : les relations sont ajoutées sans doublon.</li>
+    </ol>
+    <label class="depot" id="depot">
+      <input type="file" id="fichier-linkedin" accept=".csv,.zip" onchange="importer(this.files[0])">
+      <span>📂 Choisis le fichier ou glisse-le ici</span>
+    </label>
+  </div>
+  <div class="carte">
+    <h2>➕ Ajouter une relation</h2>
+    <div class="deux" style="gap:8px 12px">
+      <label class="champ">Prénom <input type="text" id="r-prenom"></label>
+      <label class="champ">Nom <input type="text" id="r-nom"></label>
+      <label class="champ">Entreprise * <input type="text" id="r-entreprise"></label>
+      <label class="champ">Poste <input type="text" id="r-poste"></label>
+    </div>
+    <label class="champ">Profil LinkedIn <input type="url" id="r-url" placeholder="https://www.linkedin.com/in/…"></label>
+    <div class="actions"><button class="principal" onclick="ajouterRelation()">➕ Ajouter</button></div>
+  </div>
+</div>
+{% if total is not none %}
 <div class="carte" style="padding:0; overflow:auto">
-<table>
-  <tr><th>Entreprise</th><th>Statut</th><th>Relation</th><th>Poste</th><th>Profil</th></tr>
-  {% for t in trouves %}
-  <tr>
-    <td><b>{{ t.entreprise }}</b></td>
-    <td><span class="badge" style="background:#{{ statuts.get(t.statut, 'EDEDED') }}">{{ t.statut }}</span></td>
-    <td>{{ t.nom }}</td><td class="doux">{{ t.poste or '' }}</td>
-    <td>{% if t.url %}<a href="{{ t.url }}" target="_blank" rel="noopener">Voir le profil ↗</a>{% endif %}</td>
-  </tr>
-  {% else %}
-  <tr><td colspan="5" class="doux">Aucune de tes relations ne travaille dans une entreprise de ton tableau pour l'instant.</td></tr>
-  {% endfor %}
-</table>
+  <div class="barre-outils" style="border:0; border-bottom:1px solid var(--bord); border-radius:12px 12px 0 0; margin:0">
+    <input type="search" id="recherche-relations" placeholder="🔎 Rechercher (entreprise, personne, poste…)">
+    <span class="doux">Une recommandation interne augmente beaucoup les chances de réponse.</span>
+  </div>
+  <table id="table-relations">
+    <tr><th>Entreprise</th><th>Statut</th><th>Relation</th><th>Poste</th><th>Profil</th></tr>
+    {% for t in trouves %}
+    <tr>
+      <td><b>{{ t.entreprise }}</b></td>
+      <td><span class="badge" style="background:#{{ statuts.get(t.statut, 'EDEDED') }}">{{ t.statut }}</span></td>
+      <td>{{ t.nom }}</td><td class="doux">{{ t.poste or '' }}</td>
+      <td>{% if t.url %}<a href="{{ t.url }}" target="_blank" rel="noopener">Voir le profil ↗</a>{% endif %}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="doux">Aucune de tes relations ne travaille dans une entreprise de ton tableau pour l'instant.</td></tr>
+    {% endfor %}
+  </table>
 </div>
 {% endif %}
+{% endblock %}
+{% block script %}
+<script>
+async function importer(f) {
+  if (!f) return;
+  const fd = new FormData();
+  fd.append("fichier", f);
+  let r = {};
+  try { r = await (await fetch("/api/linkedin/importer", {method: "POST", headers: {"X-Jeton": JETON}, body: fd})).json(); }
+  catch (e) { r = {ok: false, message: "Envoi impossible."}; }
+  annoncer(r.message || "Erreur", !r.ok);
+  if (r.ok) setTimeout(() => location.reload(), 1200);
+}
+const depot = document.getElementById("depot");
+["dragover", "dragenter"].forEach(t => depot.addEventListener(t, e => { e.preventDefault(); depot.classList.add("survol"); }));
+["dragleave", "drop"].forEach(t => depot.addEventListener(t, () => depot.classList.remove("survol")));
+depot.addEventListener("drop", e => { e.preventDefault(); importer(e.dataTransfer.files[0]); });
+async function ajouterRelation() {
+  const v = id => document.getElementById("r-" + id).value;
+  const r = await poster("/api/linkedin/ajouter", {prenom: v("prenom"), nom: v("nom"), entreprise: v("entreprise"),
+                                                   poste: v("poste"), url: v("url")});
+  annoncer(r.message || "Erreur", !r.ok);
+  if (r.ok) setTimeout(() => location.reload(), 1200);
+}
+const recherche = document.getElementById("recherche-relations");
+if (recherche) recherche.addEventListener("input", () => {
+  const q = recherche.value.trim().toLowerCase();
+  document.querySelectorAll("#table-relations tr:not(:first-child)").forEach(tr => {
+    tr.style.display = !q || tr.textContent.toLowerCase().includes(q) ? "" : "none";
+  });
+});
+</script>
 {% endblock %}

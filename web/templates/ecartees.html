@@ -5,51 +5,69 @@
      data-ville="{{ l['_ville'] }}" data-derniere="{{ l['_derniere'] }}" data-premiere="{{ l['_premiere'] }}"
      data-passages="{{ l['Passages'] or 1 }}" data-villenom="{{ l['_villenom'] }}"
      data-texte="{{ l['Entreprise'] }} {{ l['Activité'] }} {{ l['_raison'] }} {{ l['Adresse'] }} {{ l['Recherche'] }} {{ l['SIRET'] }} {{ l['Code NAF'] }}">
-  <h2>{{ l['Entreprise'] }} <span class="doux" style="font-weight:400">— {{ l['Adresse'] or l['Recherche'] or '' }}</span></h2>
-  <p>🚫 <b>Raison :</b> {{ l['_raison'] }}</p>
-  <p class="doux">Écartée {{ l['Passages'] or 1 }} fois{% if l['Première fois'] %}, depuis le {{ l['Première fois'] }}{% endif %}{% if l['Dernière fois'] and l['Dernière fois'] != l['Première fois'] %}, dernière fois le {{ l['Dernière fois'] }}{% endif %}{% if l['Recherche'] %} · recherche autour de {{ l['Recherche'] }}{% endif %}{% if l['SIRET'] %} · SIRET {{ l['SIRET'] }}{% endif %}</p>
+  <div class="entete-carte">
+    <h2>{{ l['Entreprise'] }}</h2>
+    <span class="doux">{{ l['Adresse'] or l['Recherche'] or '' }}</span>
+  </div>
+  <p class="remarque">🚫 <b>Raison :</b> {{ l['_raison'] }}</p>
+  <p class="doux remarque" title="{% if l['Première fois'] %}Écartée depuis le {{ l['Première fois'] }}{% endif %}{% if l['Recherche'] %} · recherche autour de {{ l['Recherche'] }}{% endif %}{% if l['SIRET'] %} · SIRET {{ l['SIRET'] }}{% endif %}">
+    Écartée {{ l['Passages'] or 1 }} fois{% if l['Dernière fois'] %}, dernière fois le {{ l['Dernière fois'] }}{% endif %}</p>
   <div class="actions">
-    {% if l['_site'] %}<a href="{{ l['_site'] }}" target="_blank" rel="noopener"><button>🌐 Site de l'entreprise</button></a>{% endif %}
-    <a href="{{ l['_recherche'] }}" target="_blank" rel="noopener"><button>🔎 Rechercher sur Google</button></a>
     {% if abandonnee %}
     <button onclick="decider(this, 'remettre')">↩️ Remettre dans la liste</button>
     {% else %}
     <button class="principal" onclick="decider(this, 'candidater')" title="Ajoute l'entreprise à la feuille « À contacter » : sa candidature sera écrite à la prochaine recherche">✉️ Candidater quand même</button>
-    <button onclick="decider(this, 'abandonner')" title="Ne plus l'afficher ici (même si elle est de nouveau écartée)">Abandonner</button>
     {% endif %}
+    {% if l['_site'] %}<a href="{{ l['_site'] }}" target="_blank" rel="noopener"><button>🌐 Site</button></a>{% endif %}
+    <a href="{{ l['_recherche'] }}" target="_blank" rel="noopener"><button title="Rechercher sur Google">🔎 Google</button></a>
+    {% if not abandonnee %}<button class="discret" onclick="decider(this, 'abandonner')" title="Ne plus l'afficher ici (même si elle est de nouveau écartée)">Abandonner</button>{% endif %}
   </div>
 </div>
 {% endmacro %}
 {% block contenu %}
-<h1>Entreprises écartées <span class="doux" id="compte">({{ g.a_examiner|length }})</span></h1>
-<p class="doux">Entreprises trouvées par La Bonne Alternance mais écartées par le filtre d'activité (candidatures spontanées
-limitées à l'informatique, réglage « Activités acceptées » dans Paramètres). Regarde ce qu'elles font, puis
-<b>candidate quand même</b> (la candidature sera écrite à la prochaine recherche) ou <b>abandonne</b>.</p>
-{% if (g.a_examiner|length) + (g.abandonnees|length) > 1 %}
-<div class="filtres">
-  <input type="search" id="recherche" placeholder="Rechercher (entreprise, activité, adresse, SIRET…)" size="34">
-  <select id="f-activite"><option value="">Toutes les activités</option></select>
-  <select id="f-ville"><option value="">Toutes les villes</option></select>
-  <span class="tri">
-    <label for="tri">Trier par</label>
-    <select id="tri">
-      <option value="entreprise:asc">Entreprise (A → Z)</option>
-      <option value="entreprise:desc">Entreprise (Z → A)</option>
-      <option value="activite:asc">Activité (A → Z)</option>
-      <option value="ville:asc">Ville (A → Z)</option>
-      <option value="derniere:desc">Écartées récemment d'abord</option>
-      <option value="premiere:asc">Écartées depuis le plus longtemps</option>
-      <option value="passages:desc" data-nombre>Le plus souvent écartées</option>
-    </select>
-  </span>
-  <button onclick="effacerChamps(['recherche', 'f-activite', 'f-ville'])" title="Vide la recherche et les filtres">✖ Effacer les filtres</button>
-  <button onclick="recharger()" title="Relit la liste des entreprises écartées ; la recherche et les filtres restent">🔄 Recharger</button>
+<div class="titre-page">
+  <h1>Entreprises écartées <span class="doux" id="compte">({{ g.a_examiner|length }})</span></h1>
+  <details class="aide">
+    <summary>ℹ️ Comment ça marche</summary>
+    <ul>
+      <li>Entreprises trouvées par La Bonne Alternance mais écartées par le filtre d'activité (candidatures spontanées
+        limitées à l'informatique : Paramètres → Recherche d'entreprises → « Activités acceptées »).</li>
+      <li><b>✉️ Candidater quand même</b> : la candidature sera écrite à la prochaine recherche.</li>
+      <li><b>Abandonner</b> : elle quitte la liste (retrouvable dans « Abandonnées », d'où on peut la remettre).</li>
+    </ul>
+  </details>
 </div>
-<div class="carte doux" id="aucun" style="display:none">Aucune entreprise à examiner ne correspond à la recherche ou aux filtres.</div>
+{% if (g.a_examiner|length) + (g.abandonnees|length) > 1 %}
+<div class="barre-outils">
+  <input type="search" id="recherche" placeholder="🔎 Rechercher (entreprise, activité, adresse, SIRET…)">
+  <select id="f-activite" title="Activité"><option value="">Toutes les activités</option></select>
+  <select id="f-ville" title="Ville"><option value="">Toutes les villes</option></select>
+  <span class="separateur"></span>
+  <select id="groupes" title="Regrouper les cartes par…">
+    <option value="villenom">Regrouper par ville</option>
+    <option value="activite">Regrouper par activité</option>
+    <option value="">Sans groupes</option>
+  </select>
+  <select id="tri" title="Trier par…">
+    <option value="entreprise:asc">Entreprise (A → Z)</option>
+    <option value="entreprise:desc">Entreprise (Z → A)</option>
+    <option value="activite:asc">Activité (A → Z)</option>
+    <option value="ville:asc">Ville (A → Z)</option>
+    <option value="derniere:desc">Écartées récemment d'abord</option>
+    <option value="premiere:asc">Écartées depuis le plus longtemps</option>
+    <option value="passages:desc" data-nombre>Le plus souvent écartées</option>
+  </select>
+  <button class="petit" onclick="toutDeplier(LISTES, true)" title="Ouvrir tous les groupes">▾ Tout ouvrir</button>
+  <button class="petit" onclick="toutDeplier(LISTES, false)" title="Replier tous les groupes">▸ Tout replier</button>
+  <button onclick="effacerChamps(['recherche', 'f-activite', 'f-ville'])" title="Effacer les filtres : vide la recherche et les filtres">✖ Effacer</button>
+  <button onclick="recharger()" title="Relit la liste des entreprises écartées ; la recherche et les filtres restent">🔄</button>
+</div>
 {% else %}
 <div class="actions"><button onclick="recharger()" title="Relit la liste des entreprises écartées">🔄 Recharger</button></div>
 {% endif %}
-<div id="cartes">
+<h2 class="titre-section">À examiner <span class="doux">({{ g.a_examiner|length }})</span></h2>
+<div class="carte doux" id="aucun" style="display:none">Aucune entreprise à examiner ne correspond à la recherche ou aux filtres.</div>
+<div id="cartes" class="liste-cartes">
 {% for l in g.a_examiner %}{{ carte(l) }}{% else %}
 <div class="carte">Aucune entreprise écartée à examiner. 👍</div>
 {% endfor %}
@@ -62,9 +80,9 @@ limitées à l'informatique, réglage « Activités acceptées » dans Paramètr
 </details>
 {% endif %}
 {% if g.abandonnees %}
-<details class="pli-section" id="pli-abandonnees">
-  <summary><h2 style="display:inline">Abandonnées ({{ g.abandonnees|length }})</h2></summary>
-  <div id="cartes-abandonnees">
+<details class="pli-section section-abandonnees" id="pli-abandonnees">
+  <summary><h2 style="display:inline" class="titre-section">Abandonnées <span class="doux">({{ g.abandonnees|length }})</span></h2></summary>
+  <div id="cartes-abandonnees" class="liste-cartes">
   {% for l in g.abandonnees %}{{ carte(l, True) }}{% endfor %}
   </div>
 </details>
@@ -73,11 +91,15 @@ limitées à l'informatique, réglage « Activités acceptées » dans Paramètr
 {% block script %}
 <script src="{{ url_for('static', filename='tri.js') }}"></script>
 <script src="{{ url_for('static', filename='filtres.js') }}"></script>
+<script src="{{ url_for('static', filename='groupes.js') }}"></script>
 <script>
-activerTri("tri", "cartes", "tri-ecartees");
-activerTri("tri", "cartes-abandonnees", "tri-ecartees");   // même menu pour les abandonnées
+const LISTES = ["cartes", "cartes-abandonnees"];
+const triA = activerTri("tri", "cartes", "tri-ecartees") || (() => {});
+const triB = activerTri("tri", "cartes-abandonnees", "tri-ecartees") || (() => {});   // même menu pour les abandonnées
+activerGroupes("groupes", LISTES, {inconnu: {villenom: "Ville inconnue", activite: "Activité inconnue"},
+  memoire: "groupes-ecartees", apres: () => { triA(); triB(); }});
 // recherche et filtres : la liste à examiner et les abandonnées (le compteur suit la liste à examiner)
-const refiltrer = activerFiltres({recherche: "recherche", boites: ["cartes", "cartes-abandonnees"], compte: "compte",
+const refiltrer = activerFiltres({recherche: "recherche", boites: LISTES, compte: "compte",
   vide: "aucun", memoire: "filtres-ecartees", filtres: [{id: "f-activite", champ: "activite", dynamique: true},
                            {id: "f-ville", champ: "villenom", dynamique: true}]}) || (() => {});
 async function decider(bouton, action) {

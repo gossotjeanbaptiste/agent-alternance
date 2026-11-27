@@ -418,3 +418,66 @@ class TestEtiquetteATrouver:
         ol.etiqueter_brouillons = casse
         suivi.mettre_a_jour(tableau, ol)   # ne lève pas
         assert "non mises à jour (dossier Brouillons illisible)" in capsys.readouterr().out
+
+
+# --- plusieurs adresses pour une même candidature (« a@x.fr; b@x.fr ») -------------------------------
+class TestPlusieursAdresses:
+    DEUX = "rh@forgeval.fr; marc.durand@forgeval.fr"
+
+    def base(self, tableau, **v):
+        ajouter(tableau, Statut=MAIL, **{"Email": self.DEUX, "Date envoi": AUJ - timedelta(days=5),
+                "Dernière action": AUJ - timedelta(days=5), "Relance prévue": AUJ + timedelta(days=5), **v})
+
+    def test_envoi_vers_la_deuxieme_adresse_repere(self, tableau, messagerie):
+        ajouter(tableau, Email=self.DEUX, Statut="Brouillon")
+        suivi.mettre_a_jour(tableau, messagerie(envois={"marc.durand@forgeval.fr": [envoi(2)]}))
+        assert ligne(tableau)["Statut"] == MAIL
+
+    def test_envoi_aux_deux_compte_une_fois(self, tableau, messagerie):
+        ajouter(tableau, Email=self.DEUX, Statut="Brouillon")
+        e = envoi(2)
+        suivi.mettre_a_jour(tableau, messagerie(envois={"rh@forgeval.fr": [e], "marc.durand@forgeval.fr": [e]}))
+        assert as_date(ligne(tableau)["Date envoi"]) == AUJ - timedelta(days=2)
+
+    def test_reponse_de_l_une_des_adresses(self, tableau, messagerie, faux_modele):
+        self.base(tableau)
+        faux_modele.reponses_json = [{"type": "entretien", "resume": "Entretien proposé"}]
+        suivi.mettre_a_jour(tableau, messagerie(recus=[recu("marc.durand@forgeval.fr", jours=1)]))
+        assert ligne(tableau)["Statut"] == "Entretien"
+
+    def test_adresse_perso_en_plus_de_l_adresse_pro(self, tableau, messagerie, faux_modele):
+        """Une adresse grand public parmi les adresses : reconnue exactement, sans casser le domaine de l'autre."""
+        self.base(tableau, Email="rh@forgeval.fr; marc.durand@gmail.com")
+        faux_modele.reponses_json = [{"type": "refus", "resume": "Non"}]
+        suivi.mettre_a_jour(tableau, messagerie(recus=[recu("lea@forgeval.fr", jours=1)]))
+        assert ligne(tableau)["Statut"] == "Refus"                    # même domaine que rh@forgeval.fr
+
+    def test_non_remise_d_une_seule_adresse(self, tableau, messagerie, faux_modele):
+        self.base(tableau)
+        ndr = recu("", sujet="Non remis", corps="Adresse marc.durand@forgeval.fr introuvable", jours=1,
+                   classe="REPORT.IPM.Note.NDR")
+        for _ in range(2):                                            # notée une seule fois
+            suivi.mettre_a_jour(tableau, messagerie(recus=[ndr]))
+        l = ligne(tableau)
+        assert l["Statut"] == MAIL                                    # suivi poursuivi avec l'autre adresse
+        assert l["Notes"].count("Adresse refusée : marc.durand@forgeval.fr") == 1
+
+    def test_non_remise_des_deux_adresses(self, tableau, messagerie, faux_modele):
+        self.base(tableau)
+        ndr = recu("", sujet="Non remis", corps="rh@forgeval.fr et marc.durand@forgeval.fr introuvables", jours=1,
+                   classe="REPORT.IPM.Note.NDR")
+        suivi.mettre_a_jour(tableau, messagerie(recus=[ndr]))
+        assert ligne(tableau)["Statut"] == "Adresse invalide"
+
+    def test_relance_programmee_vers_l_une_des_adresses(self, tableau, messagerie):
+        ajouter(tableau, Email=self.DEUX, Statut="Relance en brouillon", **{"Nb relances": 1,
+                "Date envoi": AUJ - timedelta(days=10), "Dernière action": AUJ - timedelta(days=1)})
+        suivi.mettre_a_jour(tableau, messagerie(programmes={"marc.durand@forgeval.fr": None}, brouillons=[]))
+        assert ligne(tableau)["Statut"] == "Relance programmée"
+
+    def test_relance_adressee_aux_deux(self, tableau, messagerie, faux_modele):
+        ajouter(tableau, Email=self.DEUX, Statut=MAIL, **{"Nb relances": 0, "Date envoi": AUJ - timedelta(days=10),
+                "Dernière action": AUJ - timedelta(days=10), "Relance prévue": AUJ - timedelta(days=1)})
+        ol = messagerie(envois={"rh@forgeval.fr": [envoi(10)]}, brouillons=[])
+        suivi.mettre_a_jour(tableau, ol)
+        assert ol.deposes[0]["a"] == "rh@forgeval.fr; marc.durand@forgeval.fr"

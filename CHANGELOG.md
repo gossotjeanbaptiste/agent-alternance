@@ -3,6 +3,13 @@
 Une ligne par version publiée (la plus récente en haut) : ce qui a changé pour l'utilisateur.
 Les mentions « tour » ne concernent que la version avec la tour (branche `main`).
 
+## 1.5 — interface refaite
+
+- **1.5.0** (27/11/2026) — Interface refaite : tableau de bord (semaines numérotées, étapes des candidatures),
+  À postuler et Écartées regroupées par ville, routines suivies en direct (programmées comprises), rapport pour
+  l'école imprimable, import LinkedIn depuis la page, Paramètres rangés par catégories, plusieurs adresses mail
+  par candidature.
+
 ## 1.4 — rapport, navigateurs, routines planifiées
 
 - **1.4.7** (27/11/2026) — Brouillons dont l'adresse reste à trouver étiquetés « Adresse à trouver » (libellé Gmail,

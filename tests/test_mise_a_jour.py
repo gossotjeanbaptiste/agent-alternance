@@ -176,7 +176,7 @@ def test_numero_de_version_visible_sans_ouvrir_la_section(client):
     import version
     h = client.get("/parametres").get_data(as_text=True)
     assert f'<span id="version-courante">v{version.__version__}</span>' in h
-    entete = h.split('id="pli-version"')[1].split("</summary>")[0]
+    entete = h.split('id="pli-version"')[1].split("</h3>")[0]
     assert f"v{version.__version__}" in entete
 
 

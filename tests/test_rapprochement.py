@@ -167,3 +167,10 @@ def test_mot_partage_pas_d_attribution(tableau, messagerie, faux_modele):
     suivi.mettre_a_jour(tableau, messagerie(recus=[recu("atelier.jean@gmail.com")]), relancer=False)
     assert ligne(tableau, "Atelier Numérique")["Dernière réponse"] in (None, "")
     assert ligne(tableau, "Atelier Bois")["Dernière réponse"] in (None, "")
+
+
+
+def test_preuves_avec_plusieurs_adresses():
+    from rapprochement import preuves_dans_le_mail
+    corps = "Cordialement, Léa — www.comptanova.com"
+    assert preuves_dans_le_mail(corps, "Comptanova", "marc@gmail.com; rh@comptanova.com") == ["domaine comptanova.com"]

@@ -1,43 +1,44 @@
 {% extends "base.html" %}
 {% block titre %}Rapport{% endblock %}
+{% macro disque(parts, total, unite) %}
+{% if parts %}
+<div class="disque">
+  <svg viewBox="0 0 42 42" role="img" aria-label="{{ total }} {{ unite }}(s)">
+    <circle cx="21" cy="21" r="15.9155" class="fond-disque"></circle>
+    {% for p in parts %}
+    {% set ecart = 0.8 if parts|length > 1 else 0 %}
+    <circle cx="21" cy="21" r="15.9155" class="trait-{{ p.couleur }}"{% if p.hex %} style="stroke:#{{ p.hex }}"{% endif %}
+            stroke-dasharray="{{ [p.longueur - ecart, 0.3]|max }} {{ 100 - [p.longueur - ecart, 0.3]|max }}"
+            stroke-dashoffset="{{ 25 - p.debut }}"><title>{{ p.nom }} : {{ p.n }} ({{ p.part }} %)</title></circle>
+    {% endfor %}
+    <text x="21" y="22.6" text-anchor="middle" class="total-disque">{{ total }}</text>
+  </svg>
+  <ul class="legende-disque">
+    {% for p in parts %}<li><span class="pastille serie-{{ p.couleur }}"{% if p.hex %} style="background:#{{ p.hex }}"{% endif %}></span><span class="nom-part">{{ p.nom }}</span><b>{{ p.n }}</b><span class="doux">{{ p.part }} %</span></li>{% endfor %}
+  </ul>
+</div>
+{% else %}<p class="doux">Aucune sur la période.</p>{% endif %}
+{% endmacro %}
 {% block contenu %}
-{% set t, j = r.t, r.j %}
-<h1>Rapport de recherche <span class="doux">du {{ r.debut.strftime('%d/%m/%Y') }} au {{ r.fin.strftime('%d/%m/%Y') }}</span></h1>
-<form class="filtres non-imprime" method="get" action="/rapport">
+{% set t = r.t %}
+<div class="titre-page">
+  <h1>Rapport de recherche <span class="doux">du {{ r.debut.strftime('%d/%m/%Y') }} au {{ r.fin.strftime('%d/%m/%Y') }}</span></h1>
+</div>
+<form class="barre-outils" method="get" action="/rapport">
   {% for cle, libelle in periodes %}
   <button type="submit" name="jours" value="{{ cle }}" class="{{ 'principal' if r.cle == cle }}">{{ libelle }}</button>
   {% endfor %}
-  <span class="doux" style="align-self:center">ou du</span>
-  <input type="date" name="du" value="{{ r.debut.isoformat() if r.cle == 'dates' }}">
-  <span class="doux" style="align-self:center">au</span>
-  <input type="date" name="au" value="{{ r.fin.isoformat() if r.cle == 'dates' }}">
+  <span class="separateur"></span>
+  <span class="doux">du</span> <input type="date" name="du" value="{{ r.debut.isoformat() if r.cle == 'dates' }}">
+  <span class="doux">au</span> <input type="date" name="au" value="{{ r.fin.isoformat() if r.cle == 'dates' }}">
   <button type="submit" class="{{ 'principal' if r.cle == 'dates' }}">Afficher</button>
   <span style="margin-left:auto"></span>
-  <button type="button" onclick="window.print()" title="Imprimer, ou choisir « Enregistrer au format PDF »">🖨️ Imprimer / PDF</button>
-  <button type="button" onclick="copierTexte()" title="Le rapport en texte simple, à coller dans un mail ou un document">📋 Copier le texte</button>
+  <button type="button" onclick="copierTexte()" title="Le bilan chiffré en texte simple, à coller dans un mail ou un document">📋 Copier le bilan</button>
 </form>
-<p class="doux">D'après le tableau de suivi et les journaux des routines (logs). Généré le {{ r.genere.strftime('%d/%m/%Y') }}.</p>
-<div class="carte" id="carte-ia">
-  <h2>🧠 Rapport rédigé par ton modèle</h2>
-  <p class="doux non-imprime">Le modèle local (la tour, sinon ce PC) écrit un vrai rapport à partir de cette période :
-    chiffres, contenu des réponses, candidatures sans réponse, relances, candidatures à finaliser, activité des routines
-    et ton profil. Tout reste chez toi ; le modèle est déchargé ensuite.</p>
-  <div class="actions non-imprime">
-    <button class="principal" id="bouton-ia" onclick="redigerIA()">🧠 Rédiger le rapport de cette période</button>
-    {% if enregistres %}
-    <select onchange="choisirIA(this.value)" title="Rapports déjà rédigés">
-      {% for n in enregistres %}<option value="{{ n }}" {{ 'selected' if n == ia }}>Rapport du {{ n[16:18] }}/{{ n[13:15] }}/{{ n[8:12] }} à {{ n[19:21] }}h{{ n[21:23] }}</option>{% endfor %}
-    </select>
-    {% endif %}
-    {% if ia %}<button onclick="copierIA()" title="Le texte du rapport (Markdown), à coller dans un mail ou un document">📋 Copier ce rapport</button>{% endif %}
-  </div>
-  <p id="etat-ia" class="doux non-imprime"></p>
-  {% if ia %}<div class="rapport-ia">{{ ia_html }}</div><textarea id="texte-ia" hidden>{{ ia_texte }}</textarea>
-  {% else %}<p class="doux">Aucun rapport rédigé pour l'instant.</p>{% endif %}
-</div>
-<h2 style="margin-top:24px">Bilan chiffré</h2>
+<textarea id="texte" hidden>{{ texte }}</textarea>
 
-<div class="grille">
+<h2 class="titre-section">Bilan chiffré</h2>
+<div class="grille indicateurs">
   <div class="carte"><div class="chiffre">{{ t.envoyees }}</div><div class="libelle">candidatures envoyées</div></div>
   <div class="carte"><div class="chiffre">{{ t.reponses }}</div><div class="libelle">réponses reçues</div></div>
   <div class="carte"><div class="chiffre">{{ t.entretiens }}</div><div class="libelle">entretiens / réponses positives</div></div>
@@ -45,83 +46,55 @@
   <div class="carte"><div class="chiffre">{{ t.taux }} %</div><div class="libelle">taux de réponse (candidatures de la période)</div></div>
   <div class="carte"><div class="chiffre">{{ t.ajoutees }}</div><div class="libelle">entreprises ajoutées au suivi</div></div>
 </div>
-
-<div class="deux">
+<div class="trois etire">
   <div class="carte">
-    <h2>Candidatures envoyées</h2>
-    <table>
-      <tr><th>Par canal</th><th></th></tr>
-      {% for k, n in t.par_canal %}<tr><td>{{ k }}</td><td>{{ n }}</td></tr>{% else %}<tr><td class="doux">aucune</td><td></td></tr>{% endfor %}
-      <tr><th>Par source</th><th></th></tr>
-      {% for k, n in t.par_source %}<tr><td>{{ k }}</td><td>{{ n }}</td></tr>{% else %}<tr><td class="doux">aucune</td><td></td></tr>{% endfor %}
-    </table>
+    <h2>Envoyées par canal</h2>
+    {{ disque(disques.canal, t.envoyees, "envoyée") }}
   </div>
   <div class="carte">
-    <h2>Réponses reçues</h2>
-    <table>
-      {% for st, n in t.par_reponse %}
-      <tr><td><span class="badge" style="background:#{{ statuts.get(st, 'EDEDED') }}; color:#222">{{ st }}</span></td><td>{{ n }}</td></tr>
-      {% else %}<tr><td class="doux">Aucune réponse sur la période.</td></tr>{% endfor %}
-    </table>
-    <p class="doux">Aujourd'hui : {{ t.total }} entreprises suivies, {{ t.en_attente }} en attente de réponse,
-      {{ t.a_postuler }} à postuler, {{ t.total_entretiens }} entretien(s) ou réponse(s) positive(s) en tout.</p>
+    <h2>Par source</h2>
+    {{ disque(disques.source, t.envoyees, "envoyée") }}
+  </div>
+  <div class="colonne-cartes">
+    <div class="carte">
+      <h2>Réponses reçues</h2>
+      {{ disque(disques.reponses, t.reponses, "réponse") }}
+      <p class="doux" style="font-size:13px">Aujourd'hui : {{ t.total }} entreprises suivies, {{ t.en_attente }} en attente de réponse,
+        {{ t.a_postuler }} à postuler, {{ t.total_entretiens }} entretien(s) ou réponse(s) positive(s) en tout.</p>
+    </div>
+    <div class="carte">
+      <h2>Relances des 14 prochains jours</h2>
+      {% if t.relances %}
+      <table>{% for l in t.relances %}<tr><td>{{ l['Relance prévue'].strftime('%d/%m') }}</td><td>{{ l['Entreprise'] }}</td></tr>{% endfor %}</table>
+      {% else %}<p class="doux">Aucune relance prévue.</p>{% endif %}
+    </div>
   </div>
 </div>
 
-<div class="carte">
-  <h2>Activité des routines <span class="doux">(journaux de {{ j.jours }} jour(s))</span></h2>
-  {% if j.jours %}
-  <div class="deux">
-    <table>
-      <tr><td>Routines terminées</td><td>{{ j.routines.values()|sum }}{% if j.routines %} <span class="doux">({% for k, n in j.routines.most_common() %}{{ k }} : {{ n }}{{ ', ' if not loop.last }}{% endfor %})</span>{% endif %}</td></tr>
-      <tr><td>Temps de travail des routines</td><td>{{ j.minutes // 60 }} h {{ '%02d'|format(j.minutes % 60) }}</td></tr>
-      <tr><td>Candidatures préparées en brouillon</td><td>{{ j.candidatures }}</td></tr>
-      <tr><td>Lettres prêtes pour un formulaire</td><td>{{ j.lettres }}</td></tr>
-      <tr><td>Relances préparées</td><td>{{ j.relances_brouillon }}</td></tr>
-    </table>
-    <table>
-      <tr><td>Envois repérés dans la messagerie</td><td>{{ j.envois_vus }}</td></tr>
-      <tr><td>Relances envoyées repérées</td><td>{{ j.relances_vues }}</td></tr>
-      <tr><td>Réponses lues et classées</td><td>{{ j.reponses.values()|sum }}{% if j.reponses %} <span class="doux">({% for k, n in j.reponses.most_common() %}{{ k }} : {{ n }}{{ ', ' if not loop.last }}{% endfor %})</span>{% endif %}</td></tr>
-      <tr><td>Nouvelles entreprises écartées (hors informatique)</td><td>{{ r.ecartees }}</td></tr>
-      <tr><td>Modèle utilisé</td><td>{% for k, n in j.machines.most_common() %}{{ k }} : {{ n }}{{ ', ' if not loop.last }}{% else %}<span class="doux">—</span>{% endfor %}</td></tr>
-    </table>
+<div class="carte" id="carte-ia">
+  <h2>🧠 Rapport rédigé par ton modèle</h2>
+  <div class="actions">
+    <button class="principal" id="bouton-ia" onclick="redigerIA('moi')" title="Point d'étape pour toi : ce qui marche, ce qui bloque, prochaines étapes, conseils">🧠 Rédiger pour moi</button>
+    <button class="principal" id="bouton-ecole" onclick="redigerIA('ecole')" title="Rapport formel pour ton école (démarches, résultats, suite), avec en annexe la liste des entreprises contactées sur la période">🎓 Rédiger pour l'école</button>
+    {% if enregistres %}
+    <span class="separateur"></span>
+    <select onchange="choisirIA(this.value)" title="Rapports déjà rédigés">
+      {% for d in enregistres %}<option value="{{ d.nom }}" {{ 'selected' if d.nom == ia }}>{{ d.libelle }}</option>{% endfor %}
+    </select>
+    {% endif %}
+    {% if ia %}
+    <button onclick="copierIA()" title="Le texte du rapport (Markdown), à coller dans un mail ou un document">📋 Copier</button>
+    <a href="/rapport/imprimer?ia={{ ia|urlencode }}" target="_blank" rel="noopener"><button title="Ouvre le rapport seul, prêt à imprimer ou à enregistrer en PDF (« Enregistrer au format PDF »)">🖨️ Imprimer / PDF</button></a>
+    {% endif %}
   </div>
-  {% if j.essais %}<p class="doux">{{ j.essais }} routine(s) en essai non comptée(s) (elles n'ont rien écrit).</p>{% endif %}
-  {% if j.problemes %}
-  <details class="pli"><summary>⚠️ {{ j.problemes|length }} problème(s) noté(s) dans les journaux</summary>
-    <ul>{% for p in j.problemes %}<li>{{ p }}</li>{% endfor %}</ul></details>
-  {% endif %}
-  {% else %}<p class="doux">Aucun journal sur cette période.</p>{% endif %}
+  <p class="doux" style="font-size:13px">Sur la période choisie ci-dessus. Le modèle local (la tour, sinon ce PC) écrit à partir de ces chiffres,
+    du contenu des réponses et de ton profil ; tout reste chez toi, le modèle est déchargé ensuite.</p>
+  <p id="etat-ia" class="doux"></p>
+  {% if ia %}
+  <div class="rapport-ia">{% if ia_infos %}<p class="doux">{{ ia_infos.libelle }}</p>{% endif %}{{ ia_html }}</div>
+  <textarea id="texte-ia" hidden>{{ ia_texte }}</textarea>
+  {% else %}<p class="doux">Aucun rapport rédigé pour l'instant.</p>{% endif %}
 </div>
-
-<div class="carte">
-  <h2>Détail des candidatures envoyées</h2>
-  {% if t.liste_envoyees %}
-  <table>
-    <tr><th>Envoi</th><th>Entreprise</th><th>Poste</th><th>Lieu</th><th>Statut</th></tr>
-    {% for l in t.liste_envoyees %}
-    <tr><td>{{ l['Date envoi'].strftime('%d/%m') }}</td><td><b>{{ l['Entreprise'] }}</b></td><td>{{ l['Poste'] or '' }}</td>
-      <td>{{ l['Lieu'] or '' }}</td><td>{{ l['Statut'] or '' }}</td></tr>
-    {% endfor %}
-  </table>
-  {% else %}<p class="doux">Aucune candidature envoyée sur la période.</p>{% endif %}
-</div>
-
-<div class="carte">
-  <h2>Relances prévues dans les 14 prochains jours</h2>
-  {% if t.relances %}
-  <table>
-    <tr><th>Date</th><th>Entreprise</th><th>Poste</th></tr>
-    {% for l in t.relances %}<tr><td>{{ l['Relance prévue'].strftime('%d/%m') }}</td><td>{{ l['Entreprise'] }}</td><td>{{ l['Poste'] or '' }}</td></tr>{% endfor %}
-  </table>
-  {% else %}<p class="doux">Aucune relance prévue.</p>{% endif %}
-</div>
-
-<details class="carte pli-section non-imprime">
-  <summary><h2 style="display:inline">Texte du rapport</h2> <span class="doux">— à copier dans un mail ou un document</span></summary>
-  <textarea id="texte" class="zone rapport-texte" rows="14" readonly>{{ texte }}</textarea>
-</details>
 {% endblock %}
 {% block script %}
 <script>
@@ -131,31 +104,34 @@ async function copierIA() {
   try { await navigator.clipboard.writeText(document.getElementById("texte-ia").value); annoncer("Rapport copié."); }
   catch (e) { annoncer("Copie refusée par le navigateur.", true); }
 }
-async function redigerIA() {
-  const p = new URLSearchParams(location.search), d = {};
+async function redigerIA(type) {
+  const p = new URLSearchParams(location.search), d = {type};
   for (const k of ["jours", "du", "au"]) if (p.get(k)) d[k] = p.get(k);
   const r = await poster("/api/rapport/rediger", d);
   annoncer(r.message || "Erreur", !r.ok);
   if (r.ok) suivreIA();
 }
 async function suivreIA() {   // la page se recharge sur le nouveau rapport quand le modèle a fini
-  const bouton = document.getElementById("bouton-ia"), etat = document.getElementById("etat-ia");
-  bouton.disabled = true;
+  const boutons = [document.getElementById("bouton-ia"), document.getElementById("bouton-ecole")];
+  const etat = document.getElementById("etat-ia");
+  boutons.forEach(b => b.disabled = true);
   while (true) {
     let e;
     try { e = await (await fetch("/api/rapport/etat", {cache: "no-store"})).json(); } catch (x) { e = {etat: "en cours", message: "…"}; }
     etat.textContent = e.etat === "en cours" ? "⏳ " + e.message : "";
     if (e.etat === "fini") { choisirIA(e.fichier); return; }
-    if (e.etat === "erreur") { annoncer(e.message, true); bouton.disabled = false; return; }
-    if (e.etat !== "en cours") { bouton.disabled = false; return; }
+    if (e.etat !== "en cours") {
+      if (e.etat === "erreur") annoncer(e.message, true);
+      boutons.forEach(b => b.disabled = false);
+      return;
+    }
     await new Promise(ok => setTimeout(ok, 3000));
   }
 }
 if (ETAT_IA.etat === "en cours") suivreIA();
 async function copierTexte() {
-  const zone = document.getElementById("texte");
-  try { await navigator.clipboard.writeText(zone.value); annoncer("Rapport copié."); }
-  catch (e) { zone.closest("details").open = true; zone.select(); annoncer("Copie refusée : le texte est sélectionné, fais Ctrl+C.", true); }
+  try { await navigator.clipboard.writeText(document.getElementById("texte").value); annoncer("Bilan copié."); }
+  catch (e) { annoncer("Copie refusée par le navigateur.", true); }
 }
 </script>
 {% endblock %}

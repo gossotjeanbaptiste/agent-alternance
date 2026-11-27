@@ -38,6 +38,7 @@ import theme  # noqa: E402
 import tour_web  # noqa: E402
 from api import api  # noqa: E402
 from api_rapport import api_rapport  # noqa: E402
+from api_linkedin import api_linkedin  # noqa: E402
 from pages import pages  # noqa: E402
 from tableau import STATUTS  # noqa: E402
 
@@ -59,13 +60,26 @@ def creer_app():
     app = Flask(__name__, template_folder=str(web / "templates"), static_folder=str(web / "static"))
     app.secret_key = auth.cle_secrete()   # signe le cookie de session (gardée : on reste connecté après un redémarrage)
     app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Strict",
-                      PERMANENT_SESSION_LIFETIME=timedelta(days=30))
+                      PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+                      MAX_CONTENT_LENGTH=25 * 1024 * 1024)   # fichier envoyé (CV, export LinkedIn) : refusé au-delà de 25 Mo
     app.before_request(securite.proteger)
+
+    @app.url_defaults
+    def version_statique(endpoint, values):
+        """style.css?v=… : le navigateur reprend un fichier dès qu'il change (sinon il pouvait garder l'ancien
+        script après une mise à jour : tri, groupes… cassés jusqu'à un rechargement forcé)."""
+        if endpoint == "static" and values.get("filename"):
+            try:
+                values["v"] = int((Path(app.static_folder) / values["filename"]).stat().st_mtime)
+            except OSError:
+                pass
+
     app.context_processor(lambda: {"jeton": securite.JETON, "avec_tour": tour_web.disponible(), "statuts": STATUTS, "statuts_tries": alphabetique(STATUTS),
                                    "connecte": session.get("connecte"), "theme": theme.attribut()})
     app.register_blueprint(pages)
     app.register_blueprint(api)
     app.register_blueprint(api_rapport)
+    app.register_blueprint(api_linkedin)
     return app
 
 

@@ -40,6 +40,7 @@ def main(essai=False):
     for i, (r, manque) in enumerate(a_faire, 1):
         ent = s.get(r, "Entreprise")
         say(f"   [{i}/{len(a_faire)}] {ent} : {' et '.join(manque)}…")
+        commun.etape("Réponses La Bonne Alternance", ent, i, len(a_faire))
         try:
             if "la lettre" in manque:
                 postuler.ecrire_lettre(s, r)

@@ -26,6 +26,17 @@ def test_adresse_et_contacts_modifies(client, tableau):
     assert l["Statut"] == "Candidaté (autre canal)"            # le reste de la ligne n'est pas touché
 
 
+def test_plusieurs_adresses(client, tableau):
+    n = preparer(client, tableau)
+    r = client.post("/api/suivi/fiche", json={"ligne": n, "entreprise": "Pixelmont",
+                                              "champs": {"Email": " RH@pixelmont.fr , jobs@pixelmont.fr;rh@pixelmont.fr "}})
+    assert r.get_json()["ok"]
+    assert ligne(tableau, "Pixelmont")["Email"] == "rh@pixelmont.fr; jobs@pixelmont.fr"   # rangées, sans doublon
+    assert client.post("/api/suivi/fiche", json={"ligne": n, "entreprise": "Pixelmont",
+                                                 "champs": {"Email": ""}}).get_json()["ok"]
+    assert not ligne(tableau, "Pixelmont")["Email"]                                          # vidée
+
+
 def test_entreprise_renommee(client, tableau):
     n = preparer(client, tableau)
     assert client.post("/api/suivi/fiche", json={"ligne": n, "entreprise": "Pixelmont",
@@ -35,7 +46,7 @@ def test_entreprise_renommee(client, tableau):
 
 def test_refus(client, tableau):
     n = preparer(client, tableau)
-    for champs in ({"Email": "rh@pixelmont.fr; jobs@pixelmont.fr"}, {"Entreprise": "  "}, {"Lien": "javascript:alert(1)"}, {}):
+    for champs in ({"Email": "rh@pixelmont.fr; pas-une-adresse"}, {"Entreprise": "  "}, {"Lien": "javascript:alert(1)"}, {}):
         r = client.post("/api/suivi/fiche", json={"ligne": n, "entreprise": "Pixelmont", "champs": champs})
         assert r.status_code == 400 and not r.get_json()["ok"]
     r = client.post("/api/suivi/fiche", json={"ligne": n, "entreprise": "Autre", "champs": {"Lieu": "Grenoble"}})

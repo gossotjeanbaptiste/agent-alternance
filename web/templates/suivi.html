@@ -12,14 +12,14 @@
       <label class="champ">Entreprise * <input type="text" id="a-Entreprise" required></label>
       <label class="champ">Poste <input type="text" id="a-Poste" placeholder="Développeur web en alternance"></label>
       <label class="champ">Lieu <input type="text" id="a-Lieu" placeholder="69003 Lyon"></label>
-      <label class="champ">Statut
+      <div class="champ"><label for="a-Statut">Statut</label>
         <select id="a-Statut">{% for st in statuts_tries %}<option {{ 'selected' if st == 'Candidaté (autre canal)' }}>{{ st }}</option>{% endfor %}</select>
-      </label>
+      </div>
       <label class="champ">Date d'envoi <input type="date" id="a-Date-envoi"></label>
     </div>
     <div>
       <label class="champ">Contact <input type="text" id="a-Contact" placeholder="Prénom Nom"></label>
-      <label class="champ">Adresse mail <input type="text" id="a-Email" placeholder="rh@entreprise.fr"></label>
+      <label class="champ">Adresse(s) mail <input type="text" id="a-Email" placeholder="rh@entreprise.fr; marc@entreprise.fr"></label>
       <label class="champ">Téléphone <input type="text" id="a-Téléphone"></label>
       <label class="champ">Lien (offre, formulaire…) <input type="text" id="a-Lien" placeholder="https://…"></label>
       <label class="champ">Source <input type="text" id="a-Source" list="sources" placeholder="Ajout manuel"></label>
@@ -32,8 +32,8 @@
 </details>
 <dialog id="fiche" class="carte fiche">
   <h2>✏️ Fiche de <span id="f-titre"></span></h2>
-  <p class="doux">Une seule adresse mail : celle du suivi des réponses et des relances. Les autres contacts vont dans
-    « Contact » ou « Notes ».</p>
+  <p class="doux">Plusieurs adresses mail possibles, séparées par « ; » : toutes servent au suivi des réponses et
+    reçoivent les relances.</p>
   <div class="deux">
     <div>
       <label class="champ">Entreprise * <input type="text" id="f-Entreprise"></label>
@@ -43,7 +43,7 @@
     </div>
     <div>
       <label class="champ">Contact(s) <input type="text" id="f-Contact" placeholder="Prénom Nom (RH), Prénom Nom (tuteur)"></label>
-      <label class="champ">Adresse mail <input type="text" id="f-Email" placeholder="rh@entreprise.fr"></label>
+      <label class="champ">Adresse(s) mail <input type="text" id="f-Email" placeholder="rh@entreprise.fr; marc@entreprise.fr"></label>
       <label class="champ">Téléphone <input type="text" id="f-Téléphone"></label>
       <label class="champ">Lien (site, offre, formulaire…) <input type="text" id="f-Lien" placeholder="https://…"></label>
     </div>

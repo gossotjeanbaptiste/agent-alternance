@@ -27,6 +27,7 @@ def rediger_candidature(o):
 def nouvelles_candidatures(suivi, ol):
     n = CFG["mails_par_jour"]
     say(f"🔎 Recherche de {n} nouvelles entreprises...")
+    commun.etape("Recherche de nouvelles entreprises", "liste perso, alertes LinkedIn, La Bonne Alternance")
     noms, domaines, sirets = suivi.deja_vus()
     choix, sans_mail = [], []
     recherches, maxi = 0, CFG["la_bonne_alternance"].get("recherches_site_max", 30)
@@ -47,6 +48,8 @@ def nouvelles_candidatures(suivi, ol):
                 # pas d'adresse : on cherche le site de l'entreprise (s'il n'est pas connu),
                 # puis une adresse ou un formulaire de contact sur ce site
                 recherches += 1
+                commun.etape("Recherche des sites et adresses", f"{o['entreprise']} — {len(choix)}/{n} retenue(s)",
+                             ligne=f"   ⏳ Recherche du site et de l'adresse de {o['entreprise']}…")
                 if not o.get("site"):
                     o["site"] = trouver_site(o["entreprise"], o.get("lieu"))
                 if o.get("site"):
@@ -75,7 +78,9 @@ def nouvelles_candidatures(suivi, ol):
     if not choix:
         say("   Aucune nouvelle entreprise trouvée (remplis la feuille « À contacter » ou ajoute un jeton La Bonne Alternance).")
         return
-    for o in choix:
+    for k, o in enumerate(choix, 1):
+        commun.etape("Rédaction des candidatures", o["entreprise"], k, len(choix),
+                     ligne=f"   ⏳ Rédaction pour {o['entreprise']} ({k}/{len(choix)})…")
         try:
             objet, corps = rediger_candidature(o)
         except Exception as e:

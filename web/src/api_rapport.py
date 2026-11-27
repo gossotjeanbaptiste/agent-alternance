@@ -8,9 +8,10 @@ api_rapport = Blueprint("api_rapport", __name__, url_prefix="/api/rapport")
 
 @api_rapport.post("/rediger")
 def rediger():
-    """Lance la rédaction en arrière-plan pour la période {jours} ou {du, au} de la page."""
+    """Lance la rédaction en arrière-plan pour la période {jours} ou {du, au} de la page ; {type} : moi / ecole."""
     d = request.get_json(force=True, silent=True) or {}
-    ok, message = rapport_ia.lancer({k: d.get(k) for k in ("jours", "du", "au") if d.get(k)})
+    ok, message = rapport_ia.lancer({k: d.get(k) for k in ("jours", "du", "au") if d.get(k)},
+                                    type_=str(d.get("type") or "moi"))
     return jsonify(ok=ok, message=message), (200 if ok else 409)
 
 

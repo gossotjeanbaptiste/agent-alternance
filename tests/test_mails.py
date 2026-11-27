@@ -117,3 +117,20 @@ def test_etiquette_a_trouver(cfg):
     assert mails.etiquette_a_trouver() == "À compléter"
     cfg["messagerie"] = {"etiquette_a_trouver": ""}
     assert mails.etiquette_a_trouver() == ""
+
+
+@pytest.mark.parametrize("cellule, attendu", [
+    ("rh@a.fr", ["rh@a.fr"]),
+    (" RH@a.fr ; marc@a.fr,lea@b.fr  jo@c.fr", ["rh@a.fr", "marc@a.fr", "lea@b.fr", "jo@c.fr"]),
+    ("rh@a.fr; rh@a.fr", ["rh@a.fr"]),                      # sans doublon
+    ("linkedin", []), ("", []), (None, []),
+    ("rh@a.fr; pas-une-adresse", ["rh@a.fr"]),
+])
+def test_adresses_d_une_case(cellule, attendu):
+    assert mails.adresses(cellule) == attendu
+
+
+def test_verifier_adresses():
+    assert mails.verifier_adresses("RH@a.fr, marc@a.fr") == ("rh@a.fr; marc@a.fr", [])
+    assert mails.verifier_adresses("rh@a.fr; oups") == ("rh@a.fr", ["oups"])
+    assert mails.verifier_adresses("") == ("", [])

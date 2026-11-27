@@ -1,7 +1,7 @@
 """Classement d'une réponse reçue par le modèle, et réponses reconnues par leur contenu (signature surtout)."""
 import re
 
-from mails import DOMAINES_PERSO, domaine, est_adresse
+from mails import DOMAINES_PERSO, adresses, domaine, est_adresse
 from modele import llm_json
 from rapprochement import preuves_dans_le_mail
 from tableau import HORS_MAIL
@@ -32,10 +32,10 @@ def reconnus_par_le_contenu(suivi, recus, ndr, statuts_actifs):
         statut = suivi.get(r, "Statut") or ""
         if (statut in statuts_actifs or statut in HORS_MAIL) and not statut.startswith("Brouillon"):
             site = re.search(r"Site : (\S+)", str(suivi.get(r, "Notes") or ""))
-            lignes.append((r[0].row, suivi.get(r, "Entreprise"), str(suivi.get(r, "Email") or "").strip().lower(),
+            lignes.append((r[0].row, suivi.get(r, "Entreprise"), "; ".join(adresses(suivi.get(r, "Email"))),
                            suivi.get(r, "Lieu"), suivi.get(r, "Téléphone"), site.group(1) if site else ""))
     # domaines de TOUTES les entreprises du tableau (une entreprise déjà refusée qui écrit ne compte pas pour une autre)
-    domaines_tableau = {domaine(str(suivi.get(r, "Email") or "").strip().lower()) for r in suivi.rows()} \
+    domaines_tableau = {domaine(a) for r in suivi.rows() for a in adresses(suivi.get(r, "Email"))} \
         - set(DOMAINES_PERSO) - {""}
     from .ailleurs_lecture import nomme_l_entreprise   # (import ici : ailleurs_lecture importe ce module)
     res = {}

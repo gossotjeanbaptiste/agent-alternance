@@ -15,12 +15,15 @@ nav { display: flex; gap: 4px; flex-wrap: wrap; padding: 12px 20px; background: 
 nav .marque { margin-right: 16px; align-self: center; padding: 0; display: flex; }
 nav .marque:hover { background: none; }
 nav .marque img { height: 40px; width: auto; display: block; }
-nav a { color: var(--doux); text-decoration: none; padding: 6px 12px; border-radius: 8px; }
+nav a { color: var(--doux); text-decoration: none; padding: 6px 10px; border-radius: 8px; white-space: nowrap; }
+@media (min-width: 1100px) { nav { flex-wrap: nowrap; align-items: center; } }
+nav button { white-space: nowrap; flex: none; }
 nav a.actif, nav a:hover { background: var(--accent-fond); color: var(--accent); }
 nav .quitter { margin-left: auto; color: var(--erreur); border-color: var(--erreur); background: transparent; }
 nav .quitter:hover { background: var(--erreur); color: var(--carte); }
-main { max-width: 1200px; margin: 0 auto; padding: 20px; }
-main.large { max-width: none; }   /* pages à grand tableau (Suivi) : toute la largeur de la fenêtre */
+main { margin: 0 auto; padding: 20px 28px; }   /* toutes les pages : toute la largeur de la fenêtre */
+main.etroit { max-width: 1200px; }   /* pages de connexion, assistant */
+@media (max-width: 700px) { main { padding: 16px; } }
 h1 { font-size: 22px; font-weight: 600; margin: 4px 0 16px; }
 h2 { font-size: 17px; font-weight: 600; margin: 0 0 12px; }
 .grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
@@ -36,7 +39,14 @@ table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--bord); vertical-align: top; }
 th { color: var(--doux); font-weight: 500; font-size: 13px; }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; color: #222; white-space: nowrap; }
-button, select, input[type=search] { font: inherit; font-size: 14px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--bord); background: var(--carte); color: var(--texte); }
+/* boutons et champs : un seul style partout (comme la page Paramètres) */
+button, select, input[type=search], input[type=text], input[type=url], input[type=password], input[type=email],
+input[type=number], input[type=date], input[type=time] { font: inherit; font-size: 14px; padding: 6px 10px; border-radius: 8px;
+  border: 1px solid var(--bord); background: var(--carte); color: var(--texte); }
+button { padding: 6px 12px; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+select option { background: var(--carte); color: var(--texte); }
+input[type=checkbox] { accent-color: var(--accent); }
 button { cursor: pointer; }
 button.principal { background: var(--accent); color: var(--carte); border-color: var(--accent); }
 button:disabled { opacity: .5; cursor: default; }
@@ -68,7 +78,7 @@ a { color: var(--accent); }
 .connexion { width: 100%; max-width: 380px; }
 .connexion h1 { display: flex; justify-content: center; margin: 4px 0 12px; }
 .erreur-texte { color: var(--erreur); min-height: 1.2em; margin: 6px 0; }
-nav .utilisateur { margin-left: auto; align-self: center; color: var(--doux); padding: 0 8px; max-width: 220px;
+nav .utilisateur { margin-left: auto; align-self: center; color: var(--doux); padding: 0 8px; max-width: 160px;
                    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 nav .deconnexion { margin-left: auto; background: transparent; }
 nav .utilisateur + .deconnexion { margin-left: 0; }
@@ -76,7 +86,8 @@ nav .deconnexion + .quitter { margin-left: 6px; }
 .assistant { width: 100%; max-width: 560px; }
 .assistant h1 { display: flex; justify-content: center; margin: 4px 0 4px; }
 .etapes { text-align: center; margin-top: 0; }
-dialog.fiche { width: min(860px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; color: var(--texte); }
+dialog.fiche { width: min(860px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; color: var(--texte);
+  margin: auto; }   /* centrée (la marge du bas des .carte la décalait vers le bas) */
 dialog.fiche::backdrop { background: rgba(0, 0, 0, .45); }
 button.petit { padding: 1px 6px; font-size: .85em; }
 .rapport-ia { line-height: 1.55; font-size: 15px; }
@@ -90,3 +101,10 @@ button.petit { padding: 1px 6px; font-size: .85em; }
   .carte { break-inside: avoid; }
   main { padding: 0; }
 }
+@media (max-width: 1400px) {   /* fenêtre moyenne : le nom du compte reste dans l'info-bulle de « Se déconnecter » */
+  nav .utilisateur { display: none; }
+  nav .utilisateur + .deconnexion { margin-left: auto; }
+}
+
+/* un peu d'air entre une zone de saisie et ses boutons */
+.zone + .actions, .champ + .actions, .carte > .actions:last-child, .lettre + button { margin-top: 12px; }

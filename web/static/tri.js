@@ -2,6 +2,7 @@
 // Chaque option du menu vaut "champ:asc" ou "champ:desc" ; le champ est un attribut data-<champ> des cartes.
 // Une option avec data-nombre trie numériquement. Les valeurs vides vont toujours à la fin.
 // Le choix est retenu dans le navigateur (localStorage), pour chaque page.
+// Cartes regroupées (groupes.js) : chaque carte est triée dans son groupe.
 
 function comparerCartes(a, b, champ, sens, nombre) {
   const x = (a.dataset[champ] || "").trim(), y = (b.dataset[champ] || "").trim();
@@ -26,13 +27,14 @@ function activerTri(idMenu, idBoite, memoire) {
     if (choix && [...menu.options].some(o => o.value === choix)) menu.value = choix;
   } catch (e) {}
   const appliquer = () => {
-    const cartes = [...boite.children].filter(c => c.classList.contains("carte") && c.dataset.entreprise !== undefined);
+    const cartes = [...boite.querySelectorAll(".carte[data-entreprise]")];
     const nombre = menu.selectedOptions[0] && menu.selectedOptions[0].dataset.nombre !== undefined;
-    trierCartes(cartes, menu.value, nombre).forEach(c => boite.appendChild(c));
+    trierCartes(cartes, menu.value, nombre).forEach(c => c.parentElement.appendChild(c));   // dans son groupe
     try { localStorage.setItem(memoire, menu.value); } catch (e) {}
   };
   menu.addEventListener("change", appliquer);
   appliquer();
+  return appliquer;      // à rappeler après un nouveau regroupement
 }
 
 if (typeof module !== "undefined") module.exports = { comparerCartes, trierCartes };

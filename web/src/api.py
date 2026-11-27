@@ -1,5 +1,4 @@
 """Les actions de l'interface (appelées par le JavaScript des pages)."""
-import re
 import threading
 from datetime import date
 
@@ -78,9 +77,11 @@ def statut():
         return jsonify(ok=False, message="Statut inconnu."), 400
     champs = {"Statut": d["statut"]}
     email = str(d.get("email") or "").strip()
-    if email:   # candidature « adresse à trouver » envoyée : adresse notée pour le suivi des réponses et la relance
-        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[A-Za-z]{2,}", email):
-            return jsonify(ok=False, message=f"Adresse mail invalide : {email}"), 400
+    if email:   # candidature « adresse à trouver » envoyée : adresse(s) notée(s) pour le suivi des réponses et la relance
+        from mails import verifier_adresses
+        email, invalides = verifier_adresses(email)
+        if invalides:
+            return jsonify(ok=False, message=f"Adresse mail invalide : {', '.join(invalides)}"), 400
         champs["Email"] = email
     if d["statut"].startswith("Candidaté") and d.get("postule"):
         champs.update({"Date envoi": date.today(), "Dernière action": date.today()})

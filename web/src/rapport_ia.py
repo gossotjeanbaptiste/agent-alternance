@@ -1,40 +1,20 @@
-"""Rapport rédigé par le modèle local (la tour, sinon ce PC) à partir du bilan de la page Rapport.
+"""Rapport rédigé par le modèle local (la tour, sinon ce PC) à partir du bilan de la page Rapport :
+« pour moi » ou « pour l'école » (consignes dans rapport_consignes.py ; annexe de l'école écrite par le code).
 
 Rédigé en arrière-plan (la page suit l'avancement par /api/rapport/etat), enregistré dans le dossier
-personnel « rapports » (rapport_AAAA-MM-JJ_HHMM.md), puis le modèle est déchargé.
+personnel « rapports » (rapport_AAAA-MM-JJ_HHMM.md, ou …_ecole.md), puis le modèle est déchargé.
 """
 import re
 import threading
 from datetime import datetime
 
 import emplacements
+import rapport_consignes
 import rapport_contexte
 import routines
 
 ETAT = {"etat": "inactif", "message": "", "fichier": ""}   # inactif | en cours | fini | erreur
-SYSTEME = ("Tu es un conseiller qui aide un étudiant à faire le point sur sa recherche d'alternance. "
-           "Tu écris en français, de façon claire, concrète et bienveillante, sans flatterie.")
-TITRES = ["Synthèse", "Activité", "Réponses et retours", "Ce qui fonctionne, ce qui bloque", "Prochaines étapes",
-          "Conseils"]
-CONSIGNES = """Rédige le rapport de recherche d'alternance de l'étudiant pour la période indiquée, en Markdown,
-à partir UNIQUEMENT des données ci-dessous.
-
-Structure : un titre « # Rapport de recherche d'alternance » suivi des dates, puis exactement ces parties,
-avec ces titres mot pour mot et rien d'autre sur la ligne du titre :
-""" + "\n".join(f"## {t}" for t in TITRES) + """
-
-Contenu attendu (consignes pour toi, à ne JAMAIS recopier dans le rapport) :
-- Synthèse : un court paragraphe sur où en est la recherche.
-- Activité : candidatures envoyées pendant la période, canaux, sources, travail des routines automatiques.
-- Réponses et retours : réponses reçues et ce qu'elles disent (refus, demandes de disponibilités, entretiens…), taux.
-- Ce qui fonctionne, ce qui bloque : d'après les chiffres et les réponses.
-- Prochaines étapes : relances prévues, candidatures à finaliser, réponses à donner, avec les noms d'entreprises.
-- Conseils : quelques conseils concrets adaptés à ces données et au profil.
-
-Règles :
-- reprends les chiffres EXACTS ; ne confonds pas les chiffres de la période avec ceux de tout le tableau ;
-- n'invente aucune entreprise, aucun chiffre, aucune réponse, aucun entretien ;
-- si une information manque, dis-le simplement ; pas de tableau Markdown, des listes à puces au besoin."""
+NOM = re.compile(r"^rapport_(\d{4})-(\d\d)-(\d\d)_(\d\d)(\d\d)(?:_(ecole))?\.md$")
 
 
 def dossier():
@@ -45,7 +25,24 @@ def dossier():
 
 def enregistres(n=20):
     """Noms des rapports déjà rédigés, du plus récent au plus ancien."""
-    return [f.name for f in sorted(dossier().glob("rapport_*.md"), reverse=True)[:n]]
+    return [d["nom"] for d in liste(n)]
+
+
+def decrire(nom):
+    """{nom, type ("moi" / "ecole"), libelle} d'un rapport enregistré d'après son nom, ou None."""
+    m = NOM.match(nom)
+    if not m:
+        return None
+    a, mo, j, h, mi, ecole = m.groups()
+    type_ = "ecole" if ecole else "moi"
+    return {"nom": nom, "type": type_, "quand": f"{a}{mo}{j}{h}{mi}",
+            "libelle": f"Rapport {rapport_consignes.TYPES[type_]} du {j}/{mo}/{a} à {h}h{mi}"}
+
+
+def liste(n=20):
+    """Rapports enregistrés (decrire), du plus récent au plus ancien."""
+    tout = [d for f in dossier().glob("rapport_*.md") if (d := decrire(f.name))]
+    return sorted(tout, key=lambda d: d["quand"], reverse=True)[:n]
 
 
 def lire(nom):
@@ -64,26 +61,30 @@ def nettoyer(texte):
     return re.sub(r"^(#{2,4}\s.*?)\s+[—–]\s.*$", r"\1", (texte or "").strip(), flags=re.M)
 
 
-def rediger(r):
+def rediger(r, type_="moi"):
     """Fait écrire le rapport au modèle (bloquant). Renvoie le nom du fichier enregistré."""
     import agent
     import chemins  # noqa: F401
     import modele
     agent.ensure_server()
-    texte = nettoyer(modele.llm(CONSIGNES + "\n\n=== DONNÉES ===\n" + rapport_contexte.contexte(r),
-                                system=SYSTEME, temperature=0.4))
+    systeme, consignes = rapport_consignes.consignes(type_)
+    texte = nettoyer(modele.llm(consignes + "\n\n=== DONNÉES ===\n" + rapport_contexte.contexte(r, ecole=type_ == "ecole"),
+                                system=systeme, temperature=0.4))
     if not texte:
         raise RuntimeError("le modèle n'a rien écrit")
-    nom = f"rapport_{datetime.now():%Y-%m-%d_%H%M}.md"
+    if type_ == "ecole":       # liste des entreprises contactées : d'après le tableau, jamais d'après le modèle
+        texte += "\n\n" + rapport_consignes.annexe(r["t"]["liste_envoyees"])
+    nom = f"rapport_{datetime.now():%Y-%m-%d_%H%M}{'_ecole' if type_ == 'ecole' else ''}.md"
     (dossier() / nom).write_text(texte + "\n", encoding="utf-8")
-    agent.log(f"📄 Rapport rédigé par le modèle ({r['debut']:%d/%m/%Y} → {r['fin']:%d/%m/%Y}) : {nom}")
+    agent.log(f"📄 Rapport {rapport_consignes.TYPES[type_]} rédigé par le modèle "
+              f"({r['debut']:%d/%m/%Y} → {r['fin']:%d/%m/%Y}) : {nom}")
     return nom
 
 
-def _travail(r):
+def _travail(r, type_="moi"):
     import redaction
     try:
-        ETAT.update(etat="fini", fichier=rediger(r), message="Rapport rédigé.")
+        ETAT.update(etat="fini", fichier=rediger(r, type_), message="Rapport rédigé.")
     except SystemExit:                       # serveur du modèle injoignable (agent.ensure_server)
         ETAT.update(etat="erreur", message="Le modèle ne répond pas : vérifie LM Studio (sur la tour ou ce PC).")
     except Exception as e:
@@ -97,8 +98,10 @@ def _travail(r):
         redaction.VERROU.release()
 
 
-def lancer(args, lignes=None):
-    """Lance la rédaction en arrière-plan pour la période demandée. Renvoie (ok, message)."""
+def lancer(args, lignes=None, type_="moi"):
+    """Lance la rédaction en arrière-plan pour la période demandée ; type_ : "moi" ou "ecole". Renvoie (ok, message)."""
+    if type_ not in rapport_consignes.TYPES:
+        return False, "Type de rapport inconnu."
     import rapport
     import redaction
     if routines.en_cours():
@@ -110,7 +113,7 @@ def lancer(args, lignes=None):
     except Exception as e:
         redaction.VERROU.release()
         return False, f"Lecture du tableau impossible : {e}"
-    ETAT.update(etat="en cours", fichier="", message="Le modèle rédige le rapport (réveil de la tour et chargement compris, "
-                "compte quelques minutes)…")
-    threading.Thread(target=_travail, args=(r,), daemon=True).start()
+    ETAT.update(etat="en cours", fichier="", message=f"Le modèle rédige le rapport {rapport_consignes.TYPES[type_]} "
+                "(réveil de la tour et chargement compris, compte quelques minutes)…")
+    threading.Thread(target=_travail, args=(r, type_), daemon=True).start()
     return True, ETAT["message"]

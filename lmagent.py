@@ -114,6 +114,17 @@ def routine(args):
         fois = max(1, int(_valeur(args, "--fois", 1)))
     except ValueError:
         fois = 1
+    import avancement   # avancement en direct (page Routines), routine programmée comprise
+    avancement.commencer(nom, fois, essai="--essai" in args)
+    code = 1
+    try:
+        code = _routine(nom, fois, essai)
+    finally:
+        avancement.finir(code)
+    return code
+
+
+def _routine(nom, fois, essai):
     if fois > 1:  # chaque passage dans un processus neuf (comme un lancement manuel)
         import os
         import boucle
@@ -121,8 +132,10 @@ def routine(args):
         sortie = _fichier_de_sortie()
         ident = os.getpid()
         try:
+            import avancement
             for i in range(fois):
                 print(f"\n===== Passage {i + 1}/{fois} =====\n", flush=True)
+                avancement.passage(i + 1, fois)
                 # le passage écrit dans le MÊME fichier ouvert que la boucle (sinon chacun écrit à sa propre position
                 # et les repères « Passage N » écrasent le début du journal) ; modèle et LM Studio restent ouverts
                 # jusqu'au dernier passage (boucle.py)

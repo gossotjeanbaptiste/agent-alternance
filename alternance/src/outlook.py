@@ -8,7 +8,7 @@ from pathlib import Path
 import commun
 import reglages
 from commun import CFG, P, say
-from mails import est_a_trouver, etiquette_a_trouver
+from mails import adresses, est_a_trouver, etiquette_a_trouver
 
 def _chemins_outlook():
     """Emplacements possibles d'OUTLOOK.EXE (modifiables dans la page Paramètres, section « Messagerie »)."""
@@ -200,13 +200,13 @@ class Outlook:
 
     def supprimer_brouillons(self, adresse):
         """Met à la corbeille (Éléments supprimés) les brouillons adressés à cette adresse. Renvoie leur nombre."""
-        adresse = (adresse or "").strip().lower()
-        if not adresse or commun.ESSAI:
+        cibles = set(adresses(adresse))          # une ou plusieurs adresses (« a@x.fr; b@x.fr »)
+        if not cibles or commun.ESSAI:
             return 0
         a_supprimer = []
         for it in self.ns.GetDefaultFolder(16).Items:  # on liste d'abord : supprimer en parcourant saute des mails
             try:
-                if adresse in [self._addr(r) for r in it.Recipients]:
+                if cibles & {self._addr(r) for r in it.Recipients}:
                     a_supprimer.append(it)
             except Exception:
                 pass

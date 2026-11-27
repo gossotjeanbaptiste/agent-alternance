@@ -36,8 +36,8 @@ def connexion():
 
 @pages.route("/")
 def accueil():
-    lignes = suivi_donnees.lire()
-    return render_template("accueil.html", page="accueil", s=suivi_donnees.statistiques(lignes),
+    import statistiques
+    return render_template("accueil.html", page="accueil", s=statistiques.calculer(suivi_donnees.lire()),
                            routine=routines.ROUTINE["nom"] if routines.en_cours() else None)
 
 
@@ -54,12 +54,25 @@ def page_rapport():
     import rapport_ia
     import rapport_md
     r = rapport.generer(request.args)
-    enregistres = rapport_ia.enregistres()
-    ia = request.args.get("ia") or (enregistres[0] if enregistres else "")
+    enregistres = rapport_ia.liste()
+    ia = request.args.get("ia") or (enregistres[0]["nom"] if enregistres else "")
     ia_texte = rapport_ia.lire(ia)
-    return render_template("rapport.html", page="rapport", r=r, periodes=rapport.PERIODES, texte=rapport.texte(r),
-                           enregistres=enregistres, ia=ia if ia_texte else "", ia_texte=ia_texte,
+    return render_template("rapport.html", page="rapport", r=r, periodes=rapport.PERIODES, disques=rapport.disques(r, __import__('tableau').STATUTS),
+                           texte=rapport.texte(r, details=False), enregistres=enregistres,
+                           ia=ia if ia_texte else "", ia_texte=ia_texte, ia_infos=rapport_ia.decrire(ia) if ia_texte else None,
                            ia_html=rapport_md.en_html(ia_texte), ia_etat=rapport_ia.ETAT)
+
+
+@pages.route("/rapport/imprimer")
+def imprimer_rapport():
+    """Le rapport rédigé seul, sans menu ni boutons, pour l'imprimer ou l'enregistrer en PDF."""
+    import rapport_ia
+    import rapport_md
+    nom = request.args.get("ia") or ""
+    texte = rapport_ia.lire(nom)
+    if not texte:
+        abort(404)
+    return render_template("rapport_imprimer.html", ia_html=rapport_md.en_html(texte), infos=rapport_ia.decrire(nom))
 
 
 @pages.route("/parametres")
@@ -72,7 +85,7 @@ def page_parametres():
                            signature=signature, debut=debut, ajouter=ajouter, fichier=fichier,
                            interdits=parametres.lire_interdits(), profil=parametres.lire_profil(),
                            version=__import__("version").__version__, installee=__import__("emplacements").INSTALLEE,
-                           sections=reglages_web.sections())
+                           categories=__import__("categories_reglages").categories(reglages_web.sections()))
 
 
 @pages.route("/postuler")
@@ -112,13 +125,19 @@ def tour():
 def linkedin():
     rel = relations.lire_relations()
     trouves = relations.correspondances(suivi_donnees.lire(), rel) if rel else []
-    return render_template("linkedin.html", page="linkedin", trouves=trouves, total=len(rel) if rel else None)
+    from datetime import datetime
+    maj = f"{datetime.fromtimestamp(relations.FICHIER.stat().st_mtime):%d/%m/%Y}" if relations.FICHIER.exists() else ""
+    return render_template("linkedin.html", page="linkedin", trouves=trouves, maj=maj,
+                           total=len(rel) if rel is not None else None)
 
 
 @pages.route("/journal")
 def journal():
-    fichiers = sorted(LOGS.glob("*.log"), reverse=True) if LOGS.exists() else []
+    tous = list(LOGS.glob("*.log")) if LOGS.exists() else []
+    # journaux du jour (AAAA-MM-JJ.log) du plus récent au plus ancien, puis les autres (ovms.log…)
+    fichiers = (sorted((f for f in tous if f.name[:4].isdigit()), reverse=True)
+                + sorted((f for f in tous if not f.name[:4].isdigit()), key=lambda f: f.name))
     choisi = request.args.get("f") or (fichiers[0].name if fichiers else None)
     f = routines.fichier_du_journal(choisi) if choisi else None
     return render_template("journal.html", page="journal", fichiers=[x.name for x in fichiers],
-                           choisi=choisi, contenu=routines.fin_de_fichier(f, 400) if f else "")
+                           choisi=choisi, contenu=routines.fin_de_fichier(f, 3000) if f else "")   # toute la journée (ou presque)

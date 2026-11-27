@@ -27,25 +27,28 @@ def _envoi_constate(p, l):
 
 
 def _brouillon_de_relance(p, l):
-    s, ol, mail = p.suivi, p.ol, l.mail
+    s, ol = p.suivi, p.ol
+    mails = l.mails or [l.mail]          # toutes les adresses de la candidature
+    programmee = next((a for a in mails if a in p.programmes), None)
+    en_brouillon = any(a in p.brouillons for a in mails)
     # relance planifiée par toi (nouvel Outlook : reste dans Brouillons) ou dans la Boîte d'envoi
-    if l.statut == "Relance en brouillon" and mail in p.programmes:
+    if l.statut == "Relance en brouillon" and programmee:
         l.statut = "Relance programmée"
         s.set(l.row, "Statut", l.statut)
-        q = p.programmes[mail]
+        q = p.programmes[programmee]
         say(f"   ⏰ {l.ent} : relance programmée{f' pour le {q:%d/%m à %H:%M}' if q else ''}")
 
     # brouillon de relance disparu sans envoi, avec une messagerie qui ne montre pas les envois
     # programmés (IMAP hors Gmail) : on suppose que tu l'as programmé, pas supprimé.
     # (Si tu l'as supprimé : python alternance\maj_tableau.py corrige la ligne.)
-    if not ol.voit_programmes and l.statut == "Relance en brouillon" and mail not in p.brouillons:
+    if not ol.voit_programmes and l.statut == "Relance en brouillon" and not en_brouillon:
         l.statut = "Relance programmée"
         s.set(l.row, "Statut", l.statut)
         say(f"   ⏰ {l.ent} : brouillon de relance parti des Brouillons sans envoi visible : supposé programmé")
 
     # brouillon de relance supprimé sans être envoyé : on la remet dans la file pour la recréer
     if ol.voit_programmes and l.statut in ("Relance en brouillon", "Relance programmée") \
-            and mail not in p.brouillons and mail not in p.programmes:
+            and not en_brouillon and not programmee:
         nb = max(0, int(s.get(l.row, "Nb relances") or 0) - 1)
         l.statut = "Relancé" if nb else MAIL
         s.set(l.row, "Nb relances", nb)

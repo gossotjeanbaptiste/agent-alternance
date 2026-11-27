@@ -66,7 +66,7 @@ def pieces_jointes():
         elif p not in _PJ_SIGNALEES:
             _PJ_SIGNALEES.add(p)
             say(f"   ⚠️ pièce jointe introuvable, le brouillon partira sans : {p} "
-                f"(corrige le chemin dans Paramètres → Fichiers ; tes fichiers sont dans {dossier})")
+                f"(corrige le chemin dans Paramètres → Candidatures et relances → Fichiers ; tes fichiers sont dans {dossier})")
     if not ok and "_aucune" not in _PJ_SIGNALEES:
         _PJ_SIGNALEES.add("_aucune")
         say("   ⚠️ aucune pièce jointe utilisable : les candidatures partiront sans CV")
@@ -75,6 +75,18 @@ def pieces_jointes():
 
 def say(msg):
     agent.say(msg)
+
+
+def etape(texte, detail="", k=None, n=None, ligne=None):
+    """Étape en cours, affichée en direct par la page Routines (src/avancement.py). ligne : texte écrit aussi dans
+    le journal de la routine (affiché seulement, pas noté dans le journal du jour : le Rapport ne le compte pas)."""
+    if ligne:
+        print(ligne, flush=True)
+    try:
+        import avancement
+        avancement.etape(texte, detail, k, n)
+    except Exception:
+        pass
 
 
 def lire_signature_html(f):

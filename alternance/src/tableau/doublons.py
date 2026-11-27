@@ -1,6 +1,6 @@
 """Entreprise déjà dans le tableau ? Même SIRET, même domaine mail, ou même nom ET même ville
 (plusieurs établissements du même nom à des adresses différentes sont permis)."""
-from mails import domaine
+from mails import adresses, domaine
 from .texte import cle_lieu, norm
 
 
@@ -17,8 +17,7 @@ def deja_contactee(o, noms, domaines, sirets):
         return True
     if o.get("siret") and o["siret"] in sirets:
         return True
-    d = domaine(o.get("email") or "")
-    if d and d in domaines:
+    if any(domaine(a) in domaines for a in adresses(o.get("email"))):   # plusieurs adresses possibles
         return True
     lieu = cle_lieu(o.get("lieu"))
 

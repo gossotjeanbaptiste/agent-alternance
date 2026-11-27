@@ -284,6 +284,14 @@ class TestImap:
         assert m["To"] == "rh@exemple.fr" and m["Subject"] == "Candidature" and m["From"] == "moi@gmail.com"
         assert "Camille Test" in m.get_body(("html",)).get_content()   # signature construite
 
+    def test_brouillon_a_plusieurs_adresses(self, boite):
+        boite.brouillon("rh@exemple.fr; marc@exemple.fr", "Relance", "<p>x</p>")
+        m = email.message_from_bytes(boite.serveur.appends[0][2], policy=email.policy.default)
+        assert m["To"] == "rh@exemple.fr, marc@exemple.fr"           # séparées par une virgule dans un vrai mail
+
+    def test_supprimer_brouillons_de_plusieurs_adresses(self, boite):
+        assert boite.supprimer_brouillons("inconnu@x.fr; Patron@Boite.fr") == 1
+
     def test_brouillon_avec_pieces_jointes(self, boite, cfg, tmp_path):
         cv = tmp_path / "cv.pdf"
         cv.write_bytes(b"%PDF-1.4 cv")

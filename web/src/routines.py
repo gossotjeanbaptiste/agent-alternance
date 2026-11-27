@@ -1,20 +1,39 @@
 """Lancement des routines en arrière-plan et lecture de leur sortie."""
 import os
 import subprocess
-import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
 from chemins import ALT, LOGS, ROOT
+from dechargement import decharger_modele  # noqa: F401  (routines.decharger_modele : remplacé par les tests)
 
 SCRIPTS = {"relances": ALT / "relances.py", "recherche": ALT / "recherche.py", "tout": ALT / "alternance.py",
            "mails": ALT / "alternance.py", "reponses": ALT / "reponses_lba.py"}  # noms connus
 ROUTINE = {"proc": None, "nom": None, "fichier": None, "debut": None}
+_EXTERNE = {"quand": 0, "etat": None}     # routine lancée hors de cette interface, vérifiée au plus toutes les 3 s
+
+
+def lancee_ici():
+    """Vrai si la routine lancée par cette interface tourne encore."""
+    p = ROUTINE["proc"]
+    return p is not None and p.poll() is None
+
+
+def externe():
+    """Avancement (src/avancement.py) d'une routine qui tourne sans avoir été lancée par cette interface : routine
+    programmée par le Planificateur de tâches, ou lancée avant que l'interface soit relancée. None sinon."""
+    if lancee_ici():
+        return None
+    if time.time() - _EXTERNE["quand"] > 3:
+        import avancement
+        _EXTERNE.update(quand=time.time(), etat=avancement.en_cours())
+    return _EXTERNE["etat"]
 
 
 def en_cours():
-    p = ROUTINE["proc"]
-    return p is not None and p.poll() is None
+    """Une routine tourne (lancée ici ou programmée) : le tableau ne doit pas être modifié depuis l'interface."""
+    return lancee_ici() or externe() is not None
 
 
 def commande(nom, essai=False, fois=1, depuis=None):
@@ -49,8 +68,8 @@ def annuler():
     Ce qui était fait reste fait (tableau et lettres enregistrés d'un seul coup : jamais à moitié écrits) ;
     le modèle, qu'elle n'a pas pu décharger, l'est ensuite en arrière-plan. Renvoie (ok, message)."""
     p = ROUTINE["proc"]
-    if not en_cours():
-        return False, "Aucune routine en cours."
+    if not lancee_ici():
+        return _annuler_externe()
     subprocess.run(["taskkill", "/PID", str(p.pid), "/T", "/F"], capture_output=True,
                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     try:
@@ -58,69 +77,85 @@ def annuler():
     except subprocess.TimeoutExpired:
         return False, "La routine ne s'arrête pas : réessaie dans un instant."
     ROUTINE["annulee"] = True
+    import avancement
+    avancement.annulee()
+    return _apres_annulation(ROUTINE["fichier"])
+
+
+def _annuler_externe():
+    """Arrête une routine programmée : seulement si son numéro de processus fait bien tourner LMAgent."""
+    import avancement
+    d = externe()
+    if not d:
+        return False, "Aucune routine en cours."
+    if not avancement.en_cours():          # revérifié juste avant l'arrêt (numéro et heure de création du processus)
+        _EXTERNE["quand"] = 0
+        return False, "Cette routine n'est plus en cours."
+    subprocess.run(["taskkill", "/PID", str(int(d["pid"])), "/T", "/F"], capture_output=True,
+                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    _EXTERNE["quand"] = 0
+    avancement.annulee()
+    return _apres_annulation(fichier_du_journal(Path(d.get("sortie") or "").name, prefixe="web_"))
+
+
+def _apres_annulation(fichier):
+    """Note l'annulation dans le journal de la routine et décharge le modèle en arrière-plan."""
     try:
-        with open(ROUTINE["fichier"], "a", encoding="utf-8") as f:
+        with open(fichier, "a", encoding="utf-8") as f:
             f.write(f"\n⛔ Routine annulée depuis l'interface à {datetime.now():%H:%M:%S}.\n")
-    except OSError:
+    except (OSError, TypeError):   # journal inconnu (routine lancée depuis le code)
         pass
     import threading
     threading.Thread(target=decharger_modele, daemon=True).start()
     return True, "Routine annulée : ce qui était fait est gardé, le modèle est déchargé."
 
 
-def decharger_modele():
-    """Décharge le modèle des routines là où il est chargé (tour, ce PC) : une routine arrêtée de force n'a pas pu
-    le faire. LM Studio reste ouvert ; seul le modèle réglé dans config.json est concerné."""
-    import json
-    import urllib.request
-    import agent
-    modele = agent.CONFIG.get("modele")
-    bases = []
-    for s in agent.CONFIG.get("serveurs") or [{"url": "local"}]:
-        url = str(s.get("url") or "")
-        bases += ["http://localhost:1234", "http://localhost:1235"] if url == "local" else [url.removesuffix("/v1")]
-    dechargees = 0
-    for base in dict.fromkeys(bases):
-        try:
-            with urllib.request.urlopen(base + "/api/v1/models", timeout=5) as r:
-                infos = json.loads(r.read())
-        except Exception:
-            continue                      # serveur éteint ou injoignable : rien à décharger
-        for m in infos.get("models", []):
-            if m.get("key") != modele:
-                continue
-            for inst in m.get("loaded_instances") or []:
-                req = urllib.request.Request(base + "/api/v1/models/unload", method="POST",
-                                             data=json.dumps({"instance_id": inst["id"]}).encode(),
-                                             headers={"Content-Type": "application/json"})
-                try:
-                    urllib.request.urlopen(req, timeout=60).close()
-                    dechargees += 1
-                except Exception:
-                    pass
-    try:
-        dechargees += int(agent.npu.arreter())   # OpenVINO (NPU) lancé par la routine
-    except Exception:
-        pass
-    return dechargees
+NOMS = {"relances": "Relances", "recherche": "Recherche", "tout": "Les deux", "mails": "Mails reçus",
+        "reponses": "Réponses La Bonne Alternance"}
 
 
 def etat():
+    """Routine lancée ici (en cours ou dernière), sinon routine programmée en cours ; avec son avancement."""
+    import avancement
     p = ROUTINE["proc"]
+    d = externe()
+    if d:
+        sortie = fichier_du_journal(Path(d.get("sortie") or "").name, prefixe="web_") if d.get("sortie") else None
+        return {"en_cours": True, "externe": True, "annulee": False, "code": None,
+                "nom": NOMS.get(d.get("routine"), d.get("routine")) + " (programmée)",
+                "debut": str(d.get("debut") or "")[11:19], "avancement": d,
+                "sortie": fin_de_fichier(sortie, 400) if sortie else "Journal non disponible (routine lancée depuis le code, "
+                                                                       "sa sortie va dans sa propre fenêtre)."}
+    ici = lancee_ici()
     return {
-        "en_cours": en_cours(),
-        "annulee": bool(ROUTINE.get("annulee")) and not en_cours(),
+        "en_cours": ici,
+        "externe": False,
+        "annulee": bool(ROUTINE.get("annulee")) and not ici,
         "nom": ROUTINE["nom"],
         "debut": ROUTINE["debut"].strftime("%H:%M:%S") if ROUTINE["debut"] else None,
         "code": None if p is None or p.poll() is None else p.returncode,
-        "sortie": fin_de_fichier(ROUTINE["fichier"]) if ROUTINE["fichier"] else "",
+        "avancement": avancement.lire() if ici else None,
+        "sortie": fin_de_fichier(ROUTINE["fichier"], 400) if ROUTINE["fichier"] else "",
     }
 
 
-def historique(n=12):
+def libelle_lancement(nom):
+    """« web_20261126_134722_tout_x3_essai.txt » -> « 26/11 à 13:47 — Les deux ×3 (essai) »."""
+    import re
+    m = re.match(r"web_(\d{4})(\d\d)(\d\d)_(\d\d)(\d\d)\d\d_([a-z]+)(.*)\.txt$", nom)
+    if not m:
+        return nom
+    a, mo, j, h, mi, routine, reste = m.groups()
+    fois = re.search(r"_x(\d+)", reste)
+    return (f"{j}/{mo} à {h}:{mi} — {NOMS.get(routine, routine)}" + (f" ×{fois.group(1)}" if fois else "")
+            + (" (programmée)" if "_planifiee" in reste else "") + (" (essai)" if "_essai" in reste else ""))
+
+
+def historique(n=15):
     if not LOGS.exists():
         return []
-    return [{"nom": f.name, "taille": f.stat().st_size} for f in sorted(LOGS.glob("web_*.txt"), reverse=True)[:n]]
+    return [{"nom": f.name, "libelle": libelle_lancement(f.name), "taille": f.stat().st_size}
+            for f in sorted(LOGS.glob("web_*.txt"), reverse=True)[:n]]
 
 
 def fichier_du_journal(nom, prefixe=""):

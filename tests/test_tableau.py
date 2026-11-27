@@ -47,6 +47,7 @@ class TestDejaContactee:
         ({"entreprise": "Nouvelle Boîte"}, False),
         ({"entreprise": "Autre", "email": "rh@exemple.fr"}, True),   # même domaine
         ({"entreprise": "Autre", "email": "rh@ailleurs.fr"}, False),
+        ({"entreprise": "Autre", "email": "rh@ailleurs.fr; jobs@exemple.fr"}, True),   # l'une des adresses
         ({"entreprise": "Autre", "siret": "12345678900011"}, True),
         ({"entreprise": "Autre", "siret": "99999999900099"}, False),
         ({"entreprise": ""}, True),                       # sans nom : ignorée

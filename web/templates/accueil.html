@@ -1,47 +1,66 @@
 {% extends "base.html" %}
 {% block titre %}Tableau de bord{% endblock %}
+{% block largeur %}large{% endblock %}
 {% block contenu %}
 <h1>Tableau de bord</h1>
 {% if routine %}<div class="carte">⏳ Routine en cours : <b>{{ routine }}</b> — <a href="/routines">voir l'avancement</a></div>{% endif %}
-<div class="grille">
+<div class="grille indicateurs">
   <div class="carte"><div class="chiffre">{{ s.envoyees }}</div><div class="libelle">candidatures envoyées</div></div>
-  <div class="carte"><div class="chiffre">{{ s.semaine }}</div><div class="libelle">ces 7 derniers jours</div></div>
-  <div class="carte"><div class="chiffre">{{ s.taux }} %</div><div class="libelle">taux de réponse ({{ s.reponses }})</div></div>
-  <div class="carte"><div class="chiffre">{{ s.entretiens }}</div><div class="libelle">entretiens / acceptées</div></div>
+  <div class="carte"><div class="chiffre">{{ s.cette_semaine }}</div>
+    <div class="libelle">cette semaine ({{ s.semaine }}) · semaine dernière : {{ s.semaine_derniere }}</div></div>
+  <div class="carte"><div class="chiffre">{{ s.taux }} %</div>
+    <div class="libelle">taux de réponse ({{ s.reponses }} réponse{{ 's' if s.reponses > 1 }} sur {{ s.envoyees }})</div></div>
+  <div class="carte"><div class="chiffre">{{ s.entretiens }}</div><div class="libelle">entretiens et réponses positives</div></div>
   <div class="carte"><div class="chiffre">{{ s.en_cours }}</div><div class="libelle">en attente de réponse</div></div>
   <div class="carte"><div class="chiffre"><a href="/postuler">{{ s.a_postuler }}</a></div><div class="libelle">à postuler (formulaires, mails à envoyer, adresses à trouver)</div></div>
+  <div class="carte"><div class="chiffre"><a href="/suivi">{{ s.relances_7j }}</a></div><div class="libelle">relance{{ 's' if s.relances_7j > 1 }} en retard ou à faire d'ici 7 jours</div></div>
 </div>
+
+<div class="carte">
+  <h2>Candidatures envoyées par semaine <span class="doux" style="font-weight:400">— {{ s.semaines|length }} dernières semaines, {{ s.moyenne|replace('.', ',') }} en moyenne</span></h2>
+  <div class="hebdo" role="img" aria-label="Candidatures envoyées par semaine">
+    {% for w in s.semaines %}
+    <div class="semaine{{ ' courante' if loop.last }}" tabindex="0">
+      <span class="valeur">{{ w.n if w.n }}</span>
+      <div class="colonne" style="height: {{ (100 * w.n / s.maxi)|round|int }}%"></div>
+      <span class="nom">{{ w.semaine }}</span><span class="annee">{{ w.annee }}</span>
+      <span class="bulle">{{ w.semaine }} · {{ w.annee }}<br>du {{ w.du.strftime('%d/%m') }} au {{ w.au.strftime('%d/%m') }}<br><b>{{ w.n }}</b> candidature{{ 's' if w.n > 1 }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
 <div class="deux">
   <div class="carte">
-    <h2>Candidatures envoyées par semaine</h2>
-    <div class="barres">
-      {% for w in s.semaines %}
-      <div class="barre" title="{{ w.n }} candidature(s)">
-        <span>{{ w.n if w.n }}</span>
-        <div style="height: {{ (100 * w.n / s.maxi)|round|int }}%"></div>
-        <span>{{ w.libelle }}</span>
-      </div>
+    <h2>Où en sont tes candidatures <span class="doux" style="font-weight:400">— {{ s.total }} entreprise{{ 's' if s.total > 1 }} suivie{{ 's' if s.total > 1 }}</span></h2>
+    {% if s.total %}
+    <div class="empile" role="img" aria-label="Répartition des candidatures par étape">
+      {% for e in s.etapes if e.n %}
+      <div class="serie-{{ e.num }}" style="flex: {{ e.n }}" title="{{ e.nom }} : {{ e.n }} ({{ e.part|replace('.', ',') }} %)"></div>
       {% endfor %}
     </div>
+    <div class="legende-etapes">
+      {% for e in s.etapes %}
+      <details class="etape{{ ' vide' if not e.n }}">
+        <summary><span class="pastille serie-{{ e.num }}"></span><span class="nom-etape">{{ e.nom }}</span>
+          <b>{{ e.n }}</b><span class="doux part">{{ e.part|replace('.', ',') }} %</span></summary>
+        {% if e.statuts %}<ul>{% for st, n in e.statuts %}<li><span class="badge" style="background:#{{ statuts.get(st, 'EDEDED') }}">{{ st }}</span> {{ n }}</li>{% endfor %}</ul>
+        {% else %}<p class="doux">Aucune pour l'instant.</p>{% endif %}
+      </details>
+      {% endfor %}
+    </div>
+    <p class="doux" style="font-size:12px">Clique sur une étape pour voir le détail des statuts.</p>
+    {% else %}<p class="doux">Le tableau de suivi est vide.</p>{% endif %}
   </div>
   <div class="carte">
-    <h2>Répartition par statut</h2>
-    <table>
-      {% for st, n in s.par_statut %}
-      <tr><td><span class="badge" style="background:#{{ statuts.get(st, 'EDEDED') }}">{{ st }}</span></td><td>{{ n }}</td></tr>
-      {% endfor %}
-    </table>
+    <h2>Envois par canal</h2>
+    {% for k, n in s.canaux %}
+    <div class="ligne-canal" title="{{ n }} candidature{{ 's' if n > 1 }} par {{ k }}">
+      <span class="nom-canal">{{ k }}</span>
+      <span class="piste"><span style="width: {{ (100 * n / s.maxi_canal)|round|int }}%"></span></span>
+      <b>{{ n }}</b>
+    </div>
+    {% else %}<p class="doux">Aucune candidature envoyée pour l'instant.</p>{% endfor %}
   </div>
-</div>
-<div class="carte">
-  <h2>Prochaines relances prévues</h2>
-  {% if s.relances %}
-  <table>
-    <tr><th>Date</th><th>Entreprise</th><th>Poste</th><th>Relances déjà faites</th></tr>
-    {% for l in s.relances %}
-    <tr><td>{{ l['Relance prévue'].strftime('%d/%m') }}</td><td>{{ l['Entreprise'] }}</td><td>{{ l['Poste'] or '' }}</td><td>{{ l['Nb relances'] or 0 }}</td></tr>
-    {% endfor %}
-  </table>
-  {% else %}<p class="doux">Aucune relance prévue.</p>{% endif %}
 </div>
 {% endblock %}

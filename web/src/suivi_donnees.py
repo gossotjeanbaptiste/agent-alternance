@@ -1,12 +1,11 @@
-"""Lecture du tableau de suivi, statistiques du tableau de bord et modification d'une ligne."""
-from collections import Counter
-from datetime import date, timedelta
+"""Lecture du tableau de suivi, ajout et modification d'une ligne (chiffres du tableau de bord : statistiques.py)."""
+from datetime import date
 
 import chemins  # noqa: F401  (rend les modules d'alternance importables)
 import commun
 import routines
 from commun import CFG, P
-from tableau import PAGE_A_POSTULER, Suivi, as_date
+from tableau import Suivi, as_date
 
 REPONDU = {"Réponse positive", "Demande de disponibilités", "Entretien", "Accepté", "Refus", "Réponse à lire", "Candidature transmise"}
 EN_ATTENTE = {"Candidaté (mail)", "Relancé", "Relance en brouillon", "Relance programmée",
@@ -28,34 +27,6 @@ def lire():
     return lignes
 
 
-def statistiques(lignes):
-    aujourd_hui = date.today()
-    st = Counter(l.get("Statut") or "?" for l in lignes)
-    envoyees = [l for l in lignes if l.get("Date envoi")]
-    reponses = [l for l in envoyees if l.get("Statut") in REPONDU]
-    lundi = aujourd_hui - timedelta(days=aujourd_hui.weekday())
-    semaines = []
-    for i in range(9, -1, -1):
-        debut = lundi - timedelta(weeks=i)
-        n = sum(1 for l in envoyees if debut <= l["Date envoi"] < debut + timedelta(days=7))
-        semaines.append({"libelle": f"{debut:%d/%m}", "n": n})
-    relances = sorted((l for l in lignes if l.get("Statut") in {"Candidaté (mail)", "Relancé"} and l.get("Relance prévue")),
-                      key=lambda l: l["Relance prévue"])[:8]
-    return {
-        "envoyees": len(envoyees),
-        "semaine": sum(1 for l in envoyees if l["Date envoi"] >= aujourd_hui - timedelta(days=7)),
-        "reponses": len(reponses),
-        "taux": round(100 * len(reponses) / len(envoyees)) if envoyees else 0,
-        "entretiens": st.get("Entretien", 0) + st.get("Demande de disponibilités", 0) + st.get("Accepté", 0),
-        "en_cours": sum(st.get(k, 0) for k in EN_ATTENTE),
-        "a_postuler": sum(st.get(k, 0) for k in PAGE_A_POSTULER),   # même chose que la page « À postuler »
-        "par_statut": sorted(st.items(), key=lambda x: -x[1]),
-        "semaines": semaines,
-        "maxi": max([w["n"] for w in semaines] + [1]),
-        "relances": relances,
-    }
-
-
 CHAMPS_AJOUT = ("Entreprise", "Poste", "Lieu", "Contact", "Email", "Téléphone", "Lien", "Source", "Notes")
 
 
@@ -64,7 +35,7 @@ def ajouter(d):
     (AAAA-MM-JJ, facultative) et "forcer" (ajouter même si l'entreprise semble déjà dans le tableau).
     Renvoie (ok, message, doublon)."""
     import re
-    from mails import est_adresse
+    from mails import verifier_adresses
     from tableau import STATUTS, deja_contactee
     vals = {c: str(d.get(c) or "").strip() for c in CHAMPS_AJOUT}
     if not vals["Entreprise"]:
@@ -72,8 +43,9 @@ def ajouter(d):
     statut = str(d.get("Statut") or "").strip()
     if statut not in STATUTS:
         return False, "Statut inconnu.", False
-    if vals["Email"] and not est_adresse(vals["Email"]):
-        return False, f"Adresse mail invalide : {vals['Email']}", False
+    vals["Email"], invalides = verifier_adresses(vals["Email"])     # une ou plusieurs adresses (« a; b »)
+    if invalides:
+        return False, f"Adresse mail invalide : {', '.join(invalides)}", False
     envoi = None
     if d.get("Date envoi"):
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(d["Date envoi"])):

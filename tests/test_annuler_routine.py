@@ -96,7 +96,9 @@ def test_api_et_bouton(client, monkeypatch):
     monkeypatch.setattr(routines, "annuler", lambda: (False, "Aucune routine en cours."))
     assert client.post("/api/annuler_routine").status_code == 409
     h = client.get("/routines").get_data(as_text=True)
-    assert 'id="annuler"' in h and "annulerRoutine()" in h and "⛔ annulée" in h
+    assert 'id="annuler"' in h and "annulerRoutine()" in h and "routines.js" in h
+    from chemins import ROOT
+    assert "⛔ annulée" in (ROOT / "web" / "static" / "routines.js").read_text(encoding="utf-8")
 
 
 # --- enregistrements protégés -------------------------------------------------------------------------

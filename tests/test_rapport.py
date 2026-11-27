@@ -98,6 +98,18 @@ def test_page_rapport(client, tableau, tmp_path, monkeypatch):
     client.post("/api/suivi/ajouter", json={"Entreprise": "Pixelmont", "Statut": "Candidaté (autre canal)",
                                             "Date envoi": AUJ.isoformat()})
     html = client.get("/rapport?jours=7").get_data(as_text=True)
-    assert "Rapport de recherche" in html and "Pixelmont" in html and "Activité des routines" in html
-    assert "1 routine(s) en essai" in html
+    assert "Rapport de recherche" in html and "Bilan chiffré" in html
+    # plus de détail des candidatures ni d'activité des routines sur la page ; bilan avant le rapport rédigé
+    assert "Pixelmont" not in html and "Activité des routines" not in html and "Détail des candidatures" not in html
+    assert html.index("Bilan chiffré") < html.index("Rapport rédigé par ton modèle")
+    assert "Rédiger pour moi" in html and "Rédiger pour l'école" in html
     assert client.get("/rapport?du=2026-01-01&au=2026-01-31").status_code == 200
+
+
+def test_parts_du_disque():
+    parts = rapport.disque([("mail", 6), ("LBA", 2), ("a", 1), ("b", 1), ("c", 1), ("d", 1), ("e", 1), ("vide", 0)])
+    assert [p["nom"] for p in parts] == ["mail", "LBA", "a", "b", "c", "Autres"]          # au-delà de 5 : « Autres »
+    assert parts[-1]["n"] == 2 and parts[-1]["couleur"] == 6 and parts[0]["couleur"] == 1
+    assert abs(sum(p["longueur"] for p in parts) - 100) < 0.1 and parts[1]["debut"] == parts[0]["longueur"]
+    assert rapport.disque([]) == []
+    assert rapport.disque([("Refus", 3)], couleurs={"Refus": "F4CCCC"})[0]["hex"] == "F4CCCC"
