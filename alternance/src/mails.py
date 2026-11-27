@@ -17,6 +17,24 @@ def est_adresse(mail):
     return bool(re.fullmatch(r"[^@\s]+@[^@\s]+\.[a-z]{2,}", (mail or "").strip().lower()))
 
 
+def adresses(cellule):
+    """Adresses valides d'une case « Email » (plusieurs adresses séparées par « ; », « , » ou des espaces),
+    en minuscules, sans doublon, dans l'ordre : « rh@a.fr; Marc@a.fr » -> ["rh@a.fr", "marc@a.fr"]."""
+    vues = [a for a in re.split(r"[;,\s]+", str(cellule or "").strip().lower()) if est_adresse(a)]
+    return list(dict.fromkeys(vues))
+
+
+def joindre(liste):
+    """Adresses à écrire dans la case « Email » : « a@x.fr; b@x.fr »."""
+    return "; ".join(liste)
+
+
+def verifier_adresses(texte):
+    """Saisie d'une ou plusieurs adresses (interface) : (case « Email » à enregistrer, morceaux invalides)."""
+    morceaux = [m for m in re.split(r"[;,\s]+", str(texte or "").strip()) if m]
+    return joindre(adresses(texte)), [m for m in morceaux if not est_adresse(m)]
+
+
 def domaine(mail):
     return mail.split("@")[-1].lower() if est_adresse(mail) else ""
 

@@ -85,3 +85,18 @@ function recharger() {
 if (new URLSearchParams(location.search).has("frais")) {
   history.replaceState(null, "", location.pathname);   // un F5 ensuite ne relit pas la messagerie pour rien
 }
+
+// Listes des barres d'outils : largeur réglée sur le choix affiché (« Plus anciennes d'abord » lisible en entier,
+// sans élargir les autres pour rien). Recalculée à chaque changement, filtres remis au chargement compris.
+function ajusterListe(sel) {
+  const choix = sel.selectedOptions[0];
+  if (!choix) return;
+  const c = ajusterListe.c || (ajusterListe.c = document.createElement("canvas").getContext("2d"));
+  const st = getComputedStyle(sel);
+  c.font = st.fontWeight + " " + st.fontSize + " " + st.fontFamily;
+  sel.style.width = Math.ceil(c.measureText(choix.textContent).width + 46) + "px";   // texte + marges + flèche
+}
+function ajusterListes() { document.querySelectorAll(".barre-outils select").forEach(ajusterListe); }
+document.addEventListener("change", e => { if (e.target.matches && e.target.matches(".barre-outils select")) ajusterListe(e.target); });
+document.addEventListener("input", e => { if (e.target.matches && e.target.matches(".barre-outils select")) ajusterListe(e.target); });
+window.addEventListener("load", ajusterListes);

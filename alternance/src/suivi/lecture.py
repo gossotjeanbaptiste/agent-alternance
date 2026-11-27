@@ -7,7 +7,7 @@ from datetime import date, datetime
 import commun
 from commun import CFG, say
 from jours import date_relance, prochain_ouvrable
-from mails import domaine, est_adresse, etiquette_a_trouver
+from mails import adresses, domaine, etiquette_a_trouver
 from messagerie import nom_messagerie
 from rapprochement import mots_distinctifs
 from tableau import HORS_MAIL, MAIL, TRANSMISE, as_date
@@ -38,7 +38,8 @@ class Passage:
         self.aujourd_hui = date.today()
         self.a_relancer = []
         self.bilan = Counter()   # ce que ce passage a changé, résumé à la fin
-        self.nb_domaines = Counter(domaine(str(suivi.get(r, "Email") or "").strip()) for r in suivi.rows())
+        # chaque domaine compté une fois par ligne (une ligne peut avoir plusieurs adresses du même domaine)
+        self.nb_domaines = Counter(d for r in suivi.rows() for d in {domaine(a) for a in adresses(suivi.get(r, "Email"))})
         # mots du nom propres à une seule entreprise du tableau (réponse depuis une adresse personnelle)
         self.distinctifs = mots_distinctifs([suivi.get(r, "Entreprise") for r in suivi.rows()])
         self.par_contenu = reconnus_par_le_contenu(suivi, self.recus, self.ndr, STATUTS_ACTIFS)
@@ -52,6 +53,16 @@ class Passage:
             return jours
         say(f"   Mails envoyés et reçus lus depuis le {commun.DEPUIS:%d/%m/%Y}")
         return max(1, (date.today() - commun.DEPUIS).days + 1)
+
+    @staticmethod
+    def envois_vers(envois, mails):
+        """Mails envoyés à l'une des adresses de la candidature, du plus ancien au plus récent (un mail envoyé à
+        deux de ses adresses n'est compté qu'une fois)."""
+        vus = {}
+        for a in mails:
+            for e in envois.get(a, []):
+                vus.setdefault((e[0], e[1]), e)
+        return sorted(vus.values(), key=lambda x: x[0])
 
     def envois_complets(self):
         """Envois de toute la période suivie, lus seulement si une relance due a son mail d'origine avant la date
@@ -75,9 +86,10 @@ class Ligne:
     def __init__(self, suivi, row):
         self.row = row
         self.ent = suivi.get(row, "Entreprise")
-        self.mail = (suivi.get(row, "Email") or "").strip().lower()
+        self.mails = adresses(suivi.get(row, "Email"))           # plusieurs adresses possibles (« a@x.fr; b@x.fr »)
+        self.mail = self.mails[0] if self.mails else (suivi.get(row, "Email") or "").strip().lower()
         self.statut = suivi.get(row, "Statut") or ""
-        if self.statut.startswith("Brouillon") and self.mail:  # adresse ajoutée à la main depuis
+        if self.statut.startswith("Brouillon") and self.mails:  # adresse ajoutée à la main depuis
             self.statut = "Brouillon"
         # réponse qui n'a pas pu être classée (modèle injoignable) : on retente à ce passage
         self.a_reclasser = self.statut == "Réponse à lire" and \
@@ -96,7 +108,7 @@ def _relance_due(p, l):
     if l.statut in (MAIL, "Relancé") and nb < CFG["relances_max"] and prevue \
             and prevue <= prochain_ouvrable(p.aujourd_hui, inclus=False):
         if not l.mes_envois and commun.DEPUIS:   # mail d'origine envoyé avant la date choisie
-            l.mes_envois = sorted(p.envois_complets().get(l.mail, []), key=lambda x: x[0])
+            l.mes_envois = p.envois_vers(p.envois_complets(), l.mails)
         if l.mes_envois:
             p.a_relancer.append((l.row, l.mes_envois[-1]))
         else:  # mail d'origine pas dans « Éléments envoyés » (autre boîte, webmail...) : relance sans transfert
@@ -113,11 +125,11 @@ def _passer_en_revue(p, row):
     l = Ligne(p.suivi, row)
     if not (l.statut in STATUTS_ACTIFS or l.hors_mail or l.a_reclasser):
         return
-    if not est_adresse(l.mail):
+    if not l.mails:
         if not l.hors_mail:
             return  # « linkedin », « labonnealternance »... : pas une adresse, pas de suivi mail
         l.mail = ""
-    l.mes_envois = sorted(p.envois.get(l.mail, []), key=lambda x: x[0])
+    l.mes_envois = p.envois_vers(p.envois, l.mails)
     envois.constater(p, l)
     if l.statut == "Brouillon":
         return
@@ -131,9 +143,13 @@ def mettre_a_jour(suivi, ol, relancer=True):
     """Lit la messagerie (envois, réponses, non-remises) et met le tableau à jour ; relancer=False : sans écrire
     les brouillons de relance dus (routine « Mails reçus »)."""
     say(f"📬 Lecture de {nom_messagerie()}...")
+    commun.etape(f"Lecture de {nom_messagerie()}", "mails envoyés, reçus, brouillons")
     p = Passage(suivi, ol)
-    for row in list(suivi.rows()):
+    lignes = list(suivi.rows())
+    for k, row in enumerate(lignes, 1):
+        commun.etape("Suivi des réponses", suivi.get(row, "Entreprise"), k, len(lignes))
         _passer_en_revue(p, row)
+    commun.etape("Candidatures faites ailleurs", "accusés de réception et réponses")
     ailleurs.traiter(p)   # accusés de réception / réponses de candidatures faites hors de LM Agent
     say("📊 Bilan : " + (", ".join(f"{n} {quoi}" for quoi, n in p.bilan.items()) if p.bilan else
                          "rien de nouveau dans la messagerie depuis le dernier passage (les réponses déjà classées et "
@@ -146,7 +162,10 @@ def mettre_a_jour(suivi, ol, relancer=True):
     maxi = CFG.get("relances_max_par_jour", 5)
     if len(p.a_relancer) > maxi:
         say(f"   {len(p.a_relancer)} relances dues : {maxi} aujourd'hui, les autres les jours suivants")
-    for row, (t, sujet, item) in p.a_relancer[:maxi]:
+    dues = p.a_relancer[:maxi]
+    for k, (row, (t, sujet, item)) in enumerate(dues, 1):
+        ent = suivi.get(row, "Entreprise")
+        commun.etape("Rédaction des relances", ent, k, len(dues), ligne=f"   ⏳ Relance de {ent} ({k}/{len(dues)})…")
         preparer_relance(suivi, ol, row, t, sujet, item)
     etiqueter(ol)
 

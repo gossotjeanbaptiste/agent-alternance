@@ -66,8 +66,10 @@ def main(mode=None):
     commun.GARDE = threading.Timer(garde * 60, outlook_bloque)
     commun.GARDE.daemon = True
     commun.GARDE.start()
+    commun.etape(f"Ouverture de {nom_messagerie()}")
     ol = ouvrir()
     # le modèle n'est chargé qu'une fois la messagerie ouverte : sans Internet, on s'arrête avant de l'attendre
+    commun.etape("Préparation du modèle", "la tour si elle est disponible, sinon ce PC")
     agent.ensure_server()
     try:
         if mode in ("tout", "relances", "mails"):
@@ -78,6 +80,7 @@ def main(mode=None):
             commun.GARDE.cancel()
         if mode in ("tout", "recherche"):
             nouvelles_candidatures(suivi, ol)
+            commun.etape("Enregistrement du tableau")
             suivi.save()
     finally:
         suivi.save()

@@ -7,7 +7,7 @@ import commun
 import reglages
 from commun import CFG, PROFIL, interdits, say
 from jours import heure_aleatoire, prochain_ouvrable
-from mails import est_generique, texte_vers_html
+from mails import adresses, est_generique, joindre, texte_vers_html
 from messagerie import texte_mail, type_messagerie
 from modele import llm
 from tableau import as_date
@@ -41,7 +41,9 @@ def _rediger(ent, contact, nb, t_envoi, consigne_ton, transfert):
 
 
 def preparer_relance(suivi, ol, row, t_envoi, sujet, item):
-    ent, mail = suivi.get(row, "Entreprise"), suivi.get(row, "Email")
+    ent = suivi.get(row, "Entreprise")
+    mails = adresses(suivi.get(row, "Email"))     # relance adressée à toutes les adresses de la candidature
+    mail = mails[0] if mails else str(suivi.get(row, "Email") or "").strip()
     contact = suivi.get(row, "Contact") or ""
     nb = int(suivi.get(row, "Nb relances") or 0) + 1
     prevue = as_date(suivi.get(row, "Relance prévue")) or date.today()
@@ -60,7 +62,7 @@ def preparer_relance(suivi, ol, row, t_envoi, sujet, item):
         say(f"   ℹ️ {ent} : mail d'origine introuvable dans Éléments envoyés, relance en nouveau mail")
     # Pas d'envoi différé posé par le script : il ne partirait que si l'Outlook classique est ouvert.
     # Tu planifies toi-même dans le nouvel Outlook (Envoyer -> Planifier l'envoi) : c'est le serveur qui envoie.
-    ol.brouillon(mail, sujet_relance, texte_vers_html(corps), base=item,
+    ol.brouillon(joindre(mails) or mail, sujet_relance, texte_vers_html(corps), base=item,
                  pieces=commun.pieces_jointes() if item is None else ())
     suivi.set(row, "Statut", "Relance en brouillon")
     suivi.set(row, "Nb relances", nb)

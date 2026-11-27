@@ -1,128 +1,127 @@
 {% extends "base.html" %}
 {% block titre %}À postuler{% endblock %}
 {% block contenu %}
-<h1>À postuler <span class="doux" id="compte">({{ lignes|length }})</span></h1>
-<p class="doux">La Bonne Alternance : « 🧾 Ouvrir le formulaire prérempli » le remplit dans Chrome (identité, lettre, réponses, CV) ; relis, envoie-le toi-même, puis clique « Envoyée ».
-Formulaire du site de l'entreprise : ouvre la page, copie la lettre, colle-la (Ctrl+V) et envoie, puis clique « Envoyée ».</p>
-<details class="carte pli-section" id="pli-extension"{% if not extension.vue_le %} open{% endif %}>
-  <summary><h2 style="display:inline">🧩 Extension Chrome LMAgent
-    {% if extension.vue_le %}<span class="doux" style="font-weight:400">— ✅ installée (vue le {{ extension.vue_le }})</span>
-    {% else %}<span class="doux" style="font-weight:400">— pas encore installée</span>{% endif %}</h2></summary>
-  <p class="doux">Elle remplit le formulaire La Bonne Alternance dans ton Chrome habituel. Elle n'agit que sur les pages de
-  La Bonne Alternance ouvertes par LMAgent, n'a accès ni à tes cookies ni à tes autres sites, et ne reçoit les données
-  qu'une fois, par un code à usage unique valable 2 minutes. Elle n'envoie jamais la candidature : c'est toi qui cliques.</p>
-  <p class="doux">Chrome interdit qu'un programme installe une extension tout seul (protection contre les extensions
-  malveillantes) : c'est à toi de faire ces 3 clics, une seule fois.</p>
+<div class="titre-page">
+  <h1>À postuler <span class="doux" id="compte">({{ lignes|length }})</span></h1>
+  <details class="aide">
+    <summary>ℹ️ Comment ça marche</summary>
+    <ul>
+      <li>🎓 <b>La Bonne Alternance</b> : « 🧾 Formulaire prérempli » remplit la page (identité, lettre, réponses, CV) ; relis, envoie, puis « ✅ Envoyée ».</li>
+      <li>📝 <b>Formulaire du site</b> : ouvre la page, copie la lettre, colle-la et envoie, puis « ✅ Envoyée ».</li>
+      <li>📧 <b>Mail</b> : le brouillon t'attend dans {{ messagerie }} ; l'envoi est repéré tout seul au prochain suivi.</li>
+      <li>📭 <b>Adresse à trouver</b> : trouve l'adresse, mets-la dans le champ « À » du brouillon, envoie, puis « ✅ Envoyée ».</li>
+    </ul>
+  </details>
+</div>
+<details class="carte pli-section extension" id="pli-extension"{% if not extension.vue_le %} open{% endif %}>
+  <summary><b>🧩 Extension Chrome LMAgent</b>
+    {% if extension.vue_le %}<span class="doux">— ✅ installée (vue le {{ extension.vue_le }})</span>
+    {% else %}<span class="doux">— pas encore installée : elle remplit le formulaire La Bonne Alternance pour toi</span>{% endif %}</summary>
   <ol class="doux">
-    <li>Clique « 🧩 Ouvrir la page des extensions » : elle s'ouvre dans Chrome, et le chemin du dossier est copié.</li>
-    <li>En haut à droite de cette page, active <b>« Mode développeur »</b>.</li>
-    <li>Clique <b>« Charger l'extension non empaquetée »</b>, colle le chemin (Ctrl+V) dans la barre d'adresse de la fenêtre
-      qui s'ouvre, valide, puis clique « Sélectionner un dossier ».</li>
+    <li>Clique « 🧩 Ouvrir la page des extensions » (le chemin du dossier est copié).</li>
+    <li>Active <b>« Mode développeur »</b> en haut à droite.</li>
+    <li><b>« Charger l'extension non empaquetée »</b> → colle le chemin (Ctrl+V) → « Sélectionner un dossier ».</li>
   </ol>
   {% if extension.dossier %}<p class="doux">Dossier : <code id="dossier-extension">{{ extension.dossier }}</code>
-    <button onclick="copier(document.getElementById('dossier-extension').textContent, 'Chemin copié')">📋 Copier le chemin</button></p>{% endif %}
+    <button class="petit" onclick="copier(document.getElementById('dossier-extension').textContent, 'Chemin copié')">📋 Copier</button></p>{% endif %}
+  <p class="doux">Elle n'agit que sur La Bonne Alternance, sans accès à tes cookies, et n'envoie jamais rien : c'est toi qui cliques.
+    Après une mise à jour de LMAgent : ↻ sous l'extension dans la page des extensions.</p>
   <div class="actions"><button class="principal" onclick="installerExtension()">🧩 Ouvrir la page des extensions</button></div>
-  <p class="doux">Une fois installée, recharge cette page : elle doit afficher « ✅ installée ». Après une mise à jour de LMAgent,
-  clique sur ↻ (Actualiser) sous l'extension dans la page des extensions de Chrome.</p>
 </details>
-<p class="doux">
-Par mail : le brouillon t'attend dans {{ messagerie }}, relis-le et envoie-le ; l'envoi est repéré tout seul au prochain suivi, ou clique « Envoyée » si tu l'as déjà envoyé.
-Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de l'entreprise ; trouve l'adresse (site, recherche), mets-la à la place dans le champ « À », envoie, puis clique « Envoyée ».</p>
 {% if erreur %}<div class="carte erreur">{{ erreur }}</div>{% endif %}
 {% if lignes|length > 1 %}
-<div class="filtres">
-  <input type="search" id="recherche" placeholder="Rechercher (entreprise, poste, ville, adresse…)" size="34">
-  <select id="f-type">
+<div class="barre-outils">
+  <input type="search" id="recherche" placeholder="🔎 Rechercher (entreprise, poste, ville, adresse…)">
+  <select id="f-type" title="Type de candidature">
     <option value="">Tous les types</option>
     <option value="3">Adresse à trouver</option>
     <option value="1">Formulaire du site</option>
     <option value="0">Formulaire La Bonne Alternance</option>
     <option value="2">Mail à envoyer</option>
   </select>
-  <select id="f-source"><option value="">Toutes les sources</option></select>
-  <select id="f-ville"><option value="">Toutes les villes</option></select>
-  <span class="tri">
-    <label for="tri">Trier par</label>
-    <select id="tri">
-      <option value="type:asc" data-nombre>Type (formulaires, mails, adresses à trouver)</option>
-      <option value="date:desc">Plus récentes d'abord</option>
-      <option value="date:asc">Plus anciennes d'abord</option>
-      <option value="entreprise:asc">Entreprise (A → Z)</option>
-      <option value="entreprise:desc">Entreprise (Z → A)</option>
-      <option value="ville:asc">Ville (A → Z)</option>
-    </select>
-  </span>
-  <button onclick="effacerChamps(['recherche', 'f-type', 'f-source', 'f-ville'])" title="Vide la recherche et les filtres">✖ Effacer les filtres</button>
-  <button onclick="recharger()" title="Relit le tableau et les lettres dans la messagerie ; la recherche et les filtres restent">🔄 Recharger</button>
+  <select id="f-source" title="Source"><option value="">Toutes les sources</option></select>
+  <select id="f-ville" title="Ville"><option value="">Toutes les villes</option></select>
+  <span class="separateur"></span>
+  <select id="groupes" title="Regrouper les cartes par…">
+    <option value="villenom">Regrouper par ville</option>
+    <option value="typenom">Regrouper par type</option>
+    <option value="source">Regrouper par source</option>
+    <option value="">Sans groupes</option>
+  </select>
+  <select id="tri" title="Trier par…">
+    <option value="type:asc" data-nombre>Trier par type</option>
+    <option value="date:desc">Plus récentes d'abord</option>
+    <option value="date:asc">Plus anciennes d'abord</option>
+    <option value="entreprise:asc">Entreprise (A → Z)</option>
+    <option value="entreprise:desc">Entreprise (Z → A)</option>
+    <option value="ville:asc">Ville (A → Z)</option>
+  </select>
+  <button class="petit" onclick="toutDeplier(['cartes'], true)" title="Ouvrir tous les groupes">▾ Tout ouvrir</button>
+  <button class="petit" onclick="toutDeplier(['cartes'], false)" title="Replier tous les groupes">▸ Tout replier</button>
+  <button onclick="effacerChamps(['recherche', 'f-type', 'f-source', 'f-ville'])" title="Effacer les filtres : vide la recherche et les filtres">✖ Effacer</button>
+  <button onclick="recharger()" title="Relit le tableau et les lettres dans la messagerie ; la recherche et les filtres restent">🔄</button>
 </div>
 <div class="carte doux" id="aucun" style="display:none">Aucune candidature ne correspond à la recherche ou aux filtres.</div>
 {% else %}
 <div class="actions"><button onclick="recharger()" title="Relit le tableau et les lettres dans la messagerie">🔄 Recharger</button></div>
 {% endif %}
-<div id="cartes">
+<div id="cartes" class="liste-cartes">
 {% for l in lignes %}
+{% set type = 3 if l['_a_trouver'] else (2 if l['_mail'] else (0 if l['_lba'] else 1)) %}
 <div class="carte" id="c{{ l['_ligne'] }}" data-entreprise="{{ l['Entreprise'] }}" data-email="{{ l['Email'] or l['_a_trouver_adresse'] or '' }}"
-     data-type="{{ 3 if l['_a_trouver'] else (2 if l['_mail'] else (0 if l['_lba'] else 1)) }}" data-date="{{ l['Date ajout'].isoformat() if l['Date ajout'] else '' }}"
+     data-type="{{ type }}" data-date="{{ l['Date ajout'].isoformat() if l['Date ajout'] else '' }}"
      data-ville="{{ l['_ville'] }}" data-villenom="{{ l['_villenom'] }}" data-source="{{ l['_source'] }}"
+     data-typenom="{{ ('Formulaire La Bonne Alternance', 'Formulaire du site', 'Mail à envoyer', 'Adresse à trouver')[type] }}"
      data-texte="{{ l['Entreprise'] }} {{ l['Poste'] or '' }} {{ l['Lieu'] or '' }} {{ l['Email'] or '' }} {{ l['Source'] or '' }} {{ l['Contact'] or '' }}">
-  <h2>{{ l['Entreprise'] }} <span class="doux" style="font-weight:400">— {{ l['Poste'] or '' }} · {{ l['Lieu'] or '' }}</span></h2>
-  {% if l['_a_trouver'] %}
-  <p class="doux">📭 <b>Adresse à trouver</b> — brouillon dans {{ messagerie }}, adressé à « {{ l['Entreprise'] }} (adresse à trouver) » : remplace-le par la vraie adresse avant d'envoyer</p>
-  {% elif l['_mail'] %}
-  <p class="doux">📧 <b>Par mail</b> à {{ l['Email'] }} — brouillon dans {{ messagerie }}</p>
-  {% elif l['_lba'] %}
-  <p class="doux">🎓 Formulaire La Bonne Alternance</p>
-  {% else %}
-  <p class="doux">📝 Formulaire de contact du site de l'entreprise</p>
-  {% endif %}
-  {% if l['_lettre'] %}
-  <details class="pli">
-    <summary><span class="voir">📄 Afficher la lettre</span><span class="masquer">📄 Masquer la lettre</span></summary>
-    <div class="lettre" id="l{{ l['_ligne'] }}">{{ l['_lettre'] }}</div>
-  </details>
-  {% elif l['_a_trouver'] and l['_ferme'] %}
-  <p class="doux">Lettre non affichée : l'Outlook classique est fermé.</p>
-  {% elif l['_a_trouver'] %}
-  <p class="doux">Lettre introuvable : aucun brouillon sans destinataire ne parle de {{ l['Entreprise'] }} dans {{ messagerie }} (déjà envoyé ou supprimé ?).</p>
-  {% elif l['_mail'] and l['_ferme'] %}
-  <p class="doux">Lettre non affichée : l'Outlook classique est fermé.</p>
-  {% elif l['_mail'] %}
-  <p class="doux">Brouillon introuvable dans {{ messagerie }} (déjà envoyé ou supprimé ?) : le prochain suivi mettra la ligne à jour.</p>
-  {% else %}
-  <p class="doux">Pas encore de lettre pour cette entreprise : clique « ✍️ Écrire ce qui manque », le modèle l'écrira.</p>
-  {% endif %}
-  {% for titre, texte in l['_reponses'] %}
-  <details class="pli">
-    <summary>💬 {{ titre }}</summary>
-    <div class="lettre" id="r{{ l['_ligne'] }}_{{ loop.index }}">{{ texte }}</div>
-    <button onclick="copier(document.getElementById('r{{ l['_ligne'] }}_{{ loop.index }}').textContent, 'Réponse copiée')">📋 Copier la réponse</button>
-  </details>
-  {% else %}
-  {% if l['_questions'] %}<p class="doux">Réponses aux questions du formulaire pas encore écrites : clique « ✍️ Écrire ce qui manque ».</p>{% endif %}
-  {% endfor %}
+  <div class="entete-carte">
+    <h2>{{ l['Entreprise'] }}</h2>
+    <span class="doux">{{ l['Poste'] or '' }}{% if l['Poste'] and l['Lieu'] %} · {% endif %}{{ l['Lieu'] or '' }}</span>
+    <span class="type-carte t{{ type }}">{% if l['_a_trouver'] %}📭 <b>Adresse à trouver</b>{% elif l['_mail'] %}📧 Mail à {{ l['Email'] }}{% elif l['_lba'] %}🎓 Formulaire La Bonne Alternance{% else %}📝 Formulaire de contact du site{% endif %}</span>
+  </div>
+  {% if not l['_lettre'] %}<p class="doux remarque">
+  {% if l['_ferme'] and (l['_mail'] or l['_a_trouver']) %}Lettre non affichée : l'Outlook classique est fermé.
+  {% elif l['_a_trouver'] %}Lettre introuvable : aucun brouillon sans destinataire ne parle de {{ l['Entreprise'] }} dans {{ messagerie }}.
+  {% elif l['_mail'] %}Brouillon introuvable dans {{ messagerie }} (déjà envoyé ou supprimé ?).
+  {% else %}Lettre pas encore écrite.{% endif %}</p>{% endif %}
+  {% if l['_questions'] and not l['_reponses'] %}<p class="doux remarque">Réponses aux questions du formulaire pas encore écrites.</p>{% endif %}
+  <div class="plis">
+    {% if l['_lettre'] %}
+    <details class="pli">
+      <summary><span class="voir">📄 Lettre</span><span class="masquer">📄 Masquer la lettre</span></summary>
+      <div class="lettre" id="l{{ l['_ligne'] }}">{{ l['_lettre'] }}</div>
+    </details>
+    {% endif %}
+    {% for titre, texte in l['_reponses'] %}
+    <details class="pli">
+      <summary title="{{ titre }}">💬 {{ titre|truncate(34, True, '…') }}</summary>
+      <div class="lettre" id="r{{ l['_ligne'] }}_{{ loop.index }}">{{ texte }}</div>
+      <button onclick="copier(document.getElementById('r{{ l['_ligne'] }}_{{ loop.index }}').textContent, 'Réponse copiée')">📋 Copier la réponse</button>
+    </details>
+    {% endfor %}
+  </div>
   <div class="actions">
     {% if l['_a_trouver'] %}
-    <a href="{{ l['_contact'] }}" target="_blank" rel="noopener"><button>📇 Chercher l'adresse de contact</button></a>
-    {% if l['_site'] %}<a href="{{ l['_site'] }}" target="_blank" rel="noopener"><button>🌐 Site de l'entreprise</button></a>{% endif %}
-    <a href="{{ l['_recherche'] }}" target="_blank" rel="noopener"><button>🔎 Rechercher sur Google</button></a>
-    {% if l['_lettre'] %}<button onclick="copier(document.getElementById('l{{ l['_ligne'] }}').textContent)">📋 Copier la lettre</button>{% endif %}
     <button class="principal" onclick="envoyeeSansAdresse({{ l['_ligne'] }})" title="J'ai trouvé l'adresse et envoyé le mail : statut « Candidaté (mail) », adresse notée pour le suivi des réponses et la relance">✅ Envoyée</button>
+    {% if l['_lettre'] %}<button onclick="copier(document.getElementById('l{{ l['_ligne'] }}').textContent)">📋 Copier la lettre</button>{% endif %}
+    <a href="{{ l['_contact'] }}" target="_blank" rel="noopener"><button title="Recherche Google de l'adresse de contact">📇 Chercher l'adresse de contact</button></a>
+    {% if l['_site'] %}<a href="{{ l['_site'] }}" target="_blank" rel="noopener"><button>🌐 Site</button></a>{% endif %}
+    <a href="{{ l['_recherche'] }}" target="_blank" rel="noopener"><button>🔎 Google</button></a>
     {% if l['_fiche_lba'] %}<a href="{{ l['Lien'] }}" target="_blank" rel="noopener"><button title="Page de l'entreprise sur La Bonne Alternance">🎓 Fiche La Bonne Alternance</button></a>{% endif %}
     {% if l['_vers_lba'] %}<button onclick="versLba(this, {{ l['_ligne'] }}, {{ 'false' if l['_fiche_lba'] else 'true' }})" title="Candidater par le formulaire de La Bonne Alternance plutôt que par mail{{ '' if l['_fiche_lba'] else ' (l’entreprise y est d’abord cherchée, par son SIRET ou son nom et son adresse)' }} : la lettre du brouillon est gardée, le brouillon va à la corbeille et le modèle écrit les réponses aux questions">🎓 Postuler par La Bonne Alternance</button>{% endif %}
-    <button onclick="abandonnerMail({{ l['_ligne'] }})">Abandonner (brouillon à la corbeille)</button>
+    <button class="discret" onclick="abandonnerMail({{ l['_ligne'] }})" title="Abandonner (brouillon à la corbeille)">Abandonner</button>
     {% elif l['_mail'] %}
     <button class="principal" onclick="fait({{ l['_ligne'] }}, 'Candidaté (mail)', true)" title="J'ai envoyé ce mail : statut « Candidaté (mail) », date d'envoi aujourd'hui, relance prévue. Le script n'envoie rien lui-même.">✅ Envoyée</button>
-    {% if l['_site'] %}<a href="{{ l['_site'] }}" target="_blank" rel="noopener"><button>🌐 Site de l'entreprise</button></a>{% endif %}
-    <a href="{{ l['_recherche'] }}" target="_blank" rel="noopener"><button>🔎 Rechercher sur Google</button></a>
-    <button onclick="abandonnerMail({{ l['_ligne'] }})">Abandonner (brouillon à la corbeille)</button>
+    {% if l['_site'] %}<a href="{{ l['_site'] }}" target="_blank" rel="noopener"><button>🌐 Site</button></a>{% endif %}
+    <a href="{{ l['_recherche'] }}" target="_blank" rel="noopener"><button>🔎 Google</button></a>
+    <button class="discret" onclick="abandonnerMail({{ l['_ligne'] }})" title="Abandonner (brouillon à la corbeille)">Abandonner</button>
     {% else %}
     {% if l['_lba'] and l['Lien'] and l['Lien'].startswith('http') %}<button class="principal" onclick="ouvrirFormulaire(this, {{ l['_ligne'] }})" title="Ouvre le formulaire de La Bonne Alternance dans Chrome (absent : le navigateur de ton choix) et le remplit (identité, lettre, réponses, CV). Rien n'est envoyé : tu relis et tu cliques toi-même « J'envoie ma candidature ».">🧾 Ouvrir le formulaire prérempli</button>{% endif %}
-    {% if l['Lien'] and l['Lien'].startswith('http') %}<a href="{{ l['Lien'] }}" target="_blank" rel="noopener"><button>{{ '🎓 Page La Bonne Alternance' if 'labonnealternance' in l['Lien'] else '🌐 Ouvrir la page' }}</button></a>{% endif %}
-    {% if l['_formulaire'] %}<a href="{{ l['_formulaire'] }}" target="_blank" rel="noopener"><button>📝 Formulaire du site</button></a>{% endif %}
+    <button class="principal" onclick="fait({{ l['_ligne'] }}, '{{ 'Candidaté (La Bonne Alternance)' if l['_lba'] else 'Candidaté (formulaire du site)' }}', true)">✅ Envoyée</button>
     {% if l['_manque'] %}<button onclick="ecrireManque(this, {{ l['_ligne'] }})" title="Le modèle rédige ce qui manque (la tour, sinon ce PC), puis il est déchargé">✍️ Écrire ce qui manque ({{ l['_manque']|join(' et ') }})</button>{% endif %}
     {% if l['_lettre'] %}<button onclick="copier(document.getElementById('l{{ l['_ligne'] }}').textContent)">📋 Copier la lettre</button>{% endif %}
-    <button class="principal" onclick="fait({{ l['_ligne'] }}, '{{ 'Candidaté (La Bonne Alternance)' if l['_lba'] else 'Candidaté (formulaire du site)' }}', true)">✅ Envoyée</button>
-    <button onclick="fait({{ l['_ligne'] }}, 'Abandonné', false)">Abandonner</button>
+    {% if l['Lien'] and l['Lien'].startswith('http') %}<a href="{{ l['Lien'] }}" target="_blank" rel="noopener"><button>{{ '🎓 Page La Bonne Alternance' if 'labonnealternance' in l['Lien'] else '🌐 Ouvrir la page' }}</button></a>{% endif %}
+    {% if l['_formulaire'] %}<a href="{{ l['_formulaire'] }}" target="_blank" rel="noopener"><button>📝 Formulaire du site</button></a>{% endif %}
+    <button class="discret" onclick="fait({{ l['_ligne'] }}, 'Abandonné', false)">Abandonner</button>
     {% endif %}
   </div>
 </div>
@@ -133,9 +132,8 @@ Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de 
 <dialog id="choix-navigateur" class="carte fiche" style="width:min(520px, calc(100vw - 32px))">
   <h2>Dans quel navigateur ouvrir le formulaire ?</h2>
   <p class="doux">Google Chrome n'est pas installé sur ce PC. Edge, Brave, Vivaldi, Opera et Opera GX remplissent le
-    formulaire comme Chrome (avec l'extension LMAgent installée dans ce navigateur, voir l'aide en haut de la page) ;
-    les autres ouvrent seulement la page, avec la lettre copiée pour la coller à la main.
-    Rien n'est jamais envoyé : tu relis et tu envoies toi-même.</p>
+    formulaire comme Chrome (avec l'extension LMAgent installée dans ce navigateur) ; les autres ouvrent seulement la
+    page, avec la lettre copiée. Rien n'est jamais envoyé : tu relis et tu envoies toi-même.</p>
   <div class="actions" id="navigateurs" style="flex-direction:column; align-items:stretch"></div>
   <div class="actions"><button onclick="document.getElementById('choix-navigateur').close()">Annuler</button></div>
 </dialog>
@@ -143,90 +141,14 @@ Adresse à trouver : le brouillon est dans {{ messagerie }}, adressé au nom de 
 {% block script %}
 <script src="{{ url_for('static', filename='tri.js') }}"></script>
 <script src="{{ url_for('static', filename='filtres.js') }}"></script>
+<script src="{{ url_for('static', filename='groupes.js') }}"></script>
+<script src="{{ url_for('static', filename='postuler.js') }}"></script>
 <script>
-activerTri("tri", "cartes", "tri-postuler");
+const trier = activerTri("tri", "cartes", "tri-postuler") || (() => {});
+activerGroupes("groupes", ["cartes"], {inconnu: {villenom: "Ville inconnue", source: "Source inconnue"}, colonnes: ["typenom"],
+  ordre: {typenom: ["Formulaire La Bonne Alternance", "Mail à envoyer", "Formulaire du site", "Adresse à trouver"]}, memoire: "groupes-postuler", apres: trier});
 const refiltrer = activerFiltres({recherche: "recherche", boites: ["cartes"], compte: "compte", vide: "aucun", memoire: "filtres-postuler",
   filtres: [{id: "f-type", champ: "type"}, {id: "f-source", champ: "source", dynamique: true},
             {id: "f-ville", champ: "villenom", dynamique: true}]}) || (() => {});
-function retirer(carte) { carte.remove(); refiltrer(); }
-async function fait(ligne, statut, postule) {
-  const carte = document.getElementById("c" + ligne);
-  if (await changerStatut(ligne, carte.dataset.entreprise, statut, postule)) retirer(carte);
-}
-async function envoyeeSansAdresse(ligne) {
-  const carte = document.getElementById("c" + ligne);
-  const adresse = prompt("À quelle adresse as-tu envoyé la candidature de " + carte.dataset.entreprise + " ?\n"
-    + "(elle sert au suivi des réponses et à la relance ; laisse vide si tu ne la connais pas)", "");
-  if (adresse === null) return;
-  const r = await poster("/api/statut", { ligne, entreprise: carte.dataset.entreprise, statut: "Candidaté (mail)",
-                                         postule: true, email: adresse.trim() });
-  annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
-  if (r.ok) retirer(carte);
-}
-async function ecrireManque(bouton, ligne) {
-  const carte = document.getElementById("c" + ligne), texte = bouton.textContent;
-  document.querySelectorAll("button[onclick^='ecrireManque']").forEach(b => b.disabled = true);
-  bouton.textContent = "✍️ Rédaction en cours… (environ une minute)";
-  const r = await poster("/api/ecrire", { ligne, entreprise: carte.dataset.entreprise });
-  annoncer(r.message || (r.ok ? "C'est écrit." : "Erreur"), !r.ok);
-  if (r.ok) { location.reload(); return; }
-  bouton.textContent = texte;
-  document.querySelectorAll("button[onclick^='ecrireManque']").forEach(b => b.disabled = false);
-}
-async function versLba(bouton, ligne, chercher) {
-  const carte = document.getElementById("c" + ligne);
-  if (!confirm("Postuler chez " + carte.dataset.entreprise + " par le formulaire de La Bonne Alternance ? "
-               + (chercher ? "L'entreprise y est d'abord cherchée (SIRET, sinon nom et adresse). " : "")
-               + "La lettre est gardée, le brouillon sans adresse va à la corbeille et le modèle écrit les réponses aux questions.")) return;
-  document.querySelectorAll("button[onclick^='versLba'], button[onclick^='ecrireManque']").forEach(b => b.disabled = true);
-  bouton.textContent = chercher ? "🎓 Recherche sur La Bonne Alternance…" : "🎓 En cours… (environ une minute)";
-  const r = await poster("/api/vers_lba", { ligne, entreprise: carte.dataset.entreprise });
-  annoncer(r.message || (r.ok ? "C'est fait." : "Erreur"), !r.ok);
-  if (r.ok) { location.reload(); return; }
-  bouton.textContent = "🎓 Postuler par La Bonne Alternance";
-  document.querySelectorAll("button[onclick^='versLba'], button[onclick^='ecrireManque']").forEach(b => b.disabled = false);
-}
-async function installerExtension() {
-  const r = await poster("/api/extension_installer", {});
-  if (r.ok && r.dossier) {
-    try { await navigator.clipboard.writeText(r.dossier); } catch (e) { /* copie refusée : le chemin reste affiché */ }
-  }
-  annoncer(r.message || "Erreur", !r.ok);
-}
-async function ouvrirFormulaire(bouton, ligne, navigateur) {
-  const carte = document.getElementById("c" + ligne), texte = bouton.textContent;
-  bouton.disabled = true;
-  bouton.textContent = "🧾 Ouverture…";
-  const r = await poster("/api/formulaire", { ligne, entreprise: carte.dataset.entreprise, navigateur });
-  bouton.textContent = texte;
-  bouton.disabled = false;
-  if (r.navigateurs) return choisirNavigateur(bouton, ligne, r.navigateurs);   // Chrome absent : lequel ?
-  if (r.lettre) { try { await navigator.clipboard.writeText(r.lettre); } catch (e) {} }   // à coller à la main
-  annoncer(r.message || (r.ok ? "Formulaire prérempli." : "Erreur"), !r.ok);
-}
-// Chrome absent du PC : choix du navigateur (le dernier choisi est proposé en premier)
-function choisirNavigateur(bouton, ligne, liste) {
-  const d = document.getElementById("choix-navigateur"), zone = document.getElementById("navigateurs");
-  let dernier = null;
-  try { dernier = localStorage.getItem("navigateur-lba"); } catch (e) {}
-  liste.sort((a, b) => (b.cle === dernier) - (a.cle === dernier));
-  zone.replaceChildren(...liste.map(n => {
-    const b = document.createElement("button");
-    b.textContent = n.nom + (n.prerempli ? " (prérempli)" : " (page seulement, lettre copiée)");
-    if (n.cle === dernier) b.className = "principal";
-    b.onclick = () => {
-      d.close();
-      try { localStorage.setItem("navigateur-lba", n.cle); } catch (e) {}
-      ouvrirFormulaire(bouton, ligne, n.cle);
-    };
-    return b;
-  }));
-  d.showModal();
-}
-async function abandonnerMail(ligne) {
-  const carte = document.getElementById("c" + ligne);
-  if (!confirm("Abandonner " + carte.dataset.entreprise + " et mettre son brouillon à la corbeille ?")) return;
-  if (await changerStatut(ligne, carte.dataset.entreprise, "Abandonné", false, carte.dataset.email)) retirer(carte);
-}
 </script>
 {% endblock %}

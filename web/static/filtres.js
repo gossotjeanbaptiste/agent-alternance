@@ -53,7 +53,7 @@ function activerFiltres(o) {
   // o = {recherche: id, filtres: [{id, champ, dynamique}], boites: [id…], compte: id, vide: id, memoire: clé}
   const boites = o.boites.map(id => document.getElementById(id)).filter(Boolean);
   if (!boites.length) return;
-  const cartes = () => boites.flatMap(b => [...b.children].filter(c => c.classList.contains("carte") && c.dataset.entreprise !== undefined));
+  const cartes = () => boites.flatMap(b => [...b.querySelectorAll(".carte[data-entreprise]")]);   // groupes compris
   for (const f of o.filtres) {
     const menu = document.getElementById(f.id);
     if (menu && f.dynamique) valeursDistinctes(cartes(), f.champ).forEach(v => menu.add(new Option(v, v)));
@@ -72,6 +72,7 @@ function activerFiltres(o) {
     if (compte) compte.textContent = "(" + (n === total ? total : n + " sur " + total) + ")";
     const vide = document.getElementById(o.vide);
     if (vide) vide.style.display = total && !n ? "" : "none";
+    if (typeof majGroupes === "function") boites.forEach(majGroupes);   // compteurs des groupes (groupes.js)
   };
   [o.recherche, ...o.filtres.map(f => f.id)].forEach(id => {
     const el = document.getElementById(id);

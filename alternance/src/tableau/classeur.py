@@ -6,7 +6,7 @@ from pathlib import Path
 
 import commun
 from commun import say
-from mails import DOMAINES_PERSO, domaine
+from mails import DOMAINES_PERSO, adresses, domaine
 from .mise_en_forme import mettre_en_forme
 from .statuts import COLS, COLS_A_CONTACTER, ancien_statut
 from .texte import cle_lieu, norm
@@ -68,9 +68,10 @@ class Suivi:
             n = norm(self.get(r, "Entreprise"))
             if n:
                 noms.setdefault(n, set()).add(cle_lieu(self.get(r, "Lieu")))
-            d = domaine(str(self.get(r, "Email") or "").strip())
-            if d and d not in DOMAINES_PERSO:
-                domaines.add(d)
+            for a in adresses(self.get(r, "Email")):          # plusieurs adresses possibles
+                d = domaine(a)
+                if d not in DOMAINES_PERSO:
+                    domaines.add(d)
             sirets |= set(re.findall(r"\b\d{14}\b", f"{self.get(r, 'Notes')} {self.get(r, 'Lien')}"))
         return noms, domaines, sirets
 

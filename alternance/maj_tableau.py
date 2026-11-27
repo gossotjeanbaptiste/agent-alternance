@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))  # modules internes (alte
 import commun  # noqa: E402
 from commun import CFG, P  # noqa: E402
 from jours import date_relance  # noqa: E402
-from mails import est_adresse  # noqa: E402
+from mails import adresses, joindre  # noqa: E402
 from messagerie import nom_messagerie, ouvrir  # noqa: E402
 from tableau import A_POSTULER, MAIL, Suivi, as_date, statut_par_canal  # noqa: E402
 
@@ -80,9 +80,11 @@ def main():
 
     for row in list(s.rows()):
         statut = s.get(row, "Statut") or ""
-        mail = str(s.get(row, "Email") or "").strip().lower()
-        a_adresse = est_adresse(mail)
-        mes_envois = sorted(envois.get(mail, []), key=lambda x: x[0]) if a_adresse else []
+        mails = adresses(s.get(row, "Email"))       # plusieurs adresses possibles (« a@x.fr; b@x.fr »)
+        a_adresse = bool(mails)
+        mes_envois = sorted({(e[0], e[1]): e for a in mails for e in envois.get(a, [])}.values(), key=lambda x: x[0])
+        programmee = next((a for a in mails if a in programmes), None)
+        en_brouillon = any(a in brouillons for a in mails)
         derniere = as_date(s.get(row, "Dernière action")) or as_date(s.get(row, "Date envoi"))
         ent = s.get(row, "Entreprise")
 
@@ -97,11 +99,11 @@ def main():
                 print(f"✅ {ent} : envoyé le {d:%d/%m} (trouvé dans Éléments envoyés)")
                 stats["auto"] += 1
                 continue
-            if mail in programmes:
+            if programmee:
                 print(f"⏰ {ent} : candidature dans la Boîte d'envoi, envoi programmé")
                 stats["attente"] += 1
                 continue
-            if mail in brouillons:
+            if en_brouillon:
                 stats["attente"] += 1
                 continue  # le brouillon attend toujours dans Outlook : rien à demander
             titre(s, row)
@@ -124,8 +126,8 @@ def main():
                 "4": "Retirer du tableau (la recherche pourra la reproposer)",
                 "5": "J'ai trouvé l'adresse mais pas encore envoyé"})
             if r in ("1", "5"):
-                adr = input("   Adresse mail > ").strip().lower()
-                if est_adresse(adr):
+                adr = joindre(adresses(input("   Adresse(s) mail (séparées par ;) > ")))
+                if adr:
                     s.set(row, "Email", adr)
                     if r == "5":
                         s.set(row, "Statut", "Brouillon")
@@ -148,15 +150,15 @@ def main():
                 print(f"✅ {ent} : relance envoyée le {d:%d/%m} (trouvée dans Éléments envoyés)")
                 stats["auto"] += 1
                 continue
-            if mail in programmes:
-                q = programmes[mail]
+            if programmee:
+                q = programmes[programmee]
                 s.set(row, "Statut", "Relance programmée")
                 print(f"⏰ {ent} : relance programmée{f' pour le {q:%d/%m à %H:%M}' if q else ''}")
                 stats["attente"] += 1
                 if not VOIR:
                     s.save()
                 continue
-            if mail in brouillons:
+            if en_brouillon:
                 stats["attente"] += 1
                 continue
             titre(s, row)

@@ -111,4 +111,39 @@ def test_page_et_api(client, tableau, modele_local):
     r = client.post("/api/rapport/rediger", json={"jours": "30"})
     assert r.status_code == 200 and client.get("/api/rapport/etat").get_json()["etat"] == "fini"
     html = client.get("/rapport").get_data(as_text=True)
-    assert "<h3>Synthèse</h3>" in html and "Rapport du " in html
+    assert "<h3>Synthèse</h3>" in html and "Rapport pour moi du " in html and "/rapport/imprimer?ia=rapport_" in html
+
+
+def test_rapport_pour_l_ecole(modele_local):
+    """Consignes formelles, sans l'activité des routines ; annexe des entreprises contactées écrite par le code."""
+    modele_local["faux"].reponses_texte = ["# Rapport\n\n## Synthèse\nJe recherche une alternance."]
+    ok, _ = rapport_ia.lancer({"jours": "30"}, LIGNES, type_="ecole")
+    assert ok and rapport_ia.ETAT["etat"] == "fini"
+    nom = rapport_ia.ETAT["fichier"]
+    assert nom.endswith("_ecole.md") and rapport_ia.decrire(nom)["type"] == "ecole"
+    texte = rapport_ia.lire(nom)
+    assert "## Annexe : entreprises contactées" in texte
+    assert "**Forgeval Dev**" in texte and "**Pixelo**" in texte and "Comptanova" not in texte   # envoyées seulement
+    consigne = modele_local["faux"].consignes[0]
+    assert "Démarches réalisées" in consigne and "Activité des routines" not in consigne
+
+
+def test_type_inconnu_refuse(modele_local):
+    assert rapport_ia.lancer({"jours": "7"}, LIGNES, type_="pirate") == (False, "Type de rapport inconnu.")
+
+
+def test_noms_des_rapports(tmp_path, monkeypatch):
+    monkeypatch.setattr(rapport_ia, "dossier", lambda: tmp_path)
+    for nom in ("rapport_2026-11-25_0930.md", "rapport_2026-11-27_1405_ecole.md", "autre.md"):
+        (tmp_path / nom).write_text("## Synthèse", encoding="utf-8")
+    assert [d["libelle"] for d in rapport_ia.liste()] == ["Rapport pour l'école du 27/11/2026 à 14h05",
+                                                          "Rapport pour moi du 25/11/2026 à 09h30"]   # anciens compris
+
+
+def test_page_d_impression(client, modele_local):
+    modele_local["faux"].reponses_texte = ["## Synthèse\nTout va bien."]
+    rapport_ia.lancer({"jours": "30"}, LIGNES)
+    nom = rapport_ia.ETAT["fichier"]
+    h = client.get(f"/rapport/imprimer?ia={nom}").get_data(as_text=True)
+    assert "<h3>Synthèse</h3>" in h and "<nav" not in h and "window.print()" in h and "Bilan chiffré" not in h
+    assert client.get("/rapport/imprimer?ia=../config.json").status_code == 404

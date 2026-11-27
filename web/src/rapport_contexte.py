@@ -34,13 +34,14 @@ def _journal(j):
     return lignes
 
 
-def contexte(r):
-    """Le bloc de données (texte) donné au modèle."""
+def contexte(r, ecole=False):
+    """Le bloc de données (texte) donné au modèle. ecole : rapport pour l'école, sans le travail des routines
+    automatiques (ni outils, ni machines, ni problèmes techniques)."""
     import rapport
     t, lignes = r["t"], r.get("lignes") or []
     blocs = [f"Période du rapport : du {_d(r['debut'])} au {_d(r['fin'])} (rapport fait le {_d(r['genere'])}).",
              "", "--- Profil de l'étudiant ---", _profil() or "(non renseigné)",
-             "", "--- Bilan chiffré (tableau de suivi) ---", rapport.texte(r)]
+             "", "--- Bilan chiffré (tableau de suivi) ---", rapport.texte(r, routines=not ecole)]
     if t["liste_reponses"]:
         blocs += ["", "--- Contenu des réponses reçues sur la période ---"]
         for l in t["liste_reponses"][:MAX_LIGNES]:
@@ -59,6 +60,7 @@ def contexte(r):
     if a_postuler:
         blocs += ["", f"--- Candidatures prêtes, à finaliser par l'étudiant ({len(a_postuler)}) ---"]
         blocs += [f"- {l.get('Entreprise')} : {l.get('Statut')}" for l in a_postuler[:MAX_LIGNES]]
-    blocs += ["", "--- Activité des routines automatiques (journaux) ---"] + _journal(r["j"])
-    blocs.append(f"Nouvelles entreprises écartées par le filtre d'activité (hors informatique) : {r['ecartees']}")
+    if not ecole:
+        blocs += ["", "--- Activité des routines automatiques (journaux) ---"] + _journal(r["j"])
+        blocs.append(f"Nouvelles entreprises écartées par le filtre d'activité (hors informatique) : {r['ecartees']}")
     return "\n".join(blocs)

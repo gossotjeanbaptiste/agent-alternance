@@ -206,5 +206,5 @@ class TestConnexion:
     def test_cartes_repliables_dans_les_parametres(self, client):
         h = client.get("/parametres").get_data(as_text=True)
         for ident in ("pli-signature", "pli-signature-mails", "pli-interdits", "pli-mot-de-passe"):
-            assert f'<details class="carte pli-section" id="{ident}">' in h
+            assert f'<div class="carte bloc-param" id="{ident}">' in h
         assert "Mot de passe de l'interface" in h and IDENTIFIANT in h

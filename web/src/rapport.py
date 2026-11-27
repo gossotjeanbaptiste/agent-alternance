@@ -60,12 +60,35 @@ def generer(args, lignes=None):
             "ecartees": ecartees(debut, fin), "lignes": lignes}
 
 
+def disques(r, statuts=None):
+    """Les trois graphiques en disque de la page : envois par canal, par source, réponses reçues."""
+    t = r["t"]
+    return {"canal": disque(t["par_canal"]), "source": disque(t["par_source"]), "reponses": disque(t["par_reponse"], couleurs=statuts)}
+
+
+def disque(paires, max_parts=5, couleurs=None):
+    """Parts d'un graphique en disque : [{nom, n, part (%), debut, longueur (sur 100), couleur (1 à 6)}].
+    Au-delà de max_parts, le reste est regroupé dans « Autres » (gris, couleur 6) : jamais de teinte inventée.
+    couleurs : {nom: "RRGGBB"} pour des parts qui ont déjà leur couleur (statuts : refus, réponse positive…)."""
+    paires = [(str(k), int(n)) for k, n in paires if n]
+    if len(paires) > max_parts + 1:
+        paires = paires[:max_parts] + [("Autres", sum(n for _, n in paires[max_parts:]))]
+    total, debut, res = sum(n for _, n in paires), 0.0, []
+    for i, (nom, n) in enumerate(paires):
+        longueur = 100 * n / total
+        res.append({"nom": nom, "n": n, "part": round(longueur), "debut": round(debut, 2), "longueur": round(longueur, 2),
+                    "couleur": 6 if nom == "Autres" else min(i + 1, 5), "hex": (couleurs or {}).get(nom, "")})
+        debut += longueur
+    return res
+
+
 def _liste(paires):
     return ", ".join(f"{k} : {n}" for k, n in paires) or "aucune"
 
 
-def texte(r):
-    """Le rapport en texte simple (sans couleur ni tableau), à coller où on veut."""
+def texte(r, details=True, routines=True):
+    """Le rapport en texte simple (sans couleur ni tableau), à coller où on veut. details : liste des candidatures
+    et des réponses (données au modèle ; pas dans le bilan copié de la page) ; routines : travail des routines."""
     t, j = r["t"], r["j"]
     lignes = [f"Bilan de ma recherche d'alternance du {r['debut']:%d/%m/%Y} au {r['fin']:%d/%m/%Y}", "",
               f"- Candidatures envoyées : {t['envoyees']} ({_liste(t['par_canal'])})",
@@ -73,18 +96,20 @@ def texte(r):
               f"- Entretiens ou réponses positives : {t['entretiens']}",
               f"- Taux de réponse des candidatures de la période : {t['taux']} %",
               f"- Entreprises ajoutées au suivi : {t['ajoutees']}",
-              f"- Relances : {j['relances_brouillon']} préparée(s), {j['relances_vues']} envoyée(s) repérée(s)",
-              f"- Entreprises écartées (hors informatique) : {r['ecartees']}",
-              f"- Routines automatiques terminées : {sum(j['routines'].values())}", "",
+              f"- Relances : {j['relances_brouillon']} préparée(s), {j['relances_vues']} envoyée(s) repérée(s)"]
+    if routines:
+        lignes += [f"- Entreprises écartées (hors informatique) : {r['ecartees']}",
+                   f"- Routines automatiques terminées : {sum(j['routines'].values())}"]
+    lignes += ["",
               f"Tout le tableau (pas seulement la période) : {t['total']} entreprises suivies, {t['en_attente']} candidatures en attente de réponse, "
               f"{t['a_postuler']} à postuler, {t['total_entretiens']} entretien(s) ou réponse(s) positive(s)."]
-    if t["liste_envoyees"]:
+    if details and t["liste_envoyees"]:
         lignes += ["", "Candidatures envoyées :"]
         for l in t["liste_envoyees"]:
             poste = f" — {l['Poste']}" if l.get("Poste") else ""
             lieu = f" ({l['Lieu']})" if l.get("Lieu") else ""
             lignes.append(f"  {l['Date envoi']:%d/%m} {l.get('Entreprise') or '?'}{poste}{lieu} : {l.get('Statut') or ''}")
-    if t["liste_reponses"]:
+    if details and t["liste_reponses"]:
         lignes += ["", "Réponses :"]
         for l in t["liste_reponses"]:
             lignes.append(f"  {l.get('Entreprise') or '?'} : {l.get('Statut')}")

@@ -57,11 +57,11 @@ def site_ou_recherche(l):
     Site : celui noté par la recherche (« Site : … » dans Notes), sinon le domaine de son adresse mail
     (sauf messageries grand public comme gmail.com)."""
     from urllib.parse import quote_plus
-    from mails import DOMAINES_PERSO, domaine
+    from mails import DOMAINES_PERSO, adresses, domaine
     m = re.search(r"Site : (\S+)", str(l.get("Notes") or ""))
     site = m.group(1) if m else ""
     if not site:
-        d = domaine(str(l.get("Email") or "").strip().lower())
+        d = next((domaine(a) for a in adresses(l.get("Email")) if domaine(a) not in DOMAINES_PERSO), "")
         if d and d not in DOMAINES_PERSO and re.search(r"\.[a-z]{2,}$", d):
             site = "https://" + d
     lieu = str(l.get("Lieu") or "")
@@ -129,7 +129,8 @@ def ajouter_lettres(lignes):
         l["_reponses"] = reponses.en_liste(deja.get((l.get("Lien") or "").strip()) or {}) if l["_questions"] else []
         l["_site"], l["_recherche"] = site_ou_recherche(l)
         if l["_mail"]:  # brouillon de mail : la signature est déjà celle de la messagerie
-            l["_lettre"] = lettres.get(str(l.get("Email") or "").strip().lower())
+            from mails import adresses   # brouillon adressé à l'une des adresses de la candidature
+            l["_lettre"] = next((lettres[a] for a in adresses(l.get("Email")) if a in lettres), None)
             continue
         lettre = lettres.get((l.get("Lien") or "").strip())
         l["_lettre"] = (lettre + "\n\n" + sig) if lettre and sig else lettre

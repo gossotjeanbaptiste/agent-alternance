@@ -18,6 +18,7 @@ import donnees
 import reglages
 from commun import CFG, say
 from mails import DOMAINES_PERSO, domaine
+from mails import adresses as adresses_cellule
 from tableau import A_POSTULER, C_AUTRE, C_FORMULAIRE, C_LBA, C_LINKEDIN, FORMULAIRE, LBA, as_date, norm
 from .ailleurs_lecture import ModeleInjoignable, lire_avec_le_modele, lire_format_connu
 from .reponses import STATUT_DU_TYPE
@@ -155,7 +156,7 @@ def traiter(p):
     deja, au_modele, en_attente = set(lus), 0, 0
     # adresses et domaines des entreprises du tableau : leurs mails relèvent du rattachement habituel (reponses.py),
     # même quand il les écarte (mail d'avant l'envoi, domaine partagé…) ; domaines de l'école : jamais
-    adresses = {str(p.suivi.get(r, "Email") or "").strip().lower() for r in p.suivi.rows()} - {""}
+    adresses = {a for r in p.suivi.rows() for a in adresses_cellule(p.suivi.get(r, "Email"))}
     ignores = ({domaine(a) for a in adresses} - set(DOMAINES_PERSO)) | set(CFG.get("domaines_ignores", []))
     for m in sorted(p.recus, key=lambda x: x["date"]):
         if id(m) in p.rattaches or not m["de"] or m in p.ndr or _cle(m) in deja \

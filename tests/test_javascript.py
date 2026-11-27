@@ -53,6 +53,6 @@ def test_scripts_des_pages(node, client, tableau, url, tmp_path):
                   "Recherche": "Lyon"} for n, s in (("A", "1"), ("B", "2"))])
     h = client.get(url).get_data(as_text=True)
     scripts = re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", h, re.S)
-    assert scripts or url in ("/", "/suivi", "/linkedin", "/journal"), "aucun script trouvé"
+    assert scripts or url in ("/", "/suivi", "/linkedin", "/routines"), "aucun script trouvé"
     for i, code in enumerate(scripts):
         verifier(node, code, f"{url} script {i + 1}", tmp_path)

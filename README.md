@@ -30,7 +30,7 @@ suivi dans un tableau Excel, et une interface web locale pour tout piloter. Rien
 
 Tes données vivent dans `%APPDATA%\LMAgent\` (config, tableau, profil, journaux…) : jamais touchées par les mises à
 jour ni la désinstallation. Les **mises à jour s'installent toutes seules** au lancement (et toutes les 6 h), après
-vérification de leur empreinte SHA-256 ; désactivable dans **Paramètres** (section Mises à jour).
+vérification de leur empreinte SHA-256 ; désactivable dans **Paramètres** → Interface et compte → Mises à jour.
 
 ### Depuis le code source
 
@@ -94,14 +94,16 @@ Mot de passe oublié : supprime `alternance/donnees/acces_interface.json`, la pa
 
 | Page | Ce qu'on y fait |
 |---|---|
-| **Tableau de bord** | chiffres, graphique des envois, relances à venir |
-| **Suivi** | toutes les candidatures, filtres, changement de statut |
-| **À postuler** | candidatures par formulaire (La Bonne Alternance, formulaire de contact du site) : ouvrir la page, copier la lettre et, pour La Bonne Alternance, les réponses aux trois questions (motivations, missions, expériences), puis « Envoyée ». « 🧾 Ouvrir le formulaire prérempli » remplit le formulaire La Bonne Alternance dans Chrome ; **sans Chrome**, la page demande quel navigateur utiliser (Edge, Brave, Vivaldi, Opera, Opera GX : prérempli, par l'extension LMAgent installée dans ce navigateur ; Firefox ou navigateur par défaut : page ouverte, lettre copiée). Avec l'extension, un formulaire « Candidature simplifiée » ouvert **toi-même** sur le site (fiche trouvée hors de LMAgent) est aussi prérempli : champs vides seulement, identité, recherche et CV, plus la lettre et les réponses si LMAgent connaît l'entreprise (LMAgent ouvert ; réglage « Préremplir aussi les formulaires ouverts hors de LMAgent »). Les candidatures **📧 par mail** y sont aussi : site de l'entreprise, recherche Google, « Envoyée » (statut « Candidaté (mail) », date d'envoi et relance prévue), « Abandonner » (brouillon mis à la corbeille) |
-| **Routines** | lancer « Relances » / « Recherche » (« mode essai » pour tester sans rien écrire ; « passages » pour l'enchaîner N fois d'affilée, 1 par défaut) ; « mails depuis » (par défaut le lundi de la semaine) : ne relit que les mails envoyés et reçus à partir de ce jour, bien plus rapide — vide = toute la période suivie ; une relance due d'une candidature plus ancienne va quand même chercher son mail d'origine, sortie en direct |
+| **Tableau de bord** | indicateurs (envoyées, cette semaine, taux de réponse, entretiens, en attente, à postuler, relances en retard ou à faire d'ici 7 jours), candidatures envoyées par semaine (« Semaine 47 · 2026 »), où en sont les candidatures (étapes, détail des statuts au clic), envois par canal |
+| **Suivi** | toutes les candidatures, filtres, changement de statut, fiche modifiable (plusieurs adresses mail possibles, séparées par « ; » : toutes servent au suivi des réponses et reçoivent les relances) |
+| **À postuler** | candidatures par formulaire (La Bonne Alternance, formulaire de contact du site) : ouvrir la page, copier la lettre et, pour La Bonne Alternance, les réponses aux trois questions (motivations, missions, expériences), puis « Envoyée ». « 🧾 Ouvrir le formulaire prérempli » remplit le formulaire La Bonne Alternance dans Chrome ; **sans Chrome**, la page demande quel navigateur utiliser (Edge, Brave, Vivaldi, Opera, Opera GX : prérempli, par l'extension LMAgent installée dans ce navigateur ; Firefox ou navigateur par défaut : page ouverte, lettre copiée). Avec l'extension, un formulaire « Candidature simplifiée » ouvert **toi-même** sur le site (fiche trouvée hors de LMAgent) est aussi prérempli : champs vides seulement, identité, recherche et CV, plus la lettre et les réponses si LMAgent connaît l'entreprise (LMAgent ouvert ; réglage « Préremplir aussi les formulaires ouverts hors de LMAgent »). Les candidatures **📧 par mail** y sont aussi : site de l'entreprise, recherche Google, « Envoyée » (statut « Candidaté (mail) », date d'envoi et relance prévue), « Abandonner » (brouillon mis à la corbeille) ; barre d'outils (recherche, filtres, tri) et cartes **regroupées par ville** (ou par type, par source), groupes repliables |
+| **Écartées** | entreprises écartées par le filtre d'activité, « À examiner » et « Abandonnées », mêmes recherche, filtres, tri et regroupement par ville : « Candidater quand même », « Abandonner », « Remettre » |
+| **Routines** | lancer « Relances » / « Recherche » / « Les deux » / « Mails reçus » / « Réponses La Bonne Alternance » (« essai » pour tester sans rien écrire ; « passages » pour l'enchaîner N fois d'affilée ; « mails depuis », par défaut le lundi de la semaine : ne relit que les mails à partir de ce jour) ; **avancement en direct** (passage, étape, entreprise en cours, chronomètre) et journal, aussi pour une routine **programmée** par le Planificateur (qui protège alors le tableau et peut être annulée) ; heures programmées et derniers lancements à droite |
 | **Tour** | état, réveil, LM Studio, mise en veille |
-| **LinkedIn** | tes relations (`perso/linkedin/Connections.csv` depuis le code) qui travaillent dans une entreprise du tableau |
-| **Journal** | journaux des routines |
-| **Paramètres** | signature des lettres de formulaire (avec aperçu), signature ou non sous les mails, **ce que tu ne veux pas dans tes mails**, et **tous les réglages** des deux configs (sections 3 et 4), par section, avec une aide sous chaque champ |
+| **LinkedIn** | tes relations qui travaillent dans une entreprise du tableau ; **import de l'export LinkedIn** depuis la page (`Connections.csv` ou directement l'archive `.zip`, fusionné sans doublon) et ajout d'une relation à la main |
+| **Rapport** | bilan chiffré d'une période, puis rapport rédigé par le modèle local **pour toi** (point d'étape, conseils) ou **pour l'école** (formel, avec en annexe la liste des entreprises contactées) ; « Imprimer / PDF » imprime le rapport seul |
+| **Journal** | journal du jour en pleine page (ouvert sur la fin), autres jours au choix, filtre des lignes |
+| **Paramètres** | menu de catégories à gauche (Mon profil, Signatures, Candidatures et relances, Recherche d'entreprises, Formulaire La Bonne Alternance, Messagerie, Modèle et tour, Interface et compte, Avancé) et recherche d'un réglage : profil, **ce que tu ne veux pas dans tes mails**, signatures (avec aperçu), mot de passe, et **tous les réglages** des deux configs (sections 3 et 4) avec une aide sous chaque champ |
 
 Sécurité : l'interface n'écoute que sur 127.0.0.1 (aucun autre appareil ne peut s'y connecter), refuse les en-têtes Host
 étrangers, exige d'être connecté (mot de passe haché, jamais stocké en clair ; attente croissante après 5 essais
@@ -281,7 +283,7 @@ Les relances que tu programmes dans Gmail sont reconnues (statut « Relance prog
 une fois parties. Avec une autre messagerie IMAP, qui ne montre pas les mails programmés, une relance qui quitte
 les Brouillons sans être encore envoyée est supposée programmée ; si tu l'as supprimée, `python alternance\maj_tableau.py` corrige la ligne.
 
-Si Office est installé ailleurs que d'habitude, indique le chemin d'`OUTLOOK.EXE` dans Paramètres (section Messagerie, `outlook.chemins_exe`).
+Si Office est installé ailleurs que d'habitude, indique le chemin d'`OUTLOOK.EXE` dans Paramètres → Avancé (`outlook.chemins_exe`).
 
 ---
 
@@ -322,7 +324,7 @@ la page **Paramètres**. Modèle : `interdits.example.md`.
   en informatique » : écarte « Serveur H/F »…) ; « À postuler » → « Candidaté » à la date du mail ; refus, entretien…
   classés. Formats d'Indeed, HelloWork, LinkedIn et La Bonne Alternance lus directement, les autres par le modèle.
   Les mails lus sont notés dans `alternance/donnees/mails_candidatures.json` (une ligne supprimée n'est pas rajoutée).
-  Désactivable dans Paramètres → « Candidatures faites ailleurs ».
+  Désactivable dans Paramètres → Candidatures et relances → « Candidatures faites ailleurs ».
 - Statuts d'une candidature envoyée, selon le canal : « Candidaté (mail) » (suivie et relancée automatiquement),
   « Candidaté (La Bonne Alternance) », « Candidaté (formulaire du site) », « Candidaté (LinkedIn) », « Candidaté (autre canal) ».
   Les anciens « Envoyé » et « Candidaté (hors mail) » sont convertis automatiquement (d'après les notes).

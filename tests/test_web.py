@@ -91,16 +91,21 @@ class TestPages:
         ajouter(tableau, **{"Entreprise": "Visible SA", "Statut": "Refus"})
         assert "Visible SA" in client.get("/suivi").get_data(as_text=True)
 
-    def test_suivi_sur_toute_la_largeur(self, client):
-        """Le grand tableau du Suivi prend toute la fenêtre ; les autres pages gardent leur largeur de lecture."""
-        assert '<main class="large">' in client.get("/suivi").get_data(as_text=True)
-        assert '<main class="">' in client.get("/").get_data(as_text=True)
+    def test_pages_sur_toute_la_largeur(self, client):
+        """Toutes les pages prennent toute la fenêtre (plus de largeur limitée par défaut)."""
+        from chemins import ROOT
+        css = (ROOT / "web" / "static" / "style.css").read_text(encoding="utf-8")
+        assert "main { margin: 0 auto; padding: 20px 28px; }" in css and "max-width: 1200px; margin" not in css
+        for page in ("/", "/suivi", "/postuler", "/ecartees", "/routines", "/linkedin", "/journal", "/rapport"):
+            assert '<main class="etroit">' not in client.get(page).get_data(as_text=True), page
 
     def test_journal_fichier_choisi_et_securite(self, client, tmp_path):
         logs = tmp_path / "logs"
         logs.mkdir()
         (logs / "2026-11-13.log").write_text("ligne du journal", encoding="utf-8")
-        assert "ligne du journal" in client.get("/journal").get_data(as_text=True)
+        (logs / "ovms.log").write_text("serveur OpenVINO", encoding="utf-8")       # pas ouvert par défaut
+        h = client.get("/journal").get_data(as_text=True)
+        assert "ligne du journal" in h and "serveur OpenVINO" not in h and 'id="filtre-journal"' in h
         assert "ligne du journal" not in client.get("/journal?f=../../config.json").get_data(as_text=True)
 
 
@@ -154,7 +159,7 @@ class TestPostuler:
         }, "Camille Test"))
         lettres.CACHE["note"] = None
         h = client.get("/postuler").get_data(as_text=True)
-        assert h.count("📭 <b>Adresse à trouver</b>") == 2
+        assert h.count('class="type-carte t3"') == 2
         assert h.index("Mail Co") < h.index("Sans Adresse")                     # après les mails
         assert "lettre sans adresse" in h and "Chercher l'adresse de contact" in h
         assert "q=Sans+Adresse+Lyon+contact+recrutement+email" in h and "https://sansadresse.fr" in h
@@ -172,7 +177,7 @@ class TestPostuler:
         h = client.get("/postuler").get_data(as_text=True)
         assert "Lettre par l&#39;adresse de remplacement" in h or "Lettre par l'adresse de remplacement" in h
         assert 'data-email="a-trouver@sans-adresse.invalid"' in h
-        assert "Abandonner (brouillon à la corbeille)" in h and "Sans Adresse (adresse à trouver)" in h
+        assert "Abandonner (brouillon à la corbeille)" in h
 
     def test_lettre_sans_destinataire(self):
         brouillons = [("Candidature alternance", "Bonjour, je souhaite rejoindre PIXELO SAS à Lyon"),
@@ -347,7 +352,23 @@ class TestParametres:
     def test_page_sans_secret_affiche(self, client, cfg):
         h = client.get("/parametres").get_data(as_text=True)
         assert "jeton-de-test" not in h
-        assert "Tous les réglages" in h and h.count('class="carte pli-section"') >= 10
+        assert 'class="menu-param"' in h and h.count('class="panneau"') >= 8 and h.count('class="carte groupe-param"') >= 10
+        for titre in ("Mon profil", "Signatures", "Candidatures et relances", "Recherche d", "Messagerie",
+                      "Modèle et tour", "Interface et compte", "Avancé"):
+            assert titre in h, titre
+
+    def test_chaque_reglage_dans_une_seule_categorie(self, client):
+        import categories_reglages
+        cats = categories_reglages.categories(reglages_web.sections())
+        cles = [c["cle"] for cat in cats for _, champs in cat["groupes"] for c in champs]
+        attendues = [c["cle"] for _, champs in reglages_web.sections() for c in champs]
+        assert sorted(cles) == sorted(attendues) and len(cles) == len(set(cles))   # tous, une seule fois
+        par_cle = {c["chemin"]: cat["cle"] for cat in cats for _, champs in cat["groupes"] for c in champs}
+        assert par_cle["mails_par_jour"] == "candidatures" and par_cle["la_bonne_alternance.villes"] == "recherche"
+        assert par_cle["signature_html"] == "signatures" and par_cle["sites.annuaires"] == "avance"
+        assert par_cle["messagerie.type"] == "messagerie" and par_cle["interface.theme"] == "interface"
+        h = client.get("/parametres").get_data(as_text=True)
+        assert h.count('data-cle="') == len(attendues)                           # aucun champ en double sur la page
 
 
 class TestReglagesWeb:
@@ -444,33 +465,56 @@ class TestReglagesWeb:
 # --- données du tableau de bord et relations LinkedIn ----------------------------------------------------
 class TestDonnees:
     def test_statistiques(self):
+        import statistiques
         lignes = [
             {"Statut": MAIL, "Date envoi": AUJ - timedelta(days=1), "Relance prévue": AUJ + timedelta(days=3)},
             {"Statut": "Refus", "Date envoi": AUJ - timedelta(days=20)},
             {"Statut": "Entretien", "Date envoi": AUJ - timedelta(days=2)},
             {"Statut": LBA}, {"Statut": FORMULAIRE},
-            {"Statut": "Relancé", "Date envoi": AUJ - timedelta(days=15), "Relance prévue": AUJ + timedelta(days=1)},
+            {"Statut": "Relancé", "Date envoi": AUJ - timedelta(days=15), "Relance prévue": AUJ + timedelta(days=30)},
+            # a répondu, puis abandonnée : compte quand même dans le taux de réponse
+            {"Statut": "Abandonné", "Date envoi": AUJ - timedelta(days=9), "Dernière réponse": "2026-11-20 10:00 [positive] Oui"},
+            {"Statut": "Sans réponse", "Date envoi": AUJ - timedelta(days=40), "Dernière réponse": "2026-10-01 10:00 [automatique] Reçu"},
         ]
-        s = suivi_donnees.statistiques(lignes)
-        assert s["envoyees"] == 4 and s["reponses"] == 2 and s["taux"] == 50
-        assert s["entretiens"] == 1 and s["a_postuler"] == 2 and s["semaine"] == 2
-        assert [l["Statut"] for l in s["relances"]] == ["Relancé", MAIL]       # triées par date
-        assert len(s["semaines"]) == 10 and s["maxi"] >= 1
+        s = statistiques.calculer(lignes)
+        assert s["envoyees"] == 6 and s["reponses"] == 3 and s["taux"] == 50
+        assert s["entretiens"] == 1 and s["a_postuler"] == 2 and s["relances_7j"] == 1
+        assert len(s["semaines"]) == statistiques.SEMAINES and s["maxi"] >= 1
+        assert s["cette_semaine"] + s["semaine_derniere"] >= 2
+        etapes = {e["nom"]: e["n"] for e in s["etapes"]}
+        assert etapes == {"À postuler": 2, "En attente de réponse": 2, "Entretiens et réponses positives": 1,
+                          "Autres réponses": 0, "Refus": 1, "Sans suite": 2}
+        assert dict(s["canaux"]) == {"mail": 6}
+
+    def test_semaine_iso_en_fin_d_annee(self):
+        import statistiques
+        assert statistiques.libelle_semaine(date(2026, 11, 23)) == ("Semaine 48", "2026")
+        assert statistiques.libelle_semaine(date(2027, 1, 1)) == ("Semaine 53", "2026")     # année de la semaine ISO
+        assert statistiques.libelle_semaine(date(2025, 12, 29)) == ("Semaine 1", "2026")
+
+    def test_page_tableau_de_bord(self, client, tableau):
+        ajouter(tableau, **{"Entreprise": "A", "Statut": MAIL, "Date envoi": AUJ})
+        h = client.get("/").get_data(as_text=True)
+        annee, semaine, _ = AUJ.isocalendar()
+        assert f"Semaine {semaine}" in h and str(annee) in h and "Prochaines relances" not in h
+        assert "Où en sont tes candidatures" in h and "Envois par canal" in h
 
     def test_a_postuler_compte_comme_la_page(self, client, tableau):
         """Le chiffre du tableau de bord = le nombre de cartes de la page « À postuler »."""
         for nom, statut in (("Lba", LBA), ("Form", FORMULAIRE), ("Mail", "Brouillon"),
                             ("Sans", "Brouillon (adresse à trouver)"), ("Fini", MAIL), ("Non", "Refus")):
             ajouter(tableau, **{"Entreprise": nom, "Statut": statut, "Email": "rh@mail.fr" if nom == "Mail" else ""})
-        assert suivi_donnees.statistiques(suivi_donnees.lire())["a_postuler"] == 4
+        import statistiques
+        assert statistiques.calculer(suivi_donnees.lire())["a_postuler"] == 4
         h = client.get("/").get_data(as_text=True)
         assert '<a href="/postuler">4</a>' in h and "mails à envoyer, adresses à trouver" in h
         page = client.get("/postuler").get_data(as_text=True)
         assert page.count('class="carte" id="c') == 4
 
     def test_statistiques_tableau_vide(self):
-        s = suivi_donnees.statistiques([])
-        assert s["envoyees"] == 0 and s["taux"] == 0 and s["maxi"] == 1
+        import statistiques
+        s = statistiques.calculer([])
+        assert s["envoyees"] == 0 and s["taux"] == 0 and s["maxi"] == 1 and s["total"] == 0
 
     def test_lire_convertit_les_dates(self, tableau):
         ajouter(tableau, **{"Entreprise": "A", "Date envoi": AUJ})

@@ -13,15 +13,29 @@ STATUT_DU_TYPE = {"entretien": "Entretien", "positive": "Réponse positive", "re
 
 
 def adresse_invalide(p, l):
-    """Avis de non-remise vers l'adresse depuis l'envoi : statut « Adresse invalide ». Vrai si c'est le cas.
+    """Avis de non-remise vers les adresses depuis l'envoi : statut « Adresse invalide » si TOUTES les adresses de la
+    candidature sont revenues (vrai dans ce cas) ; si une partie seulement, l'adresse refusée est notée dans Notes
+    (une fois) et le suivi continue avec les autres.
     (Candidature faite autrement qu'en mail : un avis vers son adresse ne la concerne pas.)"""
-    if not l.mail or l.hors_mail or not any(l.mail in (m["corps"] + m["sujet"]).lower()
-                                            for m in p.ndr if m["date"].date() >= l.depuis):
+    mails = l.mails or ([l.mail] if l.mail else [])
+    if not mails or l.hors_mail:
+        return False
+    avis = [(m["corps"] + m["sujet"]).lower() for m in p.ndr if m["date"].date() >= l.depuis]
+    refusees = [a for a in mails if any(a in t for t in avis)]
+    if not refusees:
         return False
     s = p.suivi
+    notes = str(s.get(l.row, "Notes") or "")
+    if len(refusees) < len(mails):
+        nouvelles = [a for a in refusees if f"Adresse refusée : {a}" not in notes]
+        if nouvelles:
+            s.set(l.row, "Notes", (" ".join(f"Adresse refusée : {a}." for a in nouvelles) + " " + notes).strip())
+            say(f"   ⚠️ {l.ent} : adresse {', '.join(nouvelles)} refusée (avis de non-remise) ; "
+                f"suivi poursuivi avec {', '.join(a for a in mails if a not in refusees)}")
+        return False
     s.set(l.row, "Statut", "Adresse invalide")
-    s.set(l.row, "Notes", f"Avis de non-remise reçu. {s.get(l.row, 'Notes') or ''}".strip())
-    say(f"   ❌ {l.ent} : adresse {l.mail} invalide")
+    s.set(l.row, "Notes", f"Avis de non-remise reçu. {notes}".strip())
+    say(f"   ❌ {l.ent} : adresse {', '.join(mails)} invalide")
     p.bilan["adresse(s) invalide(s)"] += 1
     return True
 
@@ -31,15 +45,17 @@ def _rattachees(p, l):
     l'entreprise dans le tableau (ex. un domaine d'université sur 2 lignes -> adresse exacte uniquement), outil à
     son nom (…@entreprise.on.crisp.email), mot distinctif du nom dans l'adresse (prenom.entreprise@gmail.com),
     ou contenu (signature) qui ne désigne qu'elle."""
-    dom = domaine(l.mail)
-    dom_ok = dom and dom not in DOMAINES_PERSO and dom not in CFG.get("domaines_ignores", []) and p.nb_domaines[dom] == 1
+    def dom_ok(a):
+        dom = domaine(a)
+        return bool(dom) and dom not in DOMAINES_PERSO and dom not in CFG.get("domaines_ignores", [])             and p.nb_domaines[dom] == 1
+    mails = [(a, dom_ok(a)) for a in (l.mails or [l.mail])]
     distinctifs = p.distinctifs.get(norm(l.ent), set())
     ligne = l.row[0].row
     reps = []
     for m in p.recus:
         if m["date"].date() < l.depuis or not est_adresse(m["de"]) or m in p.ndr:
             continue
-        par_adresse = correspond(m["de"], l.mail, dom_ok, distinctifs)
+        par_adresse = any(correspond(m["de"], a, ok, distinctifs) for a, ok in mails)
         par_contenu = p.par_contenu.get(id(m), (None,))[0] == ligne
         if par_contenu and not par_adresse:
             say(f"   🔎 {l.ent} : mail de {m['de']} reconnu grâce à son contenu ({', '.join(p.par_contenu[id(m)][1])})")

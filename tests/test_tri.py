@@ -67,7 +67,7 @@ def test_page_a_postuler(client, tableau):
     ajouter(tableau, **{"Entreprise": "Form Co", "Statut": FORMULAIRE, "Lien": "https://f/1", "Lieu": "Bron"})
     ajouter(tableau, **{"Entreprise": "Mail Co", "Statut": "Brouillon", "Email": "rh@mailco.fr"})
     h = client.get("/postuler").get_data(as_text=True)
-    assert '<select id="tri">' in h and 'activerTri("tri", "cartes", "tri-postuler")' in h and "tri.js" in h
+    assert '<select id="tri"' in h and 'activerTri("tri", "cartes", "tri-postuler")' in h and "tri.js" in h
     assert 'data-type="0" data-date="2026-11-12"' in h and 'data-ville="lyon"' in h
     assert 'data-type="1" data-date=""' in h and 'data-ville="bron"' in h
     assert 'data-type="2"' in h
@@ -75,7 +75,7 @@ def test_page_a_postuler(client, tableau):
 
 def test_page_a_postuler_une_seule_carte_sans_menu(client, tableau):
     ajouter(tableau, **{"Entreprise": "Seule", "Statut": FORMULAIRE, "Lien": "https://f/1"})
-    assert '<select id="tri">' not in client.get("/postuler").get_data(as_text=True)
+    assert '<select id="tri"' not in client.get("/postuler").get_data(as_text=True)
 
 
 # --- page Écartées -----------------------------------------------------------------------------------
@@ -83,7 +83,7 @@ def test_page_ecartees(client):
     refus.noter([{"Entreprise": n, "SIRET": s, "Code NAF": "47.41Z", "Activité": a, "Adresse": ad, "Recherche": "Lyon"}
                  for n, s, a, ad in (("Boutique", "1", "Commerce", "69003 Lyon"), ("Garage", "2", "Réparation", "Bron"))])
     h = client.get("/ecartees").get_data(as_text=True)
-    assert '<select id="tri">' in h and 'activerTri("tri", "cartes", "tri-ecartees")' in h
+    assert '<select id="tri"' in h and 'activerTri("tri", "cartes", "tri-ecartees")' in h
     jour = f"{date.today():%Y-%m-%d}"
     assert f'data-activite="Commerce"' in h and 'data-ville="lyon"' in h
     assert f'data-derniere="{jour}" data-premiere="{jour}"' in h and 'data-passages="1"' in h
@@ -96,7 +96,7 @@ def test_page_ecartees_abandonnees_triees_aussi(client):
     refus.decider("2", refus.ABANDONNEE)
     refus.decider("3", refus.ABANDONNEE)
     h = client.get("/ecartees").get_data(as_text=True)
-    assert '<select id="tri">' in h and '<div id="cartes-abandonnees">' in h
+    assert '<select id="tri"' in h and 'id="cartes-abandonnees"' in h
     assert 'activerTri("tri", "cartes-abandonnees", "tri-ecartees")' in h
 
 
@@ -233,3 +233,31 @@ def test_recharger_relit_les_lettres(client, tableau, sans_outlook):
     assert lettres.CACHE["quand"] == 10 ** 12
     client.get("/postuler?frais=1")
     assert lettres.CACHE["quand"] != 10 ** 12
+
+
+# --- regroupement par ville / type (web/static/groupes.js) -------------------------------------------
+def test_ordre_des_groupes():
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node.js non installé")
+    js = Path(__file__).resolve().parent.parent / "web" / "static" / "groupes.js"
+    script = (f"const g = require({json.dumps(str(js))});"
+              "console.log(JSON.stringify([g.ordreGroupes(['Lyon', '', 'écully', 'Bron', 'Lyon']),"
+              "g.nomGroupe({dataset: {villenom: ' Lyon '}}, 'villenom'),"
+              "g.nomGroupe({dataset: {type: '2'}}, 'type', {'2': 'Mail'}), g.nomGroupe({dataset: {}}, 'villenom'),"
+              "g.ordreGroupes(['Formulaire du site', 'Mail', 'Autre', 'LBA'], ['LBA', 'Mail', 'Formulaire du site'])]));")
+    r = subprocess.run([node, "-e", script], capture_output=True, text=True, encoding="utf-8", timeout=30)
+    assert r.returncode == 0, r.stderr
+    assert json.loads(r.stdout) == [["Bron", "écully", "Lyon", ""], "Lyon", "Mail", "",          # sans nom : à la fin
+                                    ["LBA", "Mail", "Formulaire du site", "Autre"]]           # ordre imposé d'abord
+
+
+def test_regroupement_sur_les_deux_pages(client, tableau):
+    ajouter(tableau, **{"Entreprise": "Lba Co", "Statut": LBA, "Lieu": "69003 Lyon"})
+    ajouter(tableau, **{"Entreprise": "Form Co", "Statut": FORMULAIRE, "Lieu": "Bron"})
+    h = client.get("/postuler").get_data(as_text=True)
+    assert 'id="groupes"' in h and "groupes.js" in h and 'activerGroupes("groupes", ["cartes"]' in h
+    assert 'data-typenom="Formulaire La Bonne Alternance"' in h
+    refus.noter([{"Entreprise": n, "SIRET": s, "Activité": "Commerce", "Adresse": "Lyon"} for n, s in (("A", "1"), ("B", "2"))])
+    e = client.get("/ecartees").get_data(as_text=True)
+    assert 'id="groupes"' in e and 'activerGroupes("groupes", LISTES' in e

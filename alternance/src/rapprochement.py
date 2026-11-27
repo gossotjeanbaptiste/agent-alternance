@@ -12,7 +12,7 @@ Par ordre de sûreté :
 import re
 from collections import Counter
 
-from mails import DOMAINES_PERSO, domaine
+from mails import DOMAINES_PERSO, adresses, domaine
 from tableau import norm
 
 MOTS_COURANTS = {"france", "groupe", "group", "services", "service", "solutions", "conseil", "consulting",
@@ -49,12 +49,12 @@ def _domaine_du_site(site):
 
 def preuves_dans_le_mail(corps, entreprise, adresse="", lieu="", telephone="", site=""):
     """Preuves, dans le texte du mail (signature surtout), qu'il vient bien de cette entreprise :
-    son domaine (adresse ou site), son numéro de téléphone, ou son nom accompagné de son code postal / sa ville.
+    son domaine (adresses — plusieurs possibles, « a@x.fr; b@y.fr » — ou site), son numéro de téléphone, ou son nom accompagné de son code postal / sa ville.
     Renvoie la liste des preuves trouvées (vide si aucune)."""
     from tableau import cle_lieu
     texte = _sans_accents(corps)
     preuves = []
-    domaines = {d for d in (domaine(adresse) if adresse else "", _domaine_du_site(site))
+    domaines = {d for d in [domaine(a) for a in adresses(adresse)] + [_domaine_du_site(site)]
                 if d and d not in DOMAINES_PERSO}
     for d in sorted(domaines):
         # www.forgeval-dev.fr ou contact@forgeval-dev.fr oui ; notre-forgeval-dev.fr.example non

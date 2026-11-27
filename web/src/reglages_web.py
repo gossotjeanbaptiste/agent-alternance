@@ -6,6 +6,7 @@ L'interface met à jour sa copie en mémoire ; quelques listes lues au démarrag
 ne comptent pour l'interface qu'après l'avoir relancée.
 """
 import json
+import re
 
 import chemins  # noqa: F401
 import commun
@@ -53,7 +54,7 @@ def sections():
         res.setdefault(r["section"], []).append({
             **r, "cle": f"{r['fichier']}|{r['chemin']}", "valeur": _affichage(r, v),
             "defini": bool(v) if r["type"] == "secret" else True,
-            "lignes": max(3, min(12, len(_affichage(r, v).splitlines()) + 1)) if r["type"] in ("liste", "json") else 0})
+            "lignes": max(3, min(40, len(_affichage(r, v).splitlines()) + 1)) if r["type"] in ("liste", "json") else 0})
     return list(res.items())
 
 
@@ -83,6 +84,8 @@ def _convertir(r, brut, actuel):
                           "liste": "une valeur par ligne, des nombres entiers ici"}.get(t, "valeur invalide"))
     if t == "choix" and r["choix"] and brut not in r["choix"]:
         raise ValueError(f"choisir parmi {', '.join(r['choix'])}")
+    if t == "texte":     # texte long affiché sur plusieurs lignes : les retours à la ligne redeviennent des espaces
+        brut = re.sub(r"\s*\n\s*", " ", brut)
     return brut.strip()
 
 

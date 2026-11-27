@@ -29,7 +29,8 @@ def resumer(lignes, debut, fin):
                 and dans(l.get("Dernière action") or l.get("Date envoi"), debut, fin)]
     reponses.sort(key=lambda l: l.get("Dernière action") or l.get("Date envoi"), reverse=True)
     st_reponses = Counter(l.get("Statut") for l in reponses)
-    repondues_parmi = sum(1 for l in envoyees if l.get("Statut") in REPONDU)
+    from statistiques import a_repondu    # même définition que le tableau de bord
+    repondues_parmi = sum(1 for l in envoyees if a_repondu(l))
     aujourd_hui = date.today()
     relances = sorted((l for l in lignes if l.get("Statut") in {"Candidaté (mail)", "Relancé"}
                        and dans(l.get("Relance prévue"), aujourd_hui, aujourd_hui + timedelta(days=JOURS_RELANCES))),

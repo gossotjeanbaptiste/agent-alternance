@@ -1,141 +1,82 @@
 {% extends "base.html" %}
 {% block titre %}Routines{% endblock %}
 {% block contenu %}
-<h1>Routines</h1>
-<div class="carte">
+<div class="titre-page">
+  <h1>Routines</h1>
+  <details class="aide">
+    <summary>ℹ️ Les routines</summary>
+    <ul>
+      <li><b>🔁 Relances</b> : lit ta messagerie (réponses, envois) puis écrit les relances dues en brouillon.</li>
+      <li><b>🔎 Recherche</b> : trouve de nouvelles entreprises et écrit leurs candidatures.</li>
+      <li><b>Les deux</b> : relances puis recherche, à la suite.</li>
+      <li><b>📩 Mails reçus</b> : met seulement le tableau à jour d'après ta messagerie, sans relance ni candidature.</li>
+      <li><b>✍️ Réponses La Bonne Alternance</b> : écrit les lettres et réponses manquantes des formulaires.</li>
+      <li>Rien n'est jamais envoyé. Le modèle tourne sur la tour si elle est disponible, sinon sur ce PC.
+        Pendant une routine (même programmée), le tableau ne peut pas être modifié depuis l'interface.</li>
+    </ul>
+  </details>
+</div>
+<div class="carte lancer">
   <div class="actions">
     <button class="principal" onclick="lancer('relances')">🔁 Relances</button>
     <button class="principal" onclick="lancer('recherche')">🔎 Recherche</button>
     <button onclick="lancer('tout')">Les deux</button>
     <button onclick="lancer('mails')" title="Lit les mails reçus (réponses, avis de non-remise, envois) et met le tableau à jour, sans écrire de relance ni chercher d'entreprises">📩 Mails reçus</button>
     <button onclick="lancer('reponses')" title="Écrit les réponses aux questions (et la lettre si elle manque) de toutes les candidatures à postuler sur La Bonne Alternance">✍️ Réponses La Bonne Alternance</button>
-    <label style="align-self:center"><input type="checkbox" id="essai"> mode essai (rien n'est écrit)</label>
-    <label style="align-self:center">passages <input type="number" id="fois" value="1" min="1" max="50" style="width:4em"></label>
-    <label style="align-self:center" title="Mails envoyés et reçus lus à partir de ce jour (plus rapide). Vide : toute la période suivie. Mails envoyés aussi (les plus anciens ne sont relus que si une relance en a besoin).">mails depuis <input type="date" id="depuis"></label>
+    <span class="separateur"></span>
+    <label title="Nombre de fois d'affilée (la routine se relance dès que la précédente est terminée)">passages <input type="number" id="fois" value="1" min="1" max="50" style="width:4em"></label>
+    <label title="Mails envoyés et reçus lus à partir de ce jour (plus rapide). Vide : toute la période suivie.">mails depuis <input type="date" id="depuis"></label>
+    <label title="Rien n'est écrit : ni brouillon, ni tableau"><input type="checkbox" id="essai"> essai</label>
   </div>
-  <p class="doux">« Mails reçus » lit seulement ta messagerie (réponses classées, adresses invalides, envois repérés)
-    et met le tableau à jour, sans relance ni nouvelle candidature.
-    « Réponses La Bonne Alternance » écrit, pour chaque candidature à postuler sur La Bonne Alternance,
-    les réponses aux questions du formulaire et la lettre qui manquent ; rien n'est envoyé.
-    Avec plusieurs passages, la routine se relance d'elle-même dès que la précédente est terminée.
-    La routine utilise la tour si elle est disponible, sinon ce PC. Le tableau ne peut pas être modifié depuis l'interface pendant qu'elle tourne.</p>
 </div>
-<div class="carte">
-  <div class="actions" style="justify-content:space-between; align-items:center">
-    <h2 id="titre-sortie" style="margin:0">Aucune routine lancée depuis l'interface</h2>
-    <button id="annuler" style="display:none" onclick="annulerRoutine()"
-            title="Arrête la routine et ses passages suivants ; ce qui est déjà fait reste fait">⛔ Annuler la routine</button>
+<div class="routines-grille">
+  <div class="routines-principal">
+    <div class="carte avancement" id="avancement">
+      <div class="entete-avancement">
+        <h2 id="titre-sortie">Aucune routine en cours</h2>
+        <span class="doux" id="av-duree"></span>
+        <button id="annuler" style="display:none" onclick="annulerRoutine()"
+                title="Arrête la routine et ses passages suivants ; ce qui est déjà fait reste fait">⛔ Annuler la routine</button>
+      </div>
+      <div id="av-corps" style="display:none">
+        <div class="jauge-ligne"><span class="jauge-nom">Passage</span><span class="jauge"><span id="av-passage-barre"></span></span><b id="av-passage"></b></div>
+        <div class="jauge-ligne"><span class="jauge-nom" id="av-etape"></span><span class="jauge"><span id="av-compte-barre"></span></span><b id="av-compte"></b></div>
+        <p class="doux" id="av-detail"></p>
+      </div>
+    </div>
+    <div class="carte journal-routine">
+      <div class="actions" style="justify-content:space-between; align-items:center">
+        <h2 id="titre-journal" style="margin:0">Journal</h2>
+        <label class="doux" style="font-size:13px"><input type="checkbox" id="suivre" checked> suivre la fin</label>
+      </div>
+      <pre id="sortie" class="journal-plein"></pre>
+    </div>
   </div>
-  <pre id="sortie"></pre>
-</div>
-<details class="carte pli-section" id="pli-planification">
-  <summary><h2 style="display:inline">Tous les jours automatiquement</h2></summary>
-  <p class="doux">Le Planificateur de tâches Windows lance la routine chaque jour aux heures choisies
-    (PC allumé, session ouverte). Une routine peut être programmée plusieurs fois par jour, chaque heure avec son
-    nombre de passages ; ✕ supprime une heure.</p>
-  {% for nom, libelle in (("relances", "Relances"), ("recherche", "Recherche"), ("tout", "Les deux"),
-                           ("mails", "Mails reçus"), ("reponses", "Réponses LBA")) %}
-  <div class="actions" style="align-items:center; flex-wrap:wrap">
-    <span style="width:7em">{{ libelle }}</span>
-    <input type="time" id="heure-{{ nom }}">
-    <label>passages <input type="number" id="fois-{{ nom }}" value="1" min="1" max="50" style="width:4em"></label>
-    <button onclick="planifier('{{ nom }}')">➕ Ajouter</button>
-    <span class="doux" id="etat-{{ nom }}"></span>
+  <div class="routines-cote">
+    <details class="carte pli-section" id="pli-planification" open>
+      <summary><h2 style="display:inline">⏰ Tous les jours</h2></summary>
+      <p class="doux" style="font-size:13px">Le Planificateur de tâches lance la routine aux heures choisies (PC allumé, session ouverte).</p>
+      {% for nom, libelle in (("relances", "Relances"), ("recherche", "Recherche"), ("tout", "Les deux"),
+                               ("mails", "Mails reçus"), ("reponses", "Réponses LBA")) %}
+      <div class="planif">
+        <div class="planif-nom"><b>{{ libelle }}</b> <span class="doux" id="etat-{{ nom }}"></span></div>
+        <div class="planif-ajout">
+          <input type="time" id="heure-{{ nom }}">
+          <label title="passages">× <input type="number" id="fois-{{ nom }}" value="1" min="1" max="50" style="width:3.5em"></label>
+          <button class="petit" onclick="planifier('{{ nom }}')" title="Ajouter cette heure">➕</button>
+        </div>
+      </div>
+      {% endfor %}
+    </details>
+    <div class="carte">
+      <h2>Derniers lancements</h2>
+      {% for h in historique %}
+      <div class="lancement"><a href="#" onclick="voir('{{ h.nom }}'); return false;">{{ h.libelle }}</a> <span class="doux">{{ (h.taille / 1024)|round(1) }} Ko</span></div>
+      {% else %}<p class="doux">Aucun lancement pour l'instant.</p>{% endfor %}
+    </div>
   </div>
-  {% endfor %}
-</details>
-<div class="carte">
-  <h2>Derniers lancements</h2>
-  {% for h in historique %}
-  <div><a href="#" onclick="voir('{{ h.nom }}'); return false;">{{ h.nom }}</a> <span class="doux">({{ (h.taille / 1024)|round(1) }} Ko)</span></div>
-  {% else %}<p class="doux">Aucun lancement depuis l'interface pour l'instant.</p>{% endfor %}
 </div>
 {% endblock %}
 {% block script %}
-<script>
-let suivi = null;
-async function chargerPlanification() {
-  const liste = await (await fetch("/api/planification")).json();
-  for (const nom of ["relances", "recherche", "tout", "mails", "reponses"]) {
-    const e = document.getElementById("etat-" + nom), siennes = liste.filter(t => t.routine === nom);
-    e.replaceChildren();
-    if (!siennes.length) { e.textContent = "non planifiée"; continue; }
-    for (const t of siennes) {
-      const puce = document.createElement("span");
-      puce.className = "puce";
-      puce.style.cssText = "display:inline-flex; gap:.3em; align-items:center; margin-right:.6em";
-      puce.title = "Prochaine : " + t.prochaine + " (" + t.etat + ")";
-      puce.textContent = "⏰ " + t.heure + (t.fois > 1 ? " ×" + t.fois : "");
-      const x = document.createElement("button");
-      x.textContent = "✕";
-      x.title = "Supprimer ce passage programmé";
-      x.style.cssText = "padding:0 .4em";
-      x.onclick = () => supprimerPlanification(t.id, t.heure);
-      puce.append(x);
-      e.append(puce);
-    }
-  }
-}
-async function planifier(nom) {
-  const heure = document.getElementById("heure-" + nom).value;
-  if (!heure) { annoncer("Choisis une heure.", true); return; }
-  const fois = parseInt(document.getElementById("fois-" + nom).value, 10) || 1;
-  const r = await poster("/api/planification", {nom, heure, fois});
-  annoncer(r.message || (r.ok ? "Enregistré." : "Erreur"), !r.ok);
-  chargerPlanification();
-}
-async function supprimerPlanification(id, heure) {
-  if (!confirm("Supprimer le passage programmé de " + heure + " ?")) return;
-  const r = await poster("/api/planification", {supprimer: id});
-  annoncer(r.message || (r.ok ? "Supprimé." : "Erreur"), !r.ok);
-  chargerPlanification();
-}
-chargerPlanification();
-// par défaut : lundi de la semaine en cours (les mails plus anciens ont déjà été lus)
-(function () {
-  const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  const p = n => String(n).padStart(2, "0");
-  document.getElementById("depuis").value = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-})();
-async function lancer(nom) {
-  const r = await poster("/api/routine/" + nom, {
-    essai: document.getElementById("essai").checked,
-    fois: parseInt(document.getElementById("fois").value, 10) || 1,
-    depuis: document.getElementById("depuis").value,
-  });
-  if (!r.ok) { annoncer(r.message || "Impossible de lancer", true); return; }
-  annoncer("Routine lancée."); actualiser();
-}
-async function actualiser() {
-  const r = await (await fetch("/api/routine")).json();
-  if (!r.nom) return;
-  const etat = r.en_cours ? "⏳ en cours" : r.annulee ? "⛔ annulée"
-    : (r.code === 0 ? "✅ terminée" : "❌ terminée avec une erreur (code " + r.code + ")");
-  document.getElementById("annuler").style.display = r.en_cours ? "" : "none";
-  document.getElementById("titre-sortie").textContent = "Routine « " + r.nom + " » lancée à " + r.debut + " — " + etat;
-  const pre = document.getElementById("sortie");
-  const enBas = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20;
-  pre.textContent = r.sortie;
-  if (enBas) pre.scrollTop = pre.scrollHeight;
-  clearTimeout(suivi);
-  if (r.en_cours) suivi = setTimeout(actualiser, 2000);
-}
-async function annulerRoutine() {
-  if (!confirm("Annuler la routine en cours ?\nCe qui est déjà fait (tableau, brouillons, lettres) est gardé ; "
-               + "les passages suivants ne seront pas lancés.")) return;
-  const bouton = document.getElementById("annuler");
-  bouton.disabled = true;
-  const r = await poster("/api/annuler_routine");
-  bouton.disabled = false;
-  annoncer(r.message || (r.ok ? "Routine annulée." : "Erreur"), !r.ok);
-  actualiser();
-}
-async function voir(nom) {
-  const r = await (await fetch("/api/historique/" + encodeURIComponent(nom))).json();
-  clearTimeout(suivi);
-  document.getElementById("titre-sortie").textContent = nom;
-  document.getElementById("sortie").textContent = r.sortie;
-}
-actualiser();
-</script>
+<script src="{{ url_for('static', filename='routines.js') }}"></script>
 {% endblock %}
