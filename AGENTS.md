@@ -34,6 +34,10 @@ où en est le projet.
 - **Jamais de vrais noms** : après un diagnostic sur les vraies données (tableau, mails), ne reprendre dans le code,
   les tests, les commentaires ou les messages de commit **aucun** nom d'entreprise ou de personne réelle, ni adresse :
   transposer en noms inventés (Forgeval Dev, Comptanova, Pixelo, Lambert-Morel…).
+  **Exception connue, à ne pas toucher** : trois noms réels sont déjà publiés depuis le 13/11 — Opticod, E.S.I. France
+  et N Tech Services (dans `tests/test_sites.py`, `tests/test_pays.py` et deux commentaires de `alternance/src/sites/`
+  `noms.py` / `recherche.py`). Les laisser tels quels : ne pas les renommer, ne pas les supprimer, ne pas les signaler
+  comme une erreur à corriger. Cette exception ne vaut que pour eux : tout nouveau nom reste interdit.
 - **Tests sans effet de bord** : mode `--essai` (rien n'est écrit), copie du tableau pour tester une écriture,
   faux modèle (`llm_json` remplacé) pour tester les consignes. Ne pas faire tourner le modèle sur le processeur
   du portable ; ne pas utiliser la tour si elle est occupée (le script vérifie sa carte graphique) ; ne jamais la
@@ -159,3 +163,9 @@ avec un message rédigé pour l'occasion. Ne publier **que sur demande**, après
 (aucun nom, école, ville réelle, IP, nom de machine, identifiant ni secret, aucun nom d'entreprise ou de personne
 tiré des données ; seuls les modèles `*.example.*` de `alternance/donnees/`). Une version se publie avec un tag
 `vX.Y.Z` poussé sur `public` : le workflow fabrique l'installeur (vérifier ensuite sa taille, ~18 Mo).
+
+**Historique des versions obligatoire** : à **chaque** nouvelle version (chaque tag `vX.Y.Z`), ajouter **avant** de
+publier une ligne en haut de `CHANGELOG.md` (dans la bonne série, `## 1.4 — …` ; nouvelle série si le deuxième chiffre
+change) : `- **X.Y.Z** (JJ/MM/AAAA) — ce qui change pour l'utilisateur`, en une ou deux lignes, en français simple,
+sans nom réel ni détail technique inutile. Committer ce changement sur `main` puis `local-simple` (même fichier sur les
+deux branches) pour qu'il parte avec la version ; le message du commit public de la version reprend la même phrase.
