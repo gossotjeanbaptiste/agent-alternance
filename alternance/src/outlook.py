@@ -8,10 +8,30 @@ from pathlib import Path
 import commun
 import reglages
 from commun import CFG, P, say
+from mails import est_a_trouver, etiquette_a_trouver
 
 def _chemins_outlook():
     """Emplacements possibles d'OUTLOOK.EXE (modifiables dans la page Paramètres, section « Messagerie »)."""
     return [Path(p) for p in reglages.valeur("outlook.chemins_exe")]
+
+
+def _separateur_liste():
+    """Séparateur de listes de Windows (« ; » en français) : Outlook l'utilise entre les catégories d'un mail."""
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\International") as k:
+            return winreg.QueryValueEx(k, "sList")[0] or ";"
+    except Exception:
+        return ";"
+
+
+def categories_modifiees(actuelles, nom, ajouter, sep=";"):
+    """Catégories d'un mail après ajout / retrait de nom, ou None si rien ne change."""
+    liste = [c.strip() for c in re.split(r"[,;]", actuelles or "") if c.strip()]
+    if (nom in liste) == ajouter:
+        return None
+    liste = liste + [nom] if ajouter else [c for c in liste if c != nom]
+    return f"{sep} ".join(liste)
 
 
 class Msg(dict):
@@ -213,7 +233,39 @@ class Outlook:
                 mail.Attachments.Add(str(P(p)))
         if envoi_differe:
             mail.DeferredDeliveryTime = envoi_differe
+        nom = etiquette_a_trouver()
+        if nom and est_a_trouver(re.sub(r".*<|>.*", "", a or "")):
+            self._categorie_existe(nom)
+            mail.Categories = nom   # repérer d'un coup d'œil les brouillons dont l'adresse reste à trouver
         mail.Save()
+
+    def _categorie_existe(self, nom):
+        """Ajoute la catégorie à la liste d'Outlook (sinon elle s'affiche sans couleur)."""
+        try:
+            if not any(c.Name == nom for c in self.ns.Categories):
+                self.ns.Categories.Add(nom, 2)   # 2 = orange
+        except Exception:
+            pass
+
+    def etiqueter_brouillons(self):
+        """Catégorie « Adresse à trouver » ajoutée aux brouillons sans vraie adresse, retirée de ceux qui l'ont
+        reçue (réglage messagerie.etiquette_a_trouver). Renvoie (ajoutés, retirés)."""
+        nom = etiquette_a_trouver()
+        if not nom or commun.ESSAI:
+            return 0, 0
+        self._categorie_existe(nom)
+        sep, compte = _separateur_liste(), [0, 0]
+        for it in self.ns.GetDefaultFolder(16).Items:
+            try:
+                a_trouver = any(est_a_trouver(self._addr(r)) for r in it.Recipients)
+                nouvelles = categories_modifiees(it.Categories, nom, a_trouver, sep)
+                if nouvelles is not None:
+                    it.Categories = nouvelles
+                    it.Save()
+                    compte[0 if a_trouver else 1] += 1
+            except Exception:
+                pass
+        return tuple(compte)
 
 
 def texte_mail(item, maxi=3500):

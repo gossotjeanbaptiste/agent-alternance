@@ -9,6 +9,7 @@ from email.utils import formatdate, make_msgid
 
 import commun
 from commun import P, say
+from mails import est_a_trouver
 from .texte import _adresses, _decoder, _texte_en_html
 
 
@@ -78,5 +79,7 @@ class Brouillons:
                 principal, _, sous = typ.partition("/")
                 msg.add_attachment(donnees, maintype=principal, subtype=sous or "octet-stream", filename=nom)
         brut = msg.as_bytes()
-        self._avec_reprise(lambda: self.cx.append(self.dossiers["brouillons"], "(\\Draft)",
-                                                  imaplib.Time2Internaldate(time.time()), brut))
+        rep = self._avec_reprise(lambda: self.cx.append(self.dossiers["brouillons"], "(\\Draft)",
+                                                        imaplib.Time2Internaldate(time.time()), brut))
+        if est_a_trouver((_adresses(a) or [""])[0]):
+            self.etiqueter_brouillon(rep[1] if isinstance(rep, tuple) and len(rep) > 1 else None)

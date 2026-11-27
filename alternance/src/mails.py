@@ -47,3 +47,8 @@ def destinataire_a_trouver(entreprise):
 def est_a_trouver(adresse):
     """Vrai pour une adresse de remplacement (brouillon dont l'adresse reste à trouver)."""
     return str(adresse or "").strip().lower().endswith(A_TROUVER)
+
+
+def etiquette_a_trouver():
+    """Libellé Gmail / catégorie Outlook des brouillons dont l'adresse reste à trouver ("" = pas d'étiquette)."""
+    return str(reglages.valeur("messagerie.etiquette_a_trouver") or "").strip()

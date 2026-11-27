@@ -48,6 +48,34 @@ def retirer(jeton, origine):
     return trouve[1] if trouve else None
 
 
+def donnees_fiche(url, origine):
+    """Formulaire ouvert par l'utilisateur lui-même sur La Bonne Alternance (pas depuis LMAgent) : données pour remplir
+    ses champs vides, seulement pour l'extension LMAgent et si le réglage le permet ; sinon None.
+    Entreprise connue (même fiche qu'une candidature enregistrée) : avec sa lettre et ses réponses ; sinon identité,
+    recherche et CV seulement. Ne lit pas la messagerie (le formulaire attend) et ne fait pas tourner le modèle."""
+    import chemins  # noqa: F401
+    import formulaire_lba
+    import reglages
+    import reponses
+    if origine != ORIGINE or not reglages.valeur("la_bonne_alternance.remplir_hors_lmagent"):
+        return None
+    if not formulaire_lba.cle_fiche(url):
+        return None
+    toutes = reponses.lire()
+    lien = formulaire_lba.lien_connu(url, toutes)
+    connue = toutes.get(lien) or {}
+    lettre = str(connue.get("lettre") or "").strip()
+    if lettre:
+        import postuler
+        sig = postuler.signature()
+        lettre = f"{lettre}\n\n{sig}" if sig else lettre
+    donnees = formulaire_lba.champs(lettre, connue)
+    cv, _ = formulaire_lba.cv_du_formulaire()
+    donnees["cv"] = formulaire_lba.cv_pour_le_navigateur(cv)
+    donnees["connue"] = bool(lettre or formulaire_lba.reponses_presentes(connue))
+    return donnees
+
+
 SOURCE = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2])) / "web" / "extension"
 
 

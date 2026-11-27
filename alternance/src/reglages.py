@@ -98,6 +98,10 @@ REGLAGES = [
     _r("Messagerie", A, "messagerie.imap.signature_html", "Signature HTML pour Gmail (chemin)", "texte", "",
        "Vide = signature construite depuis la page Paramètres (si « ajouter la signature » est coché)."),
     _r("Messagerie", A, "signature_html", "Signature HTML pour Outlook (chemin)", "texte", ""),
+    _r("Messagerie", A, "messagerie.etiquette_a_trouver", "Étiquette des brouillons dont l'adresse reste à trouver",
+       "texte", "Adresse à trouver",
+       "Libellé Gmail ou catégorie Outlook posé sur ces brouillons, et retiré dès que tu y mets la vraie adresse "
+       "(à la routine suivante) : les autres brouillons sont prêts à partir. Vide = pas d'étiquette."),
     _r("Messagerie", A, "outlook.chemins_exe", "Emplacements possibles d'OUTLOOK.EXE", "liste", OUTLOOK_EXE),
     _r("Messagerie", A, "outlook.attente_ouverture_s", "Attente après l'ouverture d'Outlook (secondes)", "entier", 20),
     _r("Messagerie", A, "outlook.garde_minutes", "Arrêt si la messagerie ne répond plus après (minutes)", "entier", 10),
@@ -135,6 +139,11 @@ REGLAGES = [
        "Ex. : nom de l'école / intitulé de la formation / ville (200 caractères au plus)."),
     _r(F, A, "la_bonne_alternance.rythme", "Rythme de l'alternance", "texte", "",
        "Ex. : 1 semaine à l'école / 2 semaines en entreprise (200 caractères au plus)."),
+    _r(F, A, "la_bonne_alternance.remplir_hors_lmagent", "Préremplir aussi les formulaires ouverts hors de LMAgent",
+       "oui_non", True,
+       "Extension LMAgent : quand tu ouvres toi-même « Candidature simplifiée » sur La Bonne Alternance, les champs "
+       "vides sont remplis (identité, recherche, CV ; lettre et réponses si LMAgent connaît l'entreprise). "
+       "LMAgent doit être ouvert. Rien n'est jamais envoyé."),
     _r(F, A, "la_bonne_alternance.cv", "CV à joindre (fichier)", "texte", "",
        "Chemin, ou simple nom d'un fichier du dossier pieces_jointes (ex. CV+Calendrier.pdf). PDF ou Word, 3 Mo au plus. "
        "Vide = le CV des pièces jointes des candidatures."),

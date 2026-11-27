@@ -16,17 +16,19 @@ Réglages (config_alternance.json) :
     connexion.py   connexion (avec reprise si le serveur coupe), dossiers, en-têtes, téléchargement
     lecture.py     envois, mails reçus, brouillons, mails programmés
     brouillons.py  dépôt et suppression de brouillons
+    etiquettes.py  libellé Gmail « Adresse à trouver » sur les brouillons sans vraie adresse
 """
 import imaplib  # noqa: F401  (imap.imaplib.IMAP4_SSL remplacé par un faux serveur dans les tests)
 
 from .brouillons import Brouillons
 from .connexion import Connexion
+from .etiquettes import Etiquettes, utf7_imap  # noqa: F401
 from .lecture import Lecture
 from .objets import MailImap, Recu  # noqa: F401
 from .texte import MOIS, _adresses, _date_imap, _date_locale, _decoder, _texte, _texte_en_html  # noqa: F401
 
 
-class Imap(Connexion, Lecture, Brouillons):
+class Imap(Connexion, Lecture, Brouillons, Etiquettes):
     """Même interface que outlook.Outlook (envois, recus, brouillon…)."""
     # Mails programmés (« Programmer l'envoi ») : Gmail les retrouve avec la recherche « in:scheduled ».
     # Une autre messagerie IMAP ne les montre pas : un brouillon de relance disparu sans envoi est

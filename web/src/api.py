@@ -191,6 +191,18 @@ def extension_presente():
     return jsonify(ok=ok), (200 if ok else 404)
 
 
+@api.post("/extension_fiche")
+def extension_fiche():
+    """Formulaire ouvert hors de LMAgent : données pour l'extension Chrome de LMAgent seulement (origine vérifiée ;
+    adresse de la fiche donnée par Chrome lui-même, voir extension_lba.donnees_fiche)."""
+    import extension_lba
+    d = request.get_json(force=True, silent=True) or {}
+    donnees = extension_lba.donnees_fiche(str(d.get("url") or ""), request.headers.get("Origin"))
+    r = jsonify(ok=donnees is not None, donnees=donnees)
+    r.headers["Cache-Control"] = "no-store"
+    return r, (200 if donnees is not None else 404)
+
+
 @api.post("/extension/<jeton>")
 def extension(jeton):
     """Données d'un formulaire prérempli, pour l'extension Chrome de LMAgent seulement (jeton à usage unique,

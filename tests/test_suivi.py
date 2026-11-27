@@ -385,3 +385,36 @@ def test_relance_due_mail_d_origine_avant_la_date(tableau, messagerie, faux_mode
     suivi.mettre_a_jour(tableau, ol)
     assert demandes == [3, 15]                       # période complète lue seulement pour cette relance
     assert ol.deposes and ol.deposes[0]["base"] is origine[2]   # mail d'origine transféré sous la relance
+
+
+
+class TestEtiquetteATrouver:
+    """Étiquette « Adresse à trouver » remise d'aplomb par la routine Relances, jamais par « Mails reçus »."""
+    def messagerie(self, messagerie, resultat=(2, 1)):
+        ol = messagerie()
+        ol.appels = []
+        ol.etiqueter_brouillons = lambda: ol.appels.append(1) or resultat
+        return ol
+
+    def test_routine_relances(self, tableau, messagerie, capsys):
+        ol = self.messagerie(messagerie)
+        suivi.mettre_a_jour(tableau, ol)
+        assert ol.appels == [1]
+        assert "posée sur 2 brouillon(s), retirée de 1" in capsys.readouterr().out
+
+    def test_routine_mails_recus_n_ecrit_rien(self, tableau, messagerie):
+        ol = self.messagerie(messagerie)
+        suivi.mettre_a_jour(tableau, ol, relancer=False)
+        assert ol.appels == []
+
+    def test_rien_a_changer_rien_dans_le_journal(self, tableau, messagerie, capsys):
+        suivi.mettre_a_jour(tableau, self.messagerie(messagerie, (0, 0)))
+        assert "Étiquette" not in capsys.readouterr().out
+
+    def test_une_erreur_ne_bloque_pas_la_routine(self, tableau, messagerie, capsys):
+        ol = messagerie()
+        def casse():
+            raise RuntimeError("dossier Brouillons illisible")
+        ol.etiqueter_brouillons = casse
+        suivi.mettre_a_jour(tableau, ol)   # ne lève pas
+        assert "non mises à jour (dossier Brouillons illisible)" in capsys.readouterr().out

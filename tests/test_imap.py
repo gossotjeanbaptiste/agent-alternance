@@ -77,6 +77,12 @@ class FauxServeur:
         self.gmail, self.move = gmail, move
         self.choisi, self.lecture_seule, self.appends, self.efface = None, True, [], set()
         self.coupures = 0
+        self.capabilities = ("IMAP4REV1", "UIDPLUS") + (("X-GM-EXT-1",) if gmail else ())
+        self.libelles, self.crees, self.appenduid = {}, [], True   # uid -> {libellés}
+
+    def create(self, nom):
+        self.crees.append(nom)
+        return "NO", [b"[ALREADYEXISTS] Duplicate folder name"]
 
     def login(self, adresse, mdp):
         if mdp != "bon":
@@ -103,6 +109,8 @@ class FauxServeur:
         if c == "SEARCH":
             if args[1:] == ("X-GM-RAW", '"in:scheduled"') and not self.gmail:
                 raise imaplib.IMAP4.error("commande inconnue")
+            if args[1:2] == ("X-GM-LABELS",):
+                return "OK", [" ".join(u for u in boite if args[2] in self.libelles.get(u, ())).encode()]
             return "OK", [" ".join(boite).encode()]
         if c == "FETCH":
             uids = list(boite) if args[0] == "1:*" else args[0].split(",")
@@ -126,6 +134,13 @@ class FauxServeur:
                 self.dossiers[args[1].strip('"')][u] = boite[u]
             return "OK", [b""]
         if c == "STORE":
+            assert not self.lecture_seule, "STORE sur un dossier ouvert en lecture seule"
+            if args[1] in ("+X-GM-LABELS", "-X-GM-LABELS"):
+                libelle = args[2][1:-1]   # « ("…") » -> « "…" »
+                for u in args[0].split(","):
+                    s = self.libelles.setdefault(u, set())
+                    s.add(libelle) if args[1][0] == "+" else s.discard(libelle)
+                return "OK", [b""]
             self.efface |= set(args[0].split(","))
             return "OK", [b""]
         raise AssertionError(commande)
@@ -138,7 +153,9 @@ class FauxServeur:
     def append(self, dossier, drapeaux, date, brut):
         dossier = dossier.strip('"')
         self.appends.append((dossier, drapeaux, brut))
-        self.dossiers[dossier][str(100 + len(self.appends))] = brut
+        uid = str(100 + len(self.appends))
+        self.dossiers[dossier][uid] = brut
+        return "OK", [f"[APPENDUID 1 {uid}] (Success)".encode() if self.appenduid else b"(Success)"]
 
     def shutdown(self):
         pass
@@ -304,3 +321,73 @@ class TestImap:
     def test_dossier_inaccessible(self, boite):
         with pytest.raises(RuntimeError):
             boite._choisir("N'existe pas")
+
+
+# --- libellé « Adresse à trouver » (Gmail) ---------------------------------------------------------
+A_TROUVER = '"Pixelo (adresse à trouver)" <a-trouver@pixelo.invalid>'
+LIBELLE = '"Adresse &AOA- trouver"'
+
+
+@pytest.mark.parametrize("texte, attendu", [
+    ("Adresse à trouver", "Adresse &AOA- trouver"),
+    ("Envoyés", "Envoy&AOk-s"),
+    ("R&D", "R&-D"),
+    ("Simple", "Simple"),
+    ("été", "&AOk-t&AOk-"),
+])
+def test_utf7_imap(texte, attendu):
+    assert imap.utf7_imap(texte) == attendu
+
+
+class TestEtiquettes:
+    def brouillons(self, boite):
+        return boite.serveur.dossiers["[Gmail]/Brouillons"]
+
+    def test_pose_a_la_creation(self, boite):
+        boite.brouillon(A_TROUVER, "Candidature", "<p>x</p>")
+        uid = max(self.brouillons(boite), key=int)
+        assert boite.serveur.libelles[uid] == {LIBELLE}
+        assert boite.serveur.crees == [LIBELLE]
+
+    def test_pas_pose_sur_une_vraie_adresse(self, boite):
+        boite.brouillon("rh@pixelo.fr", "Candidature", "<p>x</p>")
+        assert boite.serveur.libelles == {}
+
+    def test_sans_appenduid_passe_par_la_remise_en_ordre(self, boite):
+        boite.serveur.appenduid = False
+        boite.brouillon(A_TROUVER, "Candidature", "<p>x</p>")
+        assert boite.serveur.libelles[max(self.brouillons(boite), key=int)] == {LIBELLE}
+
+    def test_reglage_vide_pas_de_libelle(self, boite, cfg):
+        cfg["messagerie"]["etiquette_a_trouver"] = ""
+        boite.brouillon(A_TROUVER, "Candidature", "<p>x</p>")
+        assert boite.serveur.libelles == {} and boite.serveur.crees == []
+        assert boite.etiqueter_brouillons() == (0, 0)
+
+    def test_pas_gmail_pas_de_libelle(self, boite):
+        boite.serveur.capabilities = ("IMAP4REV1",)
+        boite.brouillon(A_TROUVER, "Candidature", "<p>x</p>")
+        assert boite.serveur.libelles == {} and len(boite.serveur.appends) == 1   # le brouillon est bien là
+
+    def test_remise_en_ordre(self, boite):
+        b = self.brouillons(boite)
+        b["20"] = brut(To=A_TROUVER, Subject="Ancien brouillon sans adresse")           # libellé à poser
+        b["21"] = brut(To="contact@comptanova.fr", Subject="Adresse renseignée depuis")   # libellé à retirer
+        boite.serveur.libelles = {"21": {LIBELLE}, "7": {'"Autre"'}}
+        assert boite.etiqueter_brouillons() == (1, 1)
+        assert boite.serveur.libelles["20"] == {LIBELLE}
+        assert boite.serveur.libelles["21"] == set() and boite.serveur.libelles["7"] == {'"Autre"'}
+        assert boite.etiqueter_brouillons() == (0, 0)   # déjà en ordre : rien à refaire
+
+    def test_rien_en_mode_essai(self, boite):
+        self.brouillons(boite)["20"] = brut(To=A_TROUVER, Subject="x")
+        commun.ESSAI = True
+        assert boite.etiqueter_brouillons() == (0, 0) and boite.serveur.libelles == {}
+
+    def test_une_erreur_ne_casse_rien(self, boite, monkeypatch, capsys):
+        def refuse(*a):
+            raise imaplib.IMAP4.error("STORE refusé")
+        boite.brouillon("rh@pixelo.fr", "x", "y")
+        monkeypatch.setattr(boite, "_poser", refuse)
+        boite.brouillon(A_TROUVER, "Candidature", "<p>x</p>")
+        assert len(boite.serveur.appends) == 2 and "non posée" in capsys.readouterr().out

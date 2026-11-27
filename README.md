@@ -96,7 +96,7 @@ Mot de passe oublié : supprime `alternance/donnees/acces_interface.json`, la pa
 |---|---|
 | **Tableau de bord** | chiffres, graphique des envois, relances à venir |
 | **Suivi** | toutes les candidatures, filtres, changement de statut |
-| **À postuler** | candidatures par formulaire (La Bonne Alternance, formulaire de contact du site) : ouvrir la page, copier la lettre et, pour La Bonne Alternance, les réponses aux trois questions (motivations, missions, expériences), puis « Envoyée ». « 🧾 Ouvrir le formulaire prérempli » remplit le formulaire La Bonne Alternance dans Chrome ; **sans Chrome**, la page demande quel navigateur utiliser (Edge, Brave, Vivaldi, Opera, Opera GX : prérempli, par l'extension LMAgent installée dans ce navigateur ; Firefox ou navigateur par défaut : page ouverte, lettre copiée). Les candidatures **📧 par mail** y sont aussi : site de l'entreprise, recherche Google, « Envoyée » (statut « Candidaté (mail) », date d'envoi et relance prévue), « Abandonner » (brouillon mis à la corbeille) |
+| **À postuler** | candidatures par formulaire (La Bonne Alternance, formulaire de contact du site) : ouvrir la page, copier la lettre et, pour La Bonne Alternance, les réponses aux trois questions (motivations, missions, expériences), puis « Envoyée ». « 🧾 Ouvrir le formulaire prérempli » remplit le formulaire La Bonne Alternance dans Chrome ; **sans Chrome**, la page demande quel navigateur utiliser (Edge, Brave, Vivaldi, Opera, Opera GX : prérempli, par l'extension LMAgent installée dans ce navigateur ; Firefox ou navigateur par défaut : page ouverte, lettre copiée). Avec l'extension, un formulaire « Candidature simplifiée » ouvert **toi-même** sur le site (fiche trouvée hors de LMAgent) est aussi prérempli : champs vides seulement, identité, recherche et CV, plus la lettre et les réponses si LMAgent connaît l'entreprise (LMAgent ouvert ; réglage « Préremplir aussi les formulaires ouverts hors de LMAgent »). Les candidatures **📧 par mail** y sont aussi : site de l'entreprise, recherche Google, « Envoyée » (statut « Candidaté (mail) », date d'envoi et relance prévue), « Abandonner » (brouillon mis à la corbeille) |
 | **Routines** | lancer « Relances » / « Recherche » (« mode essai » pour tester sans rien écrire ; « passages » pour l'enchaîner N fois d'affilée, 1 par défaut) ; « mails depuis » (par défaut le lundi de la semaine) : ne relit que les mails envoyés et reçus à partir de ce jour, bien plus rapide — vide = toute la période suivie ; une relance due d'une candidature plus ancienne va quand même chercher son mail d'origine, sortie en direct |
 | **Tour** | état, réveil, LM Studio, mise en veille |
 | **LinkedIn** | tes relations (`perso/linkedin/Connections.csv` depuis le code) qui travaillent dans une entreprise du tableau |
@@ -253,6 +253,11 @@ il lit tes mails (envois, réponses, avis de non-remise, alertes LinkedIn) et d�
 | Planifier un envoi | nouvel Outlook : Envoyer → Planifier l'envoi | Gmail : flèche à côté d'Envoyer → Programmer l'envoi |
 | Relances | le mail d'origine est transféré | le mail d'origine est cité en dessous, avec ses pièces jointes |
 | Signature | souvent ajoutée par Outlook lui-même : laisser `ajouter_signature: false` | Gmail n'ajoute pas sa signature aux brouillons créés par le script : mettre `ajouter_signature: true` (fichier HTML `imap.signature_html`, ou vide = signature construite depuis `signature_formulaire`) |
+| Brouillons sans adresse | catégorie « Adresse à trouver » (orange) | libellé « Adresse à trouver » |
+
+Les brouillons dont l'adresse reste à trouver portent cette étiquette (réglage `messagerie.etiquette_a_trouver`,
+vide = aucune) ; elle est retirée à la routine Relances suivante une fois la vraie adresse mise dans le champ « À ».
+Tous les autres brouillons sont prêts à partir (dans Gmail, la recherche `in:drafts -to:invalid` les liste).
 
 **Mettre Gmail en place :**
 1. Active la **validation en deux étapes** sur ton compte Google.

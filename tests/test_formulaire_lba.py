@@ -572,3 +572,77 @@ def test_installer_l_extension_sans_chrome(client, monkeypatch, presence, sans_c
 def test_installer_l_extension_sans_aucun_navigateur(client, presence, sans_chrome):
     r = client.post("/api/extension_installer", json={})
     assert r.status_code == 400 and "Ni Chrome" in r.get_json()["message"]
+
+
+
+# --- formulaire ouvert hors de LMAgent (extension, sans jeton) ------------------------------------------------
+LBA_SITE = "https://labonnealternance.apprentissage.beta.gouv.fr/emploi"
+FICHE = f"{LBA_SITE}/recruteurs_lba/12345678900011/pixelo"
+
+
+@pytest.mark.parametrize("url, attendu", [
+    (FICHE, ("recruteurs_lba", "12345678900011")),
+    (f"{LBA_SITE}/recruteurs_lba/12345678900011/pixelo?type=lba&a=1#haut", ("recruteurs_lba", "12345678900011")),
+    (f"{LBA_SITE}/offres_emploi_lba/6a1b2c3d4e/developpeur", ("offres_emploi_lba", "6a1b2c3d4e")),
+    ("https://labonnealternance.apprentissage.beta.gouv.fr/recherche?q=informatique", None),
+    ("https://pixelo.example/emploi/recruteurs_lba/12345678900011/pixelo", None),
+    ("", None),
+])
+def test_cle_fiche(url, attendu):
+    assert f.cle_fiche(url) == attendu
+
+
+def test_lien_connu():
+    autre = f"{LBA_SITE}/recruteurs_lba/99999999900099/comptanova"
+    assert f.lien_connu(f"{FICHE}?utm=x", [autre, FICHE]) == FICHE                 # même SIRET, adresse un peu différente
+    assert f.lien_connu(f"{LBA_SITE}/recruteurs_lba/11111111100011/x", [autre, FICHE]) is None
+    assert f.lien_connu(FICHE, [FICHE, f"{LBA_SITE}/recruteurs_lba/12345678900011/pixelo-lyon"]) is None   # ambigu
+    assert f.lien_connu("https://lba.example/autre", [FICHE]) is None
+
+
+@pytest.fixture
+def fiche(cfg, tmp_path):
+    cv = tmp_path / "CV.pdf"
+    cv.write_bytes(b"%PDF")
+    cfg["pieces_jointes"] = [str(cv)]
+    return cfg
+
+
+def demander(appli, url, origine="extension"):
+    import extension_lba
+    entetes = {"Host": "127.0.0.1:8765"}
+    if origine:
+        entetes["Origin"] = extension_lba.ORIGINE if origine == "extension" else origine
+    return appli.test_client().post("/api/extension_fiche", json={"url": url}, headers=entetes)   # ni session ni jeton
+
+
+def test_fiche_connue_avec_lettre_et_reponses(appli, fiche):
+    import reponses
+    reponses.enregistrer(FICHE, {"lettre": "Lettre pour Pixelo", "motivations": "Parce que"})
+    r = demander(appli, f"{FICHE}?type=lba")
+    assert r.status_code == 200 and r.headers["Cache-Control"] == "no-store"
+    d = r.get_json()["donnees"]
+    assert d["connue"] and d["applicant_message"].startswith("Lettre pour Pixelo")
+    assert "Camille Test" in d["applicant_message"]                                  # signature des formulaires
+    assert d["reponses"] == {"motivations": "Parce que"} and d["cv"]["nom"] == "CV.pdf"
+    assert d["applicant_email"] and d["applicant_first_name"] == "Camille"
+
+
+def test_fiche_inconnue_identite_et_cv_seulement(appli, fiche):
+    d = demander(appli, f"{LBA_SITE}/recruteurs_lba/55555555500055/brio").get_json()["donnees"]
+    assert not d["connue"] and d["applicant_message"] == "" and d["reponses"] == {}
+    assert d["applicant_last_name"] == "Test" and d["cv"]["nom"] == "CV.pdf"
+
+
+@pytest.mark.parametrize("origine", ["https://pirate.example", "chrome-extension://autreextensionautreextension", None])
+def test_fiche_refusee_a_une_autre_origine(appli, fiche, origine):
+    assert demander(appli, FICHE, origine).status_code == 404
+
+
+def test_fiche_reglage_coupe(appli, fiche):
+    fiche.setdefault("la_bonne_alternance", {})["remplir_hors_lmagent"] = False
+    assert demander(appli, FICHE).status_code == 404
+
+
+def test_pas_une_fiche(appli, fiche):
+    assert demander(appli, "https://labonnealternance.apprentissage.beta.gouv.fr/recherche").status_code == 404

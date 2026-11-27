@@ -13,6 +13,16 @@ chrome.runtime.onStartup.addListener(signaler);
 
 chrome.runtime.onMessage.addListener((m, envoyeur, repondre) => {
   if (envoyeur.id !== chrome.runtime.id || !String(envoyeur.url || "").startsWith(SITE)) return false;
+  if (m && m.type === "fiche") {
+    // formulaire ouvert hors de LMAgent : l'adresse de la fiche est celle que Chrome donne (envoyeur.url), pas le message
+    fetch(`http://127.0.0.1:${PORT_LMAGENT}/api/extension_fiche`,
+          { method: "POST", credentials: "omit", cache: "no-store", redirect: "error",
+            headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: envoyeur.url }) })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => repondre(d && d.ok ? d.donnees : null))
+      .catch(() => repondre(null));
+    return true;   // réponse asynchrone
+  }
   if (!m || !Number.isInteger(m.port) || m.port < 1024 || m.port > 65535
       || !/^[A-Za-z0-9_-]{40,64}$/.test(String(m.jeton || ""))) return false;
   fetch(`http://127.0.0.1:${m.port}/api/extension/${m.jeton}`,
